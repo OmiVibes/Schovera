@@ -11,6 +11,7 @@ if (!url || !serviceKey || !publishableKey) throw new Error('Required Supabase e
 const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 const temporary = { authUserIds: [], classIds: [], studentIds: [], schoolIds: [], updateIds: [] };
 const channels = [];
+const signedInClients = [];
 const suffix = randomUUID().slice(0, 8);
 
 function expect(condition, message) {
@@ -27,16 +28,24 @@ async function signIn(email) {
   const client = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const { error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  signedInClients.push(client);
   return client;
 }
 
-function waitForRealtime(client, table, filter) {
+function waitForRealtime(client, table, filter, label) {
   let channel;
   let settled = false;
   let resolveEvent;
-  const event = new Promise((resolve) => { resolveEvent = resolve; });
+  let eventTimer;
+  const event = new Promise((resolve, reject) => {
+    resolveEvent = (payload) => {
+      clearTimeout(eventTimer);
+      resolve(payload);
+    };
+    eventTimer = setTimeout(() => reject(new Error(`Realtime event timed out for ${label}.`)), 15000);
+  });
   const ready = new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Realtime subscription timed out for ${table}.`)), 12000);
+    const timer = setTimeout(() => reject(new Error(`Realtime subscription timed out for ${label}.`)), 12000);
     channel = client.channel(`phase1-${table}-${randomUUID()}`).on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table, filter },
@@ -44,10 +53,10 @@ function waitForRealtime(client, table, filter) {
         if (!settled) { settled = true; resolveEvent(payload); }
       },
     ).subscribe((status) => {
-      if (status === 'SUBSCRIBED') { clearTimeout(timer); resolve(); }
+      if (status === 'SUBSCRIBED') { clearTimeout(timer); setTimeout(resolve, 500); }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         clearTimeout(timer);
-        reject(new Error(`Realtime subscription failed for ${table}: ${status}.`));
+        reject(new Error(`Realtime subscription failed for ${label}: ${status}.`));
       }
     });
   });
@@ -62,6 +71,7 @@ async function expectRpcDenied(client, parameters) {
 
 async function cleanup() {
   for (const { client, channel } of channels) if (channel) await client.removeChannel(channel);
+  for (const client of signedInClients) client.realtime.disconnect();
   if (temporary.updateIds.length) {
     await admin.from('acknowledgements').delete().in('update_id', temporary.updateIds);
     await admin.from('audit_events').delete().in('target_id', temporary.updateIds);
@@ -119,8 +129,9 @@ try {
   expect(principalCrossSchool.length === 0, 'Cross-school isolation failed: Principal A could read School B student.');
   await expectRpcDenied(parent, { p_class_id: assignment.class_id, p_student_id: student.id, p_category: 'general', p_title: 'Denied update', p_message: 'A parent cannot send a teacher update.', p_importance: 'normal' });
   await expectRpcDenied(principal, { p_class_id: assignment.class_id, p_student_id: student.id, p_category: 'general', p_title: 'Denied update', p_message: 'A principal cannot send a teacher update.', p_importance: 'normal' });
+  console.log('Phase 1 security checks passed.');
 
-  const parentLive = waitForRealtime(parent, 'student_updates', `student_id=eq.${student.id}`);
+  const parentLive = waitForRealtime(parent, 'student_updates', `student_id=eq.${student.id}`, 'Teacher-to-parent update');
   await parentLive.ready;
   const { data: importantUpdateId, error: importantError } = await teacher.rpc('send_student_update', { p_class_id: assignment.class_id, p_student_id: student.id, p_category: 'achievement', p_title: 'Phase 1 verification update', p_message: 'This persisted update verifies the school-to-home acknowledgement loop.', p_importance: 'important' });
   if (importantError) throw importantError;
@@ -128,9 +139,10 @@ try {
   await parentLive.event;
   const parentImportant = await must(parent.from('student_updates').select('id,importance').eq('id', importantUpdateId));
   expect(parentImportant.length === 1 && parentImportant[0].importance === 'important', 'Parent did not receive the persisted important update.');
+  console.log('Teacher-to-parent Realtime delivery passed.');
 
-  const teacherAckLive = waitForRealtime(teacher, 'acknowledgements', `update_id=eq.${importantUpdateId}`);
-  const principalAckLive = waitForRealtime(principal, 'acknowledgements', `update_id=eq.${importantUpdateId}`);
+  const teacherAckLive = waitForRealtime(teacher, 'acknowledgements', `update_id=eq.${importantUpdateId}`, 'Parent-to-teacher acknowledgement');
+  const principalAckLive = waitForRealtime(principal, 'acknowledgements', `update_id=eq.${importantUpdateId}`, 'Parent-to-principal acknowledgement');
   await Promise.all([teacherAckLive.ready, principalAckLive.ready]);
   const { error: acknowledgementError } = await parent.rpc('acknowledge_update', { p_update_id: importantUpdateId });
   if (acknowledgementError) throw acknowledgementError;
@@ -141,8 +153,16 @@ try {
   expect(acknowledgements.length === 1, 'Acknowledgement idempotency failed: duplicate acknowledgement was created.');
   const teacherAcknowledgement = await must(teacher.from('acknowledgements').select('id').eq('update_id', importantUpdateId));
   const principalAcknowledgement = await must(principal.from('acknowledgements').select('id').eq('update_id', importantUpdateId));
+  const principalImportantUpdate = await must(principal.from('student_updates').select('id,importance,acknowledgements(id)').eq('id', importantUpdateId).single());
   expect(teacherAcknowledgement.length === 1, 'Teacher did not receive acknowledgement state through RLS.');
   expect(principalAcknowledgement.length === 1, 'Principal coverage data did not include acknowledgement.');
+  expect(principalImportantUpdate.importance === 'important' && principalImportantUpdate.acknowledgements.length === 1, 'Principal aggregate source data was not correct.');
+  const refreshedParent = await signIn(parentProfile.email);
+  const refreshedTeacher = await signIn(teacherProfile.email);
+  const parentAfterRefresh = await must(refreshedParent.from('acknowledgements').select('id').eq('update_id', importantUpdateId));
+  const teacherAfterRefresh = await must(refreshedTeacher.from('acknowledgements').select('id').eq('update_id', importantUpdateId));
+  expect(parentAfterRefresh.length === 1 && teacherAfterRefresh.length === 1, 'Acknowledgement did not persist across fresh authenticated sessions.');
+  console.log('Parent acknowledgement and acknowledgement Realtime delivery passed.');
 
   const { data: normalUpdateId, error: normalError } = await teacher.rpc('send_student_update', { p_class_id: assignment.class_id, p_student_id: student.id, p_category: 'general', p_title: 'Phase 1 normal update', p_message: 'This normal update is informational and has no acknowledgement requirement.', p_importance: 'normal' });
   if (normalError) throw normalError;
