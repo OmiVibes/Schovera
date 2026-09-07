@@ -80,7 +80,7 @@ alter table public.acknowledgements enable row level security;
 alter table public.audit_events enable row level security;
 
 create policy "own school" on public.schools for select using (public.same_school(id));
-create policy "own profile" on public.profiles for select using (id = auth.uid() or (role = 'principal' and public.same_school(school_id)));
+create policy "own profile" on public.profiles for select using (id = auth.uid() or ((select role from public.current_profile()) = 'principal' and public.same_school(school_id)));
 create policy "assigned or linked class" on public.classes for select using (
   (select role from public.current_profile()) = 'principal' and public.same_school(school_id) or
   exists(select 1 from public.teacher_class_assignments a where a.class_id = id and a.teacher_id = auth.uid() and a.ended_at is null) or
