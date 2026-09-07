@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 const roles = ['teacher', 'parent', 'principal'] as const;
 
 export default function ProtectedRoleRoute() {
-  const db = useMemo(createClient, []);
+  const db = useMemo(() => createClient(), []);
   const params = useParams<{ role: string }>();
   const router = useRouter();
   const [state, setState] = useState<'checking' | 'denied'>('checking');

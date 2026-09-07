@@ -12,7 +12,7 @@ const people = [
   ['parent@schovera.demo', 'Rajesh Patil', 'parent'],
 ];
 const ids = {};
-for (const [email, full_name, role] of people) {
+for (const [email, , role] of people) {
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (error && !error.message.includes('already')) throw error;
   const { data: existing } = await admin.from('profiles').select('id').eq('email', email).maybeSingle();
