@@ -621,6 +621,7 @@ function Parent({ profile }: { profile: Profile }) {
     [attendance, setAttendance] = useState<Attendance[]>([]),
     [attendanceError, setAttendanceError] = useState(''),
     [acknowledgementNote, setAcknowledgementNote] = useState(''),
+    [acknowledgingId, setAcknowledgingId] = useState(''),
     [acknowledgementError, setAcknowledgementError] = useState('');
   useEffect(() => {
     db.from('parent_student_links')
@@ -752,12 +753,16 @@ function Parent({ profile }: { profile: Profile }) {
           key={update.id}
           update={update}
           parent={profile.id}
+          acknowledging={acknowledgingId === update.id}
           acknowledge={async (updateId) => {
+            if (acknowledgingId) return;
             setAcknowledgementNote('');
             setAcknowledgementError('');
+            setAcknowledgingId(updateId);
             const { error } = await db.rpc('acknowledge_update', {
               p_update_id: updateId,
             });
+            setAcknowledgingId('');
             if (error)
               setAcknowledgementError(
                 'We couldn’t save your acknowledgement. Please try again.',
@@ -1133,11 +1138,13 @@ function Card({
   update,
   teacher,
   parent,
+  acknowledging = false,
   acknowledge,
 }: {
   update: Update;
   teacher?: boolean;
   parent?: string;
+  acknowledging?: boolean;
   acknowledge?: (id: string) => void;
 }) {
   const mine = update.acknowledgements?.find(
@@ -1171,8 +1178,11 @@ function Card({
           ) : (
             <>
               <span>Please acknowledge this update.</span>
-              <button onClick={() => acknowledge?.(update.id)}>
-                Acknowledge
+              <button
+                disabled={acknowledging}
+                onClick={() => acknowledge?.(update.id)}
+              >
+                {acknowledging ? 'Acknowledging…' : 'Acknowledge'}
               </button>
             </>
           )}
