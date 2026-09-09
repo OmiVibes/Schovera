@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint src scripts",
     "typecheck": "tsc --noEmit",
     "test": "npm run verify:phase1",
     "test:watch": "vitest",
