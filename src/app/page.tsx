@@ -229,6 +229,7 @@ function Teacher({ profile }: { profile: Profile }) {
     [records, setRecords] = useState<Record<string, Status>>({}),
     [attendanceBusy, setAttendanceBusy] = useState(false),
     [attendanceNote, setAttendanceNote] = useState(''),
+    [sending, setSending] = useState(false),
     [note, setNote] = useState('');
   useEffect(() => {
     db.from('teacher_class_assignments')
@@ -305,18 +306,26 @@ function Teacher({ profile }: { profile: Profile }) {
   }, [db, student]);
   const send = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!student) return;
+    if (!student || sending) return;
     const formElement = e.currentTarget;
     const form = new FormData(formElement);
+    const title = String(form.get('title') || '').trim();
+    const message = String(form.get('message') || '').trim();
     setNote('');
+    if (!title || !message) {
+      setNote('Please add a title and message before sending.');
+      return;
+    }
+    setSending(true);
     const { error } = await db.rpc('send_student_update', {
       p_class_id: classId,
       p_student_id: student.id,
       p_category: form.get('category'),
-      p_title: form.get('title'),
-      p_message: form.get('message'),
+      p_title: title,
+      p_message: message,
       p_importance: form.get('important') ? 'important' : 'normal',
     });
+    setSending(false);
     if (error) setNote('Could not send update. Try again.');
     else {
       formElement.reset();
@@ -466,7 +475,9 @@ function Teacher({ profile }: { profile: Profile }) {
                   <input name="important" type="checkbox" /> Important —
                   acknowledgement required
                 </label>
-                <button>Send update to parent</button>
+                <button disabled={sending}>
+                  {sending ? 'Sending update…' : 'Send update to parent'}
+                </button>
               </form>
               {note && (
                 <p className={note.startsWith('Could') ? 'error' : 'success'}>
@@ -1003,6 +1014,7 @@ function Announcements({
   const db = useMemo(() => createClient(), []);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
   const [note, setNote] = useState('');
   const load = async () => {
     setLoading(true);
@@ -1020,14 +1032,17 @@ function Announcements({
   }, [db, profile.id]);
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (publishing) return;
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     setNote('');
+    setPublishing(true);
     const { error } = await db.rpc('publish_announcement', {
       p_title: form.get('title'),
       p_body: form.get('body'),
       p_priority: form.get('priority'),
     });
+    setPublishing(false);
     if (error) setNote('Could not publish announcement. Try again.');
     else {
       formElement.reset();
@@ -1075,7 +1090,9 @@ function Announcements({
               <option value="important">Important</option>
             </select>
           </label>
-          <button>Publish notice</button>
+          <button disabled={publishing}>
+            {publishing ? 'Publishing notice…' : 'Publish notice'}
+          </button>
         </form>
       )}
       {note && (
