@@ -308,7 +308,8 @@ function Teacher({ profile }: { profile: Profile }) {
   const send = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!student) return;
-    const form = new FormData(e.currentTarget);
+    const formElement = e.currentTarget;
+    const form = new FormData(formElement);
     setNote('');
     const { error } = await db.rpc('send_student_update', {
       p_class_id: classId,
@@ -320,7 +321,7 @@ function Teacher({ profile }: { profile: Profile }) {
     });
     if (error) setNote('Could not send update. Try again.');
     else {
-      e.currentTarget.reset();
+      formElement.reset();
       setNote('Update sent and saved.');
       refreshUpdates();
     }
@@ -978,7 +979,8 @@ function Announcements({
   }, [db, profile.id]);
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     setNote('');
     const { error } = await db.rpc('publish_announcement', {
       p_title: form.get('title'),
@@ -987,7 +989,7 @@ function Announcements({
     });
     if (error) setNote('Could not publish announcement. Try again.');
     else {
-      event.currentTarget.reset();
+      formElement.reset();
       setNote('Announcement published.');
       load();
     }
