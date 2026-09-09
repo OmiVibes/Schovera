@@ -723,9 +723,7 @@ function Parent({ profile }: { profile: Profile }) {
       <section aria-labelledby="child-updates-heading">
         <div className="section-heading">
           <p className="eyebrow">CHILD-SPECIFIC UPDATES</p>
-          <h2 id="child-updates-heading">
-            Updates from your child&apos;s teacher
-          </h2>
+          <h2 id="child-updates-heading">Recent updates</h2>
         </div>
         {acknowledgementNote && (
           <p className="success" role="status">
@@ -799,7 +797,14 @@ function AttendanceSummary({
   return (
     <div className="card">
       <p className="eyebrow">ATTENDANCE</p>
-      <h2>Recent attendance</h2>
+      <h2>Attendance</h2>
+      <p className="attendance-today">
+        Latest:{' '}
+        <b className={`status ${attendance[0].status}`}>
+          {nice(attendance[0].status)}
+        </b>
+      </p>
+      <h3 className="attendance-recent-heading">Recent attendance</h3>
       <div className="attendance-counts">
         <span>
           <b>{counts.present}</b>Present
