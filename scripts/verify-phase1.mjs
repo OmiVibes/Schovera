@@ -101,6 +101,74 @@ function waitForRealtime(client, table, filter, label) {
   return { ready, event };
 }
 
+function subscribeToRealtimeEvents(client, table, label) {
+  let channel;
+  const pending = [];
+  const received = [];
+  const deliver = (payload) => {
+    const waiterIndex = pending.findIndex((waiter) => waiter.matches(payload));
+    if (waiterIndex === -1) {
+      received.push(payload);
+      return;
+    }
+    const [waiter] = pending.splice(waiterIndex, 1);
+    clearTimeout(waiter.timer);
+    waiter.resolve(payload);
+  };
+  const ready = new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Realtime subscription timed out for ${label}.`)),
+      12000,
+    );
+    channel = client
+      .channel(`phase1-${table}-stream-${randomUUID()}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table },
+        deliver,
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(timer);
+          resolve();
+        }
+        if (
+          status === 'CHANNEL_ERROR' ||
+          status === 'TIMED_OUT' ||
+          status === 'CLOSED'
+        ) {
+          clearTimeout(timer);
+          reject(
+            new Error(`Realtime subscription failed for ${label}: ${status}.`),
+          );
+        }
+      });
+  });
+  channels.push({
+    client,
+    get channel() {
+      return channel;
+    },
+  });
+  return {
+    ready,
+    waitFor: (matches, eventLabel) => {
+      const receivedIndex = received.findIndex(matches);
+      if (receivedIndex !== -1)
+        return Promise.resolve(received.splice(receivedIndex, 1)[0]);
+      return new Promise((resolve, reject) => {
+        const waiter = { matches, resolve, timer: undefined };
+        waiter.timer = setTimeout(() => {
+          const index = pending.indexOf(waiter);
+          if (index !== -1) pending.splice(index, 1);
+          reject(new Error(`Realtime event timed out for ${eventLabel}.`));
+        }, 15000);
+        pending.push(waiter);
+      });
+    },
+  };
+}
+
 async function expectRpcDenied(client, parameters) {
   const { error } = await client.rpc('send_student_update', parameters);
   expect(Boolean(error), 'Unauthorized RPC unexpectedly succeeded.');
@@ -214,25 +282,21 @@ try {
   if (otherParentAuth.error) throw otherParentAuth.error;
   temporary.authUserIds.push(otherParentAuth.data.user.id);
   await must(
-    admin
-      .from('profiles')
-      .insert({
-        id: otherParentAuth.data.user.id,
-        school_id: school.id,
-        role: 'parent',
-        full_name: 'Verification Parent',
-        email: `parent-${suffix}@verification.invalid`,
-      }),
+    admin.from('profiles').insert({
+      id: otherParentAuth.data.user.id,
+      school_id: school.id,
+      role: 'parent',
+      full_name: 'Verification Parent',
+      email: `parent-${suffix}@verification.invalid`,
+    }),
   );
   await must(
-    admin
-      .from('parent_student_links')
-      .insert({
-        parent_id: otherParentAuth.data.user.id,
-        student_id: unlinkedStudent.id,
-        relationship_label: 'Parent',
-        status: 'active',
-      }),
+    admin.from('parent_student_links').insert({
+      parent_id: otherParentAuth.data.user.id,
+      student_id: unlinkedStudent.id,
+      relationship_label: 'Parent',
+      status: 'active',
+    }),
   );
 
   const otherSchool = await must(
@@ -344,7 +408,8 @@ try {
       p_student_id: student.id,
       p_category: 'general',
       p_title: `Phase 1 subscription preflight ${suffix}`,
-      p_message: 'This real persisted update confirms the parent subscription is active before the acceptance event.',
+      p_message:
+        'This real persisted update confirms the parent subscription is active before the acceptance event.',
       p_importance: 'normal',
     },
   );
@@ -387,25 +452,66 @@ try {
   );
   console.log('Teacher-to-parent Realtime delivery passed.');
 
-  const teacherAckLive = waitForRealtime(
+  const teacherAcknowledgementStream = subscribeToRealtimeEvents(
     teacher,
     'acknowledgements',
-    `update_id=eq.${importantUpdateId}`,
-    'Parent-to-teacher acknowledgement',
+    'Teacher acknowledgement stream',
   );
-  const principalAckLive = waitForRealtime(
+  const principalAcknowledgementStream = subscribeToRealtimeEvents(
     principal,
     'acknowledgements',
-    `update_id=eq.${importantUpdateId}`,
+    'Principal acknowledgement stream',
+  );
+  await Promise.all([
+    teacherAcknowledgementStream.ready,
+    principalAcknowledgementStream.ready,
+  ]);
+  const {
+    data: acknowledgementPreflightUpdateId,
+    error: acknowledgementPreflightError,
+  } = await teacher.rpc('send_student_update', {
+    p_class_id: assignment.class_id,
+    p_student_id: student.id,
+    p_category: 'general',
+    p_title: `Phase 1 acknowledgement preflight ${suffix}`,
+    p_message:
+      'This real persisted update confirms acknowledgement subscriptions before the acceptance event.',
+    p_importance: 'important',
+  });
+  if (acknowledgementPreflightError) throw acknowledgementPreflightError;
+  temporary.updateIds.push(acknowledgementPreflightUpdateId);
+  const { error: acknowledgementPreflightRpcError } = await parent.rpc(
+    'acknowledge_update',
+    { p_update_id: acknowledgementPreflightUpdateId },
+  );
+  if (acknowledgementPreflightRpcError) throw acknowledgementPreflightRpcError;
+  await Promise.all([
+    teacherAcknowledgementStream.waitFor(
+      (payload) => payload.new.update_id === acknowledgementPreflightUpdateId,
+      'Teacher acknowledgement subscription preflight',
+    ),
+    principalAcknowledgementStream.waitFor(
+      (payload) => payload.new.update_id === acknowledgementPreflightUpdateId,
+      'Principal acknowledgement subscription preflight',
+    ),
+  ]);
+  const teacherAcknowledgementEvent = teacherAcknowledgementStream.waitFor(
+    (payload) => payload.new.update_id === importantUpdateId,
+    'Parent-to-teacher acknowledgement',
+  );
+  const principalAcknowledgementEvent = principalAcknowledgementStream.waitFor(
+    (payload) => payload.new.update_id === importantUpdateId,
     'Parent-to-principal acknowledgement',
   );
-  await Promise.all([teacherAckLive.ready, principalAckLive.ready]);
   const { error: acknowledgementError } = await parent.rpc(
     'acknowledge_update',
     { p_update_id: importantUpdateId },
   );
   if (acknowledgementError) throw acknowledgementError;
-  await Promise.all([teacherAckLive.event, principalAckLive.event]);
+  await Promise.all([
+    teacherAcknowledgementEvent,
+    principalAcknowledgementEvent,
+  ]);
   const { error: repeatedAcknowledgementError } = await parent.rpc(
     'acknowledge_update',
     { p_update_id: importantUpdateId },
