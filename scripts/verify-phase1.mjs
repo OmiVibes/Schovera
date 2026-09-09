@@ -78,7 +78,7 @@ function waitForRealtime(client, table, filter, label) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           clearTimeout(timer);
-          setTimeout(resolve, 500);
+          resolve();
         }
         if (
           status === 'CHANNEL_ERROR' ||
@@ -330,11 +330,33 @@ try {
   });
   console.log('Phase 1 security checks passed.');
 
+  const parentSubscriptionPreflight = waitForRealtime(
+    parent,
+    'student_updates',
+    `student_id=eq.${student.id}`,
+    'Teacher-to-parent subscription preflight',
+  );
+  await parentSubscriptionPreflight.ready;
+  const { data: preflightUpdateId, error: preflightError } = await teacher.rpc(
+    'send_student_update',
+    {
+      p_class_id: assignment.class_id,
+      p_student_id: student.id,
+      p_category: 'general',
+      p_title: `Phase 1 subscription preflight ${suffix}`,
+      p_message: 'This real persisted update confirms the parent subscription is active before the acceptance event.',
+      p_importance: 'normal',
+    },
+  );
+  if (preflightError) throw preflightError;
+  temporary.updateIds.push(preflightUpdateId);
+  await parentSubscriptionPreflight.event;
+
   const parentLive = waitForRealtime(
     parent,
     'student_updates',
     `student_id=eq.${student.id}`,
-    'Teacher-to-parent update',
+    'Teacher-to-parent acceptance update',
   );
   await parentLive.ready;
   const { data: importantUpdateId, error: importantError } = await teacher.rpc(
