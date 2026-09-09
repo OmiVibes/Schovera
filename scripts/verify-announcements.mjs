@@ -30,9 +30,6 @@ async function signIn(email, role) {
   return client;
 }
 try {
-  const school = await must(
-    admin.from('schools').select('id').eq('code', 'SCHOVERA-DEMO').single(),
-  );
   const principal = await signIn('principal@schovera.demo', 'principal'),
     teacher = await signIn('teacher@schovera.demo', 'teacher'),
     parent = await signIn('parent@schovera.demo', 'parent');
