@@ -38,6 +38,31 @@ const school = await must(admin.from('schools').upsert({ name: 'Schovera Interna
 for (const [email, full_name, role] of people) await must(admin.from('profiles').upsert({ id: ids[role], school_id: school.id, email, full_name, role, active: true }));
 const grade7 = await must(admin.from('classes').upsert({ school_id: school.id, grade: '7', division: 'A', academic_year: '2026-27' }, { onConflict: 'school_id,grade,division,academic_year' }).select().single());
 await must(admin.from('teacher_class_assignments').upsert({ teacher_id: ids.teacher, class_id: grade7.id }, { onConflict: 'teacher_id,class_id' }));
-const aarav = await must(admin.from('students').upsert({ school_id: school.id, class_id: grade7.id, roll_number: '07', full_name: 'Aarav Patil' }, { onConflict: 'class_id,roll_number' }).select().single());
+const roster = [
+  ['07', 'Aarav Patil'],
+  ['11', 'Diya Nair'],
+  ['14', 'Kabir Shah'],
+  ['18', 'Meera Iyer'],
+  ['22', 'Rohan Verma'],
+];
+const students = {};
+for (const [roll_number, full_name] of roster) {
+  students[roll_number] = await must(admin.from('students').upsert({ school_id: school.id, class_id: grade7.id, roll_number, full_name }, { onConflict: 'class_id,roll_number' }).select().single());
+}
+const aarav = students['07'];
 await must(admin.from('parent_student_links').upsert({ parent_id: ids.parent, student_id: aarav.id, relationship_label: 'Father', status: 'active' }, { onConflict: 'parent_id,student_id' }));
-console.log('Seed complete: demo accounts, class, student, and parent link are ready.');
+const dateDaysAgo = (days) => { const date = new Date(); date.setDate(date.getDate() - days); return date.toISOString().slice(0, 10); };
+const statuses = [
+  ['present', 'present', 'late', 'present', 'absent'],
+  ['late', 'present', 'present', 'absent', 'present'],
+  ['present', 'absent', 'present', 'present', 'present'],
+  ['present', 'present', 'present', 'late', 'present'],
+  ['absent', 'present', 'present', 'present', 'late'],
+];
+for (let day = 0; day < statuses.length; day += 1) {
+  const attendance_date = dateDaysAgo(day);
+  for (let index = 0; index < roster.length; index += 1) {
+    await must(admin.from('attendance_records').upsert({ school_id: school.id, class_id: grade7.id, student_id: students[roster[index][0]].id, marked_by: ids.teacher, attendance_date, status: statuses[day][index] }, { onConflict: 'student_id,attendance_date' }));
+  }
+}
+console.log('Seed complete: demo accounts, Grade 7A roster, attendance history, and parent link are ready.');
