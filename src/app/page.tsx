@@ -26,6 +26,13 @@ type Attendance = {
   status: Status;
   students?: any;
 };
+type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  priority: 'normal' | 'important';
+  published_at: string;
+};
 const categories = [
   'academic',
   'attendance',
@@ -336,6 +343,7 @@ function Teacher({ profile }: { profile: Profile }) {
             )}
           </>
         )}
+        <Announcements profile={profile} />
       </div>
       {mode === 'updates' ? (
         <div className="card">
@@ -582,6 +590,7 @@ function Parent({ profile }: { profile: Profile }) {
         counts={counts}
         error={attendanceError}
       />
+      <Announcements profile={profile} parentView />
       {updates.map((update) => (
         <Card
           key={update.id}
@@ -736,6 +745,7 @@ function Principal({ profile }: { profile: Profile }) {
           </div>
         ))}
       </div>
+      <Announcements profile={profile} publish />
       <div className="card">
         <p className="eyebrow">TODAY’S ATTENDANCE</p>
         <h2>Operational completion</h2>
@@ -795,6 +805,131 @@ function Principal({ profile }: { profile: Profile }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function Announcements({
+  profile,
+  publish = false,
+  parentView = false,
+}: {
+  profile: Profile;
+  publish?: boolean;
+  parentView?: boolean;
+}) {
+  const db = useMemo(() => createClient(), []);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [note, setNote] = useState('');
+  const load = async () => {
+    setLoading(true);
+    const { data, error } = await db
+      .from('announcements')
+      .select('id,title,body,priority,published_at')
+      .order('published_at', { ascending: false })
+      .limit(6);
+    setAnnouncements(data || []);
+    setNote(error ? 'Announcements could not be loaded.' : '');
+    setLoading(false);
+  };
+  useEffect(() => {
+    load();
+  }, [db, profile.id]);
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setNote('');
+    const { error } = await db.rpc('publish_announcement', {
+      p_title: form.get('title'),
+      p_body: form.get('body'),
+      p_priority: form.get('priority'),
+    });
+    if (error) setNote('Could not publish announcement. Try again.');
+    else {
+      event.currentTarget.reset();
+      setNote('Announcement published.');
+      load();
+    }
+  };
+  return (
+    <div className="card announcements">
+      <p className="eyebrow">OFFICIAL SCHOOL ANNOUNCEMENTS</p>
+      <h2>
+        {publish ? 'Publish an official notice' : 'School-wide announcements'}
+      </h2>
+      {parentView && (
+        <p className="hint">
+          These are school-wide notices, separate from updates about your child.
+        </p>
+      )}
+      {publish && (
+        <form onSubmit={submit}>
+          <label>
+            Title
+            <input
+              name="title"
+              required
+              minLength={3}
+              maxLength={120}
+              placeholder="Clear school notice title"
+            />
+          </label>
+          <label>
+            Message
+            <textarea
+              name="body"
+              required
+              minLength={3}
+              maxLength={1000}
+              rows={3}
+              placeholder="Write a concise official notice"
+            />
+          </label>
+          <label>
+            Priority
+            <select name="priority">
+              <option value="normal">Normal</option>
+              <option value="important">Important</option>
+            </select>
+          </label>
+          <button>Publish announcement</button>
+        </form>
+      )}
+      {note && (
+        <p
+          className={
+            note.startsWith('Could') || note.includes('loaded')
+              ? 'error'
+              : 'success'
+          }
+        >
+          {note}
+        </p>
+      )}
+      {loading ? (
+        <p>Loading announcements…</p>
+      ) : announcements.length ? (
+        <div className="announcement-list">
+          {announcements.map((announcement) => (
+            <article key={announcement.id}>
+              <span className="badge">Official notice</span>
+              {announcement.priority === 'important' && (
+                <span className="important">Important</span>
+              )}
+              <h3>{announcement.title}</h3>
+              <p>{announcement.body}</p>
+              <small>
+                Published {new Date(announcement.published_at).toLocaleString()}
+              </small>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="empty">
+          No school announcements have been published yet.
+        </p>
+      )}
+    </div>
   );
 }
 

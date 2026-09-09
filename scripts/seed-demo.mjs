@@ -66,16 +66,14 @@ const school = await must(
 );
 for (const [email, full_name, role] of people)
   await must(
-    admin
-      .from('profiles')
-      .upsert({
-        id: ids[role],
-        school_id: school.id,
-        email,
-        full_name,
-        role,
-        active: true,
-      }),
+    admin.from('profiles').upsert({
+      id: ids[role],
+      school_id: school.id,
+      email,
+      full_name,
+      role,
+      active: true,
+    }),
   );
 const grade7 = await must(
   admin
@@ -122,17 +120,15 @@ for (const [roll_number, full_name] of roster) {
 }
 const aarav = students['07'];
 await must(
-  admin
-    .from('parent_student_links')
-    .upsert(
-      {
-        parent_id: ids.parent,
-        student_id: aarav.id,
-        relationship_label: 'Father',
-        status: 'active',
-      },
-      { onConflict: 'parent_id,student_id' },
-    ),
+  admin.from('parent_student_links').upsert(
+    {
+      parent_id: ids.parent,
+      student_id: aarav.id,
+      relationship_label: 'Father',
+      status: 'active',
+    },
+    { onConflict: 'parent_id,student_id' },
+  ),
 );
 const dateDaysAgo = (days) => {
   const date = new Date();
@@ -150,22 +146,57 @@ for (let day = 0; day < statuses.length; day += 1) {
   const attendance_date = dateDaysAgo(day);
   for (let index = 0; index < roster.length; index += 1) {
     await must(
-      admin
-        .from('attendance_records')
-        .upsert(
-          {
-            school_id: school.id,
-            class_id: grade7.id,
-            student_id: students[roster[index][0]].id,
-            marked_by: ids.teacher,
-            attendance_date,
-            status: statuses[day][index],
-          },
-          { onConflict: 'student_id,attendance_date' },
-        ),
+      admin.from('attendance_records').upsert(
+        {
+          school_id: school.id,
+          class_id: grade7.id,
+          student_id: students[roster[index][0]].id,
+          marked_by: ids.teacher,
+          attendance_date,
+          status: statuses[day][index],
+        },
+        { onConflict: 'student_id,attendance_date' },
+      ),
     );
   }
 }
+const announcements = [
+  [
+    'Robotics Exhibition This Friday',
+    'Students will present their projects in the school auditorium this Friday at 2:00 PM.',
+    'important',
+  ],
+  [
+    'Parent Orientation Meeting',
+    'Parent orientation for the new term will be held in the multipurpose hall next Wednesday at 9:30 AM.',
+    'normal',
+  ],
+  [
+    'School Holiday Notice',
+    'The school will remain closed on Monday for the regional public holiday. Classes resume on Tuesday.',
+    'normal',
+  ],
+];
+for (const [title, body, priority] of announcements) {
+  const existing = await must(
+    admin
+      .from('announcements')
+      .select('id')
+      .eq('school_id', school.id)
+      .eq('title', title)
+      .maybeSingle(),
+  );
+  if (!existing)
+    await must(
+      admin.from('announcements').insert({
+        school_id: school.id,
+        created_by: ids.principal,
+        title,
+        body,
+        priority,
+      }),
+    );
+}
 console.log(
-  'Seed complete: demo accounts, Grade 7A roster, attendance history, and parent link are ready.',
+  'Seed complete: demo accounts, Grade 7A roster, attendance history, announcements, and parent link are ready.',
 );

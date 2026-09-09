@@ -72,12 +72,20 @@ try {
     admin.from('schools').select('id').eq('code', 'SCHOVERA-DEMO').single(),
   );
   const profiles = await must(
-    admin.from('profiles').select('id,role,email').eq('school_id', school.id),
+    admin
+      .from('profiles')
+      .select('id,role,email')
+      .in('email', [
+        'teacher@schovera.demo',
+        'parent@schovera.demo',
+        'principal@schovera.demo',
+      ]),
   );
-  const byRole = (role) => profiles.find((profile) => profile.role === role);
-  const teacherProfile = byRole('teacher');
-  const parentProfile = byRole('parent');
-  const principalProfile = byRole('principal');
+  const byEmail = (email) =>
+    profiles.find((profile) => profile.email === email);
+  const teacherProfile = byEmail('teacher@schovera.demo');
+  const parentProfile = byEmail('parent@schovera.demo');
+  const principalProfile = byEmail('principal@schovera.demo');
   expect(
     teacherProfile && parentProfile && principalProfile,
     'Seed roles are missing. Run npm run seed:demo first.',
@@ -166,25 +174,21 @@ try {
   if (otherParentAuth.error) throw otherParentAuth.error;
   temporary.authUserIds.push(otherParentAuth.data.user.id);
   await must(
-    admin
-      .from('profiles')
-      .insert({
-        id: otherParentAuth.data.user.id,
-        school_id: school.id,
-        role: 'parent',
-        full_name: 'Attendance Verification Parent',
-        email: otherParentEmail,
-      }),
+    admin.from('profiles').insert({
+      id: otherParentAuth.data.user.id,
+      school_id: school.id,
+      role: 'parent',
+      full_name: 'Attendance Verification Parent',
+      email: otherParentEmail,
+    }),
   );
   await must(
-    admin
-      .from('parent_student_links')
-      .insert({
-        parent_id: otherParentAuth.data.user.id,
-        student_id: otherChild.id,
-        relationship_label: 'Parent',
-        status: 'active',
-      }),
+    admin.from('parent_student_links').insert({
+      parent_id: otherParentAuth.data.user.id,
+      student_id: otherChild.id,
+      relationship_label: 'Parent',
+      status: 'active',
+    }),
   );
   const parentLeak = await must(
     parent
@@ -216,16 +220,14 @@ try {
     'Parent could write attendance.',
   );
   await expectDenied(
-    parent
-      .from('attendance_records')
-      .insert({
-        school_id: school.id,
-        class_id: assignment.class_id,
-        student_id: aarav.id,
-        marked_by: parentProfile.id,
-        attendance_date: testDate,
-        status: 'present',
-      }),
+    parent.from('attendance_records').insert({
+      school_id: school.id,
+      class_id: assignment.class_id,
+      student_id: aarav.id,
+      marked_by: parentProfile.id,
+      attendance_date: testDate,
+      status: 'present',
+    }),
     'Parent direct attendance insert was not blocked.',
   );
 
