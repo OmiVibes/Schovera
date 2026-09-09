@@ -187,25 +187,23 @@ export default function Page() {
           </button>
         </div>
       </header>
-      <section className="dashboard-hero">
-        <div>
-          <p className="eyebrow">{nice(profile.role)} workspace</p>
-          <h1>
-            {profile.role === 'teacher'
-              ? 'Keep every family informed.'
-              : profile.role === 'parent'
-                ? 'Your child’s school day, clearly connected.'
+      {profile.role !== 'parent' && (
+        <section className="dashboard-hero">
+          <div>
+            <p className="eyebrow">{nice(profile.role)} workspace</p>
+            <h1>
+              {profile.role === 'teacher'
+                ? 'Keep every family informed.'
                 : 'Communication, clearly connected.'}
-          </h1>
-        </div>
-        <p className="hero-support">
-          {profile.role === 'teacher'
-            ? 'Send clear student updates, record attendance and follow important acknowledgements.'
-            : profile.role === 'parent'
-              ? 'See child-specific updates, attendance and official school notices in one trusted place.'
+            </h1>
+          </div>
+          <p className="hero-support">
+            {profile.role === 'teacher'
+              ? 'Send clear student updates, record attendance and follow important acknowledgements.'
               : 'See communication coverage and attendance completion across your school.'}
-        </p>
-      </section>
+          </p>
+        </section>
+      )}
       <div className="dashboard-content">
         {profile.role === 'teacher' ? (
           <Teacher profile={profile} />
@@ -356,10 +354,10 @@ function Teacher({ profile }: { profile: Profile }) {
   return (
     <section className="two">
       <aside className="card teacher-sidebar">
-        <p className="eyebrow">YOUR CLASSROOM</p>
-        <h2>Choose your class</h2>
+        <p className="eyebrow">START HERE</p>
+        <h2>Your classroom</h2>
         <p className="hint">
-          Start with a class, then choose the task you need.
+          1. Choose a class. 2. Choose a task. 3. Keep families informed.
         </p>
         <div className="chips">
           {classes.map((row) => (
@@ -426,12 +424,12 @@ function Teacher({ profile }: { profile: Profile }) {
         <div className="card">
           {student ? (
             <>
-              <p className="eyebrow">PARENT UPDATE FOR</p>
+              <p className="eyebrow">STEP 3 · PARENT UPDATE FOR</p>
               <div className="selected-student">
                 <h2>{student.full_name}</h2>
                 <span>Roll {student.roll_number}</span>
               </div>
-              <h2 className="form-title">Send a structured update</h2>
+              <h2 className="form-title">Send an update</h2>
               <form onSubmit={send}>
                 <label>
                   Category
@@ -498,6 +496,7 @@ function Teacher({ profile }: { profile: Profile }) {
       ) : (
         <AttendanceMarker
           classId={classId}
+          classLabel={classes.find((row) => row.id === classId)}
           students={students}
           date={date}
           records={records}
@@ -517,6 +516,7 @@ function Teacher({ profile }: { profile: Profile }) {
 
 function AttendanceMarker({
   classId,
+  classLabel,
   students,
   date,
   records,
@@ -533,8 +533,12 @@ function AttendanceMarker({
         <p className="empty">Select an assigned class to mark attendance.</p>
       ) : (
         <>
-          <p className="eyebrow">DAILY ATTENDANCE</p>
-          <h2>Fast class marking</h2>
+          <p className="eyebrow">
+            {classLabel
+              ? `GRADE ${classLabel.grade}${classLabel.division} · DAILY ATTENDANCE`
+              : 'DAILY ATTENDANCE'}
+          </p>
+          <h2>Attendance register</h2>
           <label>
             Date
             <input
@@ -609,7 +613,7 @@ function Parent({ profile }: { profile: Profile }) {
     [acknowledgementError, setAcknowledgementError] = useState('');
   useEffect(() => {
     db.from('parent_student_links')
-      .select('students(*)')
+      .select('students(*,classes(grade,division))')
       .eq('parent_id', profile.id)
       .eq('status', 'active')
       .then(({ data }) => {
@@ -661,26 +665,55 @@ function Parent({ profile }: { profile: Profile }) {
     (total, row) => ({ ...total, [row.status]: total[row.status] + 1 }),
     { present: 0, absent: 0, late: 0 } as Record<Status, number>,
   );
+  const child = children.find((item) => item.id === childId);
+  const className = child?.classes
+    ? `Grade ${child.classes.grade}${child.classes.division}`
+    : 'Your child';
+  const awaitingAcknowledgement = updates.filter(
+    (update) =>
+      update.importance === 'important' &&
+      !update.acknowledgements?.some(
+        (acknowledgement) => acknowledgement.parent_id === profile.id,
+      ),
+  );
   return (
-    <section className="timeline">
-      <div className="card">
+    <section className="parent-dashboard">
+      <section
+        className="parent-welcome"
+        aria-labelledby="parent-child-heading"
+      >
         <p className="eyebrow">YOUR CHILD</p>
-        <h2>Stay connected</h2>
-        <label>
-          Child
-          <select value={childId} onChange={(e) => setChildId(e.target.value)}>
-            {children.map((child) => (
-              <option key={child.id} value={child.id}>
-                {child.full_name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="hint">
-          Important updates require acknowledgement. Normal updates are for your
-          information.
+        <h1 id="parent-child-heading">{child?.full_name || 'Your child'}</h1>
+        <p className="parent-class">{className}</p>
+        {children.length > 1 && (
+          <label className="child-switcher">
+            Viewing
+            <select
+              value={childId}
+              onChange={(e) => setChildId(e.target.value)}
+            >
+              {children.map((child) => (
+                <option key={child.id} value={child.id}>
+                  {child.full_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </section>
+      <section className="attention-panel" aria-labelledby="important-heading">
+        <p className="eyebrow">IMPORTANT FOR YOU</p>
+        <h2 id="important-heading">
+          {awaitingAcknowledgement.length
+            ? 'A teacher update needs your attention'
+            : 'You are all caught up'}
+        </h2>
+        <p className="attention-copy">
+          {awaitingAcknowledgement.length
+            ? 'Please acknowledge the update in Recent updates below.'
+            : 'No important updates need your attention right now.'}
         </p>
-      </div>
+      </section>
       <AttendanceSummary
         attendance={attendance}
         counts={counts}
@@ -863,10 +896,9 @@ function Principal({ profile }: { profile: Profile }) {
     <section>
       <div className="metrics">
         {[
-          ['Total updates', all.length],
-          ['Important', important.length],
+          ['Important updates', important.length],
           ['Acknowledged', acknowledged.length],
-          ['Awaiting', important.length - acknowledged.length],
+          ['Awaiting acknowledgement', important.length - acknowledged.length],
         ].map(([label, value]) => (
           <div className="card" key={String(label)}>
             <small>{label}</small>
@@ -877,7 +909,7 @@ function Principal({ profile }: { profile: Profile }) {
       <Announcements profile={profile} publish />
       <div className="card">
         <p className="eyebrow">TODAY’S ATTENDANCE</p>
-        <h2>Operational completion</h2>
+        <h2>Today&apos;s attendance</h2>
         {attendanceError ? (
           <p className="error">{attendanceError}</p>
         ) : (
@@ -934,7 +966,11 @@ function Principal({ profile }: { profile: Profile }) {
       </div>
       <div className="card">
         <p className="eyebrow">RECENT ACTIVITY</p>
-        <h2>Communication coverage, not teacher scoring.</h2>
+        <h2>Recent communication</h2>
+        <p className="hint">
+          A simple school-wide view of family communication. This is not teacher
+          scoring.
+        </p>
         {all.length ? (
           all
             .slice(0, 6)
@@ -996,13 +1032,12 @@ function Announcements({
   };
   return (
     <div className="card announcements">
-      <p className="eyebrow">OFFICIAL SCHOOL ANNOUNCEMENTS</p>
-      <h2>
-        {publish ? 'Publish an official notice' : 'School-wide announcements'}
-      </h2>
+      <p className="eyebrow">SCHOOL NOTICES</p>
+      <h2>{publish ? 'Publish a school notice' : 'School Notices'}</h2>
       {parentView && (
         <p className="hint">
-          These are school-wide notices, separate from updates about your child.
+          These are school-wide notices. They are separate from updates about
+          your child.
         </p>
       )}
       {publish && (
@@ -1035,7 +1070,7 @@ function Announcements({
               <option value="important">Important</option>
             </select>
           </label>
-          <button>Publish announcement</button>
+          <button>Publish notice</button>
         </form>
       )}
       {note && (
@@ -1055,7 +1090,7 @@ function Announcements({
         <div className="announcement-list">
           {announcements.map((announcement) => (
             <article key={announcement.id}>
-              <span className="badge">Official notice</span>
+              <span className="badge">School-wide notice</span>
               {announcement.priority === 'important' && (
                 <span className="important">Important</span>
               )}
@@ -1066,9 +1101,7 @@ function Announcements({
           ))}
         </div>
       ) : (
-        <p className="empty">
-          No school announcements have been published yet.
-        </p>
+        <p className="empty">No new school notices.</p>
       )}
     </div>
   );
@@ -1098,7 +1131,7 @@ function Card({
     >
       <span className="badge">{nice(update.category)}</span>
       {update.importance === 'important' && (
-        <span className="important">Acknowledgement required</span>
+        <span className="important">Important</span>
       )}
       <h3>{update.title}</h3>
       <p>{update.message}</p>
@@ -1110,13 +1143,16 @@ function Card({
       {update.importance === 'important' && (
         <div className="ack">
           {mine || (!parent && update.acknowledgements?.length) ? (
-            <b className="status present">Acknowledged</b>
+            <b className="status present">✓ Acknowledged</b>
           ) : teacher ? (
             <span className="status pending">Awaiting acknowledgement</span>
           ) : (
-            <button onClick={() => acknowledge?.(update.id)}>
-              Acknowledge update
-            </button>
+            <>
+              <span>Please acknowledge this update.</span>
+              <button onClick={() => acknowledge?.(update.id)}>
+                Acknowledge
+              </button>
+            </>
           )}
         </div>
       )}
