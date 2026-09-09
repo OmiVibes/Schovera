@@ -436,7 +436,9 @@ function Teacher({ profile }: { profile: Profile }) {
                   Category
                   <select name="category">
                     {categories.map((category) => (
-                      <option key={category}>{nice(category)}</option>
+                      <option key={category} value={category}>
+                        {nice(category)}
+                      </option>
                     ))}
                   </select>
                 </label>
