@@ -44,6 +44,11 @@ const categories = [
 const today = () => new Date().toISOString().slice(0, 10);
 const nice = (value: string) =>
   value.replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+const displayDate = (value: string) =>
+  new Date(value).toLocaleString([], {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 
 export default function Page() {
   const db = useMemo(() => createClient(), []);
@@ -51,7 +56,8 @@ export default function Page() {
     [busy, setBusy] = useState(true),
     [error, setError] = useState(''),
     [email, setEmail] = useState(''),
-    [password, setPassword] = useState('');
+    [password, setPassword] = useState(''),
+    [signingIn, setSigningIn] = useState(false);
   const load = async () => {
     setBusy(true);
     const {
@@ -76,34 +82,58 @@ export default function Page() {
     const { data } = db.auth.onAuthStateChange(load);
     return () => data.subscription.unsubscribe();
   }, [db]);
-  if (busy) return <main className="center">Loading Schovera…</main>;
+  if (busy)
+    return (
+      <main className="center" aria-live="polite">
+        <p className="loading-copy">Loading Schovera…</p>
+      </main>
+    );
   if (!profile)
     return (
       <main className="login">
-        <section>
-          <b className="logo">S</b>
-          <p className="eyebrow">SCHOVERA</p>
+        <section className="login-intro" aria-labelledby="login-title">
+          <div className="brand-lockup">
+            <b className="logo" aria-hidden="true">
+              S
+            </b>
+            <span>Schovera</span>
+          </div>
+          <p className="eyebrow">SCHOOL. HOME. TOGETHER.</p>
           <h1>
             School. Home.
             <br />
             Together.
           </h1>
-          <p>Trusted school communication, clearly connected.</p>
+          <p className="lead" id="login-title">
+            Structured school-to-home communication that keeps teachers, parents
+            and principals connected.
+          </p>
+          <p className="login-note">
+            One secure place for clear updates, attendance and official school
+            notices.
+          </p>
         </section>
         <form
-          className="card"
+          className="card login-card"
           onSubmit={async (e) => {
             e.preventDefault();
             setError('');
+            setSigningIn(true);
             const { error: signInError } = await db.auth.signInWithPassword({
               email,
               password,
             });
-            if (signInError)
+            if (signInError) {
               setError('Sign-in failed. Check your credentials.');
+              setSigningIn(false);
+            }
           }}
         >
-          <h2>Welcome back</h2>
+          <p className="eyebrow">SECURE SIGN IN</p>
+          <h2>Welcome to Schovera</h2>
+          <p className="form-intro">
+            Sign in with the account provided by your school.
+          </p>
           <label>
             Email
             <input
@@ -111,6 +141,8 @@ export default function Page() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder="you@school.org"
             />
           </label>
           <label>
@@ -120,41 +152,69 @@ export default function Page() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
             />
           </label>
-          {error && <p className="error">{error}</p>}
-          <button>Sign in securely</button>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button disabled={signingIn}>
+            {signingIn ? 'Signing in…' : 'Sign in securely'}
+          </button>
         </form>
       </main>
     );
   return (
     <main className="app">
-      <header>
-        <div>
-          <b className="logo small">S</b> <strong>SCHOVERA</strong>
+      <header className="app-header">
+        <div className="brand-lockup compact">
+          <b className="logo small" aria-hidden="true">
+            S
+          </b>
+          <strong>Schovera</strong>
         </div>
-        <div>
-          {profile.full_name}{' '}
-          <button className="link" onClick={() => db.auth.signOut()}>
+        <div className="account-actions">
+          <span className="role-chip">{nice(profile.role)}</span>
+          <span className="account-name">{profile.full_name}</span>
+          <button
+            className="link"
+            type="button"
+            onClick={() => db.auth.signOut()}
+          >
             Sign out
           </button>
         </div>
       </header>
-      <p className="eyebrow">{profile.role}</p>
-      <h1>
-        {profile.role === 'teacher'
-          ? 'Keep every family informed.'
-          : profile.role === 'parent'
-            ? "Your child's school updates."
-            : 'Communication, clearly connected.'}
-      </h1>
-      {profile.role === 'teacher' ? (
-        <Teacher profile={profile} />
-      ) : profile.role === 'parent' ? (
-        <Parent profile={profile} />
-      ) : (
-        <Principal profile={profile} />
-      )}
+      <section className="dashboard-hero">
+        <div>
+          <p className="eyebrow">{nice(profile.role)} workspace</p>
+          <h1>
+            {profile.role === 'teacher'
+              ? 'Keep every family informed.'
+              : profile.role === 'parent'
+                ? 'Your child’s school day, clearly connected.'
+                : 'Communication, clearly connected.'}
+          </h1>
+        </div>
+        <p className="hero-support">
+          {profile.role === 'teacher'
+            ? 'Send clear student updates, record attendance and follow important acknowledgements.'
+            : profile.role === 'parent'
+              ? 'See child-specific updates, attendance and official school notices in one trusted place.'
+              : 'See communication coverage and attendance completion across your school.'}
+        </p>
+      </section>
+      <div className="dashboard-content">
+        {profile.role === 'teacher' ? (
+          <Teacher profile={profile} />
+        ) : profile.role === 'parent' ? (
+          <Parent profile={profile} />
+        ) : (
+          <Principal profile={profile} />
+        )}
+      </div>
     </main>
   );
 }
@@ -294,8 +354,12 @@ function Teacher({ profile }: { profile: Profile }) {
   );
   return (
     <section className="two">
-      <div className="card">
-        <h2>Assigned class</h2>
+      <aside className="card teacher-sidebar">
+        <p className="eyebrow">YOUR CLASSROOM</p>
+        <h2>Choose your class</h2>
+        <p className="hint">
+          Start with a class, then choose the task you need.
+        </p>
         <div className="chips">
           {classes.map((row) => (
             <button
@@ -324,33 +388,49 @@ function Teacher({ profile }: { profile: Profile }) {
         </div>
         {mode === 'updates' && (
           <>
-            <h2>Select student</h2>
+            <div className="section-heading">
+              <p className="eyebrow">STUDENT UPDATES</p>
+              <h2>Select a student</h2>
+            </div>
             {classId ? (
-              students.map((row) => (
-                <button
-                  className={
-                    student?.id === row.id ? 'student active' : 'student'
-                  }
-                  key={row.id}
-                  onClick={() => setStudent(row)}
-                >
-                  {row.full_name}
-                  <small>Roll {row.roll_number}</small>
-                </button>
-              ))
+              <div
+                className="student-list"
+                aria-label="Students in selected class"
+              >
+                {students.map((row) => (
+                  <button
+                    className={
+                      student?.id === row.id ? 'student active' : 'student'
+                    }
+                    key={row.id}
+                    type="button"
+                    aria-pressed={student?.id === row.id}
+                    onClick={() => setStudent(row)}
+                  >
+                    <span>{row.full_name}</span>
+                    <small>Roll {row.roll_number}</small>
+                  </button>
+                ))}
+              </div>
             ) : (
-              <p>Select a class to view students.</p>
+              <p className="empty compact-empty">
+                Select a class to view students.
+              </p>
             )}
           </>
         )}
         <Announcements profile={profile} />
-      </div>
+      </aside>
       {mode === 'updates' ? (
         <div className="card">
           {student ? (
             <>
-              <p className="eyebrow">{student.full_name}</p>
-              <h2>Send parent update</h2>
+              <p className="eyebrow">PARENT UPDATE FOR</p>
+              <div className="selected-student">
+                <h2>{student.full_name}</h2>
+                <span>Roll {student.roll_number}</span>
+              </div>
+              <h2 className="form-title">Send a structured update</h2>
               <form onSubmit={send}>
                 <label>
                   Category
@@ -385,17 +465,26 @@ function Teacher({ profile }: { profile: Profile }) {
                   <input name="important" type="checkbox" /> Important —
                   acknowledgement required
                 </label>
-                <button>Send update</button>
+                <button>Send update to parent</button>
               </form>
               {note && (
                 <p className={note.startsWith('Could') ? 'error' : 'success'}>
                   {note}
                 </p>
               )}
-              <h2>History</h2>
-              {updates.map((update) => (
-                <Card key={update.id} update={update} teacher />
-              ))}
+              <div className="section-heading history-heading">
+                <p className="eyebrow">SENT UPDATES</p>
+                <h2>Recent communication</h2>
+              </div>
+              {updates.length ? (
+                updates.map((update) => (
+                  <Card key={update.id} update={update} teacher />
+                ))
+              ) : (
+                <p className="empty compact-empty">
+                  No updates have been sent for this student yet.
+                </p>
+              )}
             </>
           ) : (
             <p className="empty">
@@ -512,7 +601,9 @@ function Parent({ profile }: { profile: Profile }) {
     [childId, setChildId] = useState(''),
     [updates, setUpdates] = useState<Update[]>([]),
     [attendance, setAttendance] = useState<Attendance[]>([]),
-    [attendanceError, setAttendanceError] = useState('');
+    [attendanceError, setAttendanceError] = useState(''),
+    [acknowledgementNote, setAcknowledgementNote] = useState(''),
+    [acknowledgementError, setAcknowledgementError] = useState('');
   useEffect(() => {
     db.from('parent_student_links')
       .select('students(*)')
@@ -570,6 +661,8 @@ function Parent({ profile }: { profile: Profile }) {
   return (
     <section className="timeline">
       <div className="card">
+        <p className="eyebrow">YOUR CHILD</p>
+        <h2>Stay connected</h2>
         <label>
           Child
           <select value={childId} onChange={(e) => setChildId(e.target.value)}>
@@ -580,7 +673,7 @@ function Parent({ profile }: { profile: Profile }) {
             ))}
           </select>
         </label>
-        <p>
+        <p className="hint">
           Important updates require acknowledgement. Normal updates are for your
           information.
         </p>
@@ -591,14 +684,45 @@ function Parent({ profile }: { profile: Profile }) {
         error={attendanceError}
       />
       <Announcements profile={profile} parentView />
+      <section aria-labelledby="child-updates-heading">
+        <div className="section-heading">
+          <p className="eyebrow">CHILD-SPECIFIC UPDATES</p>
+          <h2 id="child-updates-heading">
+            Updates from your child&apos;s teacher
+          </h2>
+        </div>
+        {acknowledgementNote && (
+          <p className="success" role="status">
+            {acknowledgementNote}
+          </p>
+        )}
+        {acknowledgementError && (
+          <p className="error" role="alert">
+            {acknowledgementError}
+          </p>
+        )}
+      </section>
       {updates.map((update) => (
         <Card
           key={update.id}
           update={update}
           parent={profile.id}
           acknowledge={async (updateId) => {
-            await db.rpc('acknowledge_update', { p_update_id: updateId });
-            refresh();
+            setAcknowledgementNote('');
+            setAcknowledgementError('');
+            const { error } = await db.rpc('acknowledge_update', {
+              p_update_id: updateId,
+            });
+            if (error)
+              setAcknowledgementError(
+                'We couldn’t save your acknowledgement. Please try again.',
+              );
+            else {
+              setAcknowledgementNote(
+                'Acknowledgement saved. Your child’s teacher can now see it.',
+              );
+              refresh();
+            }
           }}
         />
       ))}
@@ -622,7 +746,9 @@ function AttendanceSummary({
     return (
       <div className="card">
         <h2>Attendance</h2>
-        <p className="error">{error}</p>
+        <p className="error" role="alert">
+          {error}
+        </p>
       </div>
     );
   if (!attendance.length)
@@ -787,6 +913,12 @@ function Principal({ profile }: { profile: Profile }) {
                 </p>
               ))}
             </div>
+            {!classes.length && (
+              <p className="empty compact-empty">
+                No active classes are available for today&apos;s attendance
+                view.
+              </p>
+            )}
             {todayAttendance.length > 0 && (
               <p className="hint">
                 Latest activity:{' '}
@@ -800,9 +932,16 @@ function Principal({ profile }: { profile: Profile }) {
       <div className="card">
         <p className="eyebrow">RECENT ACTIVITY</p>
         <h2>Communication coverage, not teacher scoring.</h2>
-        {all.slice(0, 6).map((update) => (
-          <Card key={update.id} update={update} teacher />
-        ))}
+        {all.length ? (
+          all
+            .slice(0, 6)
+            .map((update) => <Card key={update.id} update={update} teacher />)
+        ) : (
+          <p className="empty compact-empty">
+            No student updates have been sent yet. Communication activity will
+            appear here when teachers share updates with families.
+          </p>
+        )}
       </div>
     </section>
   );
@@ -918,9 +1057,7 @@ function Announcements({
               )}
               <h3>{announcement.title}</h3>
               <p>{announcement.body}</p>
-              <small>
-                Published {new Date(announcement.published_at).toLocaleString()}
-              </small>
+              <small>Published {displayDate(announcement.published_at)}</small>
             </article>
           ))}
         </div>
@@ -948,7 +1085,13 @@ function Card({
     (acknowledgement) => acknowledgement.parent_id === parent,
   );
   return (
-    <article>
+    <article
+      className={
+        update.importance === 'important'
+          ? 'update-card important-update'
+          : 'update-card'
+      }
+    >
       <span className="badge">{nice(update.category)}</span>
       {update.importance === 'important' && (
         <span className="important">Acknowledgement required</span>
@@ -958,14 +1101,14 @@ function Card({
       <small>
         {update.profiles?.full_name && `${update.profiles.full_name} · `}
         {update.students?.full_name && `${update.students.full_name} · `}
-        {new Date(update.sent_at).toLocaleString()}
+        {displayDate(update.sent_at)}
       </small>
       {update.importance === 'important' && (
         <div className="ack">
           {mine || (!parent && update.acknowledgements?.length) ? (
-            <b className="success">Acknowledged</b>
+            <b className="status present">Acknowledged</b>
           ) : teacher ? (
-            <span>Awaiting acknowledgement</span>
+            <span className="status pending">Awaiting acknowledgement</span>
           ) : (
             <button onClick={() => acknowledge?.(update.id)}>
               Acknowledge update
