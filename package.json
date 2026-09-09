@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src scripts --cache --cache-location .next/cache/eslint --concurrency auto",
+    "lint": "eslint src scripts --no-cache --concurrency 1",
     "typecheck": "tsc --noEmit",
     "test": "npm run verify:phase1",
     "test:watch": "vitest",
