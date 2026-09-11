@@ -793,7 +793,6 @@ function Parent({ profile }: { profile: Profile }) {
             {acknowledgementError}
           </p>
         )}
-      </section>
       {updates.map((update) => (
         <Card
           key={update.id}
@@ -822,6 +821,7 @@ function Parent({ profile }: { profile: Profile }) {
           }}
         />
       ))}
+      </section>
       {childId && !updates.length && (
         <p className="empty">You’re all caught up. No updates yet.</p>
       )}
@@ -840,7 +840,7 @@ function AttendanceSummary({
 }) {
   if (error)
     return (
-      <div className="card">
+      <div className="card attendance-card">
         <h2>Attendance</h2>
         <p className="error" role="alert">
           {error}
@@ -849,7 +849,7 @@ function AttendanceSummary({
     );
   if (!attendance.length)
     return (
-      <div className="card">
+      <div className="card attendance-card">
         <h2>Attendance</h2>
         <p className="empty">
           No attendance has been marked for this child yet.
@@ -857,7 +857,7 @@ function AttendanceSummary({
       </div>
     );
   return (
-    <div className="card">
+    <div className="card attendance-card">
       <p className="eyebrow">ATTENDANCE</p>
       <h2>Attendance</h2>
       <p className="attendance-today">

@@ -845,6 +845,11 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .attendance-counts span:nth-child(4) b, .attendance-counts span:nth-child(5) b { color: var(--warning); }
 
 .parent-dashboard { max-width: 820px; gap: 1rem; margin-top: 1.5rem; }
+.parent-dashboard > .child-identity-card { order: 1; }
+.parent-dashboard > .attention-panel { order: 2; }
+.parent-dashboard > .attendance-card { order: 3; }
+.parent-dashboard > .parent-updates { order: 4; }
+.parent-dashboard > .announcements { order: 5; }
 .child-identity-card {
   display: flex; align-items: center; gap: 1rem; border: 1px solid #f0d4b2; border-radius: 22px;
   background: #fff3d7; padding: 1.15rem 1.25rem;
