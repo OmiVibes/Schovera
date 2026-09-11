@@ -1,18 +1,18 @@
 @import 'tailwindcss';
 
 :root {
-  --ink: #14213d;
-  --ink-soft: #344563;
-  --brand: #2856b6;
-  --brand-dark: #193d89;
-  --brand-soft: #edf3ff;
-  --canvas: #f6f8fc;
+  --ink: #172033;
+  --ink-soft: #475467;
+  --brand: #4f46e5;
+  --brand-dark: #3730a3;
+  --brand-soft: #eef2ff;
+  --canvas: #f5f6fa;
   --surface: #ffffff;
-  --line: #dde4f0;
+  --line: #e5e9f0;
   --muted: #667085;
   --success: #087a55;
   --success-bg: #e9f8f0;
-  --warning: #9a6200;
+  --warning: #b45309;
   --warning-bg: #fff7e3;
   --danger: #b42318;
   --danger-bg: #fff0ef;
@@ -761,4 +761,142 @@ article p {
   .parent-dashboard .update-card {
     border-radius: 13px;
   }
+}
+
+/* Warm school clarity: role colour is contextual; status colour is semantic. */
+body { font-family: var(--font-geist-sans), Arial, sans-serif; }
+.role-teacher { --brand: #0f5d46; --brand-dark: #0a4534; --brand-soft: #ecfdf5; }
+.role-parent { --brand: #b65a08; --brand-dark: #8f4305; --brand-soft: #fff3d7; }
+.role-principal { --brand: #4f46e5; --brand-dark: #3730a3; --brand-soft: #eef2ff; }
+.icon { width: 1.18rem; height: 1.18rem; flex: 0 0 auto; }
+.app { width: min(1200px, 100%); padding-bottom: 4.5rem; }
+.role-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  min-height: 84px; border-bottom: 1px solid var(--line);
+}
+.role-school-lockup { display: flex; align-items: center; gap: .72rem; color: var(--ink); }
+.role-school-lockup .logo { background: var(--brand); }
+.role-school-lockup strong, .role-school-lockup span { display: block; }
+.role-school-lockup strong { font-size: 1.02rem; letter-spacing: -.025em; }
+.role-school-lockup span { color: var(--muted); font-size: .72rem; font-weight: 600; }
+.account-actions { gap: .55rem; }
+.account-avatar, .child-avatar, .student-avatar {
+  display: inline-grid; place-items: center; flex: 0 0 auto; border-radius: 999px;
+  background: var(--brand-soft); color: var(--brand-dark); font-size: .78rem; font-weight: 850;
+}
+.account-avatar { width: 34px; height: 34px; border: 1px solid color-mix(in srgb, var(--brand) 25%, white); }
+.role-chip { background: var(--brand-soft); border-color: color-mix(in srgb, var(--brand) 26%, white); color: var(--brand-dark); }
+.dashboard-hero { padding: 2rem 0 1.35rem; }
+.dashboard-hero h1 { font-size: clamp(2rem, 4vw, 2.85rem); }
+.dashboard-hero .eyebrow, .eyebrow { color: var(--brand); }
+.card { border-radius: 16px; border-color: var(--line); box-shadow: 0 3px 13px rgb(16 24 40 / .045); }
+.login { width: min(1120px, 100%); position: relative; gap: clamp(2rem, 8vw, 7rem); }
+.login::before { content: ''; position: fixed; z-index: -1; inset: 0 45% 0 0; background: #0f5d46; }
+.login-intro { color: #fff; padding: 2rem 0; }
+.login-intro .brand-lockup, .login-intro .lead, .login-intro .login-note { color: #fff; }
+.login-intro .eyebrow { color: #c5f2dd; }
+.login-intro .logo { background: rgb(255 255 255 / .16); box-shadow: none; }
+.login-card { border-radius: 22px; padding: 1.8rem; box-shadow: 0 18px 42px rgb(15 40 31 / .12); }
+.login-card button, .role-principal .announcements form button { background: #4f46e5; }
+.login-card button:hover:not(:disabled), .role-principal .announcements form button:hover:not(:disabled) { background: #3730a3; }
+
+.teacher-workspace, .principal-dashboard { display: grid; gap: 1rem; }
+.teacher-today-card, .communication-overview {
+  display: flex; align-items: center; gap: 1rem; border: 1px solid color-mix(in srgb, var(--brand) 20%, white);
+  border-radius: 22px; background: var(--brand-soft); padding: 1.1rem 1.25rem;
+}
+.teacher-today-card .section-icon, .overview-heading .section-icon, .announcement-list article::before {
+  display: inline-grid; place-items: center; width: 2.55rem; height: 2.55rem; border-radius: 12px;
+  background: #fff; color: var(--brand); box-shadow: 0 2px 5px rgb(16 24 40 / .05);
+}
+.teacher-today-card h2, .teacher-today-card p { margin: 0; }
+.teacher-today-card > div:nth-child(2) { flex: 1; }
+.teacher-today-card > div:nth-child(2) > p:last-child { color: var(--ink-soft); font-size: .88rem; }
+.today-status { border-radius: 999px; padding: .32rem .58rem; background: #fff; color: var(--brand-dark); font-size: .72rem; font-weight: 800; }
+.quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.quick-actions button, .quick-action-static {
+  display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 48px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--brand-soft); color: var(--brand-dark); padding: .5rem; font-size: .78rem; font-weight: 800;
+}
+.quick-actions button.active { background: var(--brand) !important; border-color: var(--brand) !important; }
+.quick-action-static { background: #f8fafc; color: var(--ink-soft); }
+.chips button { background: var(--brand-soft); color: var(--brand-dark); }
+.chips button:hover:not(:disabled) { background: color-mix(in srgb, var(--brand) 15%, white); }
+.student { min-height: 66px; padding: .55rem .7rem; border-radius: 12px; }
+.student-name { display: flex; align-items: center; gap: .62rem; min-width: 0; }
+.student-name i { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-dark); font-size: .73rem; font-style: normal; font-weight: 850; }
+.student-name > span { display: grid; min-width: 0; font-weight: 750; }
+.student-name small { font-weight: 500; }
+.student-chevron { color: var(--muted); font-size: 1.5rem; }
+.student.active { background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); border-color: color-mix(in srgb, var(--brand) 28%, white); }
+.selected-student { align-items: center; border: 1px solid color-mix(in srgb, var(--brand) 16%, white); border-radius: 14px; background: var(--brand-soft); padding: .8rem; }
+.student-avatar { width: 42px; height: 42px; }
+.selected-student div { flex: 1; }
+.selected-student h2 { font-size: 1rem; }
+.check { grid-template-columns: 18px 1fr; padding: .75rem; border: 1px solid #ecd7a7; border-radius: 12px; background: #fff7e3; color: #7a4600; }
+.check small { display: block; color: #815f2b; font-weight: 550; }
+.roster-row { min-height: 62px; border-radius: 12px; }
+.roster-row select { border-color: #e4e9f0; background: #fff; }
+.attendance-counts span { border-radius: 12px; background: #fafbfe; }
+.attendance-counts span:nth-child(2) b { color: var(--success); }
+.attendance-counts span:nth-child(3) b { color: var(--danger); }
+.attendance-counts span:nth-child(4) b, .attendance-counts span:nth-child(5) b { color: var(--warning); }
+
+.parent-dashboard { max-width: 820px; gap: 1rem; margin-top: 1.5rem; }
+.child-identity-card {
+  display: flex; align-items: center; gap: 1rem; border: 1px solid #f0d4b2; border-radius: 22px;
+  background: #fff3d7; padding: 1.15rem 1.25rem;
+}
+.child-avatar { width: 60px; height: 60px; background: #b65a08; color: #fff; font-size: 1.25rem; box-shadow: 0 8px 18px rgb(182 90 8 / .2); }
+.child-identity-copy { flex: 1; }
+.child-identity-card .eyebrow { color: #985003; }
+.child-identity-card h1 { font-size: clamp(1.65rem, 5vw, 2.15rem); }
+.child-status { margin: .55rem 0 0; color: var(--ink-soft); font-size: .84rem; font-weight: 650; }
+.child-status .status { margin-left: .25rem; }
+.child-switcher { max-width: 190px; margin-top: 0; }
+.attention-panel { border-radius: 16px; background: #fff7e3; border-color: #efd7a5; }
+.attention-panel .update-card { border: 0; border-left: 3px solid #b45309; margin: .75rem 0 0; padding: .85rem 0 .15rem .85rem; }
+.attention-panel .ack { flex-wrap: wrap; }
+.parent-updates .timeline { gap: .65rem; }
+.parent-dashboard .update-card { position: relative; border-radius: 14px; box-shadow: 0 2px 8px rgb(16 24 40 / .035); }
+.parent-dashboard .update-card:not(.important-update) { border-left: 3px solid var(--brand); }
+.parent-dashboard .important-update { background: #fffdf8; border-left: 3px solid #b45309; }
+.update-card .badge { background: var(--brand-soft); color: var(--brand-dark); }
+.announcement-list article { position: relative; padding-left: 3.35rem; }
+.announcement-list article::before { content: 'S'; position: absolute; left: 0; top: 1rem; background: #eef2ff; color: #4f46e5; font-weight: 850; }
+.announcement-list .badge { background: #eef2ff; color: #4f46e5; }
+.announcements > .eyebrow { color: #4f46e5; }
+
+.communication-overview { display: block; padding: 1.25rem; }
+.overview-heading { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+.overview-heading h2, .overview-heading p { margin: 0; }
+.metrics { gap: 0; border: 1px solid #dcdafc; border-radius: 14px; overflow: hidden; }
+.metric-cell { min-height: 104px; display: flex; flex-direction: column; justify-content: center; padding: 1rem; background: #fff; }
+.metric-cell + .metric-cell { border-left: 1px solid #e4e3ff; }
+.metric-cell b { color: #4f46e5; }
+.attendance-overview { border-top: 3px solid #4f46e5; }
+.principal-dashboard > .announcements { border-top: 3px solid #4f46e5; }
+.principal-dashboard > .card:last-child { border-top: 3px solid #e5e9f0; }
+
+@media (max-width: 760px) {
+  .role-header { min-height: 74px; }
+  .account-name { display: none; }
+  .teacher-today-card { align-items: flex-start; flex-wrap: wrap; }
+  .today-status { margin-left: auto; }
+  .quick-actions { grid-template-columns: 1fr; }
+  .child-identity-card { align-items: flex-start; flex-wrap: wrap; }
+  .child-switcher { width: 100%; max-width: none; }
+  .metrics { grid-template-columns: 1fr; }
+  .metric-cell + .metric-cell { border-left: 0; border-top: 1px solid #e4e3ff; }
+  .login::before { inset: 0 0 42% 0; }
+  .login { gap: 1.25rem; padding-top: 1.25rem; }
+  .login-intro { padding: 1rem 0; }
+}
+@media (max-width: 430px) {
+  .role-school-lockup span { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .role-chip { display: inline-flex; }
+  .account-actions .link { font-size: .78rem; }
+  .child-avatar { width: 52px; height: 52px; }
+  .teacher-today-card, .child-identity-card { border-radius: 18px; padding: 1rem; }
+  .attention-panel .ack button { width: 100%; }
 }

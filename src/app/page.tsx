@@ -50,6 +50,22 @@ const displayDate = (value: string) =>
     timeStyle: 'short',
   });
 
+function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'important' | 'check' }) {
+  const paths = {
+    school: <><path d="M3 10.5 12 5l9 5.5v8.5H3z" /><path d="M7 21v-6h10v6M9 12h.01M12 12h.01M15 12h.01" /></>,
+    student: <><circle cx="12" cy="8" r="3.25" /><path d="M5.5 21c.7-3.65 2.85-5.5 6.5-5.5s5.8 1.85 6.5 5.5" /></>,
+    updates: <><path d="M5 5h14v10H9l-4 4z" /><path d="M8 9h8M8 12h5" /></>,
+    attendance: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M7.5 12l2.2 2.2 5-5" /></>,
+    notice: <><path d="M6 5h12v14H6z" /><path d="M9 9h6M9 12h6M9 15h4" /></>,
+    important: <><path d="M12 3 21 20H3z" /><path d="M12 9v4M12 17h.01" /></>,
+    check: <path d="m5 12 4.2 4.2L19 6.5" />,
+  }[name];
+  return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths}</svg>;
+}
+
+const initials = (name: string) =>
+  name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+
 export default function Page() {
   const db = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null),
@@ -167,16 +183,18 @@ export default function Page() {
       </main>
     );
   return (
-    <main className="app">
-      <header className="app-header">
-        <div className="brand-lockup compact">
-          <b className="logo small" aria-hidden="true">
-            S
-          </b>
-          <strong>Schovera</strong>
+    <main className={`app role-${profile.role}`}>
+      <header className="role-header">
+        <div className="role-school-lockup">
+          <div className="logo small" aria-hidden="true">S</div>
+          <div>
+            <strong>Schovera</strong>
+            <span>Schovera International School</span>
+          </div>
         </div>
         <div className="account-actions">
           <span className="role-chip">{nice(profile.role)}</span>
+          <span className="account-avatar" aria-hidden="true">{initials(profile.full_name)}</span>
           <span className="account-name">{profile.full_name}</span>
           <button
             className="link"
@@ -190,10 +208,10 @@ export default function Page() {
       {profile.role !== 'parent' && (
         <section className="dashboard-hero">
           <div>
-            <p className="eyebrow">{nice(profile.role)} workspace</p>
+            <p className="eyebrow">{nice(profile.role)} workspace · Schovera International School</p>
             <h1>
               {profile.role === 'teacher'
-                ? 'Keep every family informed.'
+                ? `Good morning, ${profile.full_name.split(' ')[0]}.`
                 : 'Communication, clearly connected.'}
             </h1>
           </div>
@@ -361,14 +379,22 @@ function Teacher({ profile }: { profile: Profile }) {
     { present: 0, absent: 0, late: 0 } as Record<Status, number>,
   );
   return (
+    <section className="teacher-workspace">
+      <section className="teacher-today-card" aria-label="Today's teaching context">
+        <div className="section-icon"><Icon name="school" /></div>
+        <div>
+          <p className="eyebrow">TODAY AT SCHOVERA</p>
+          <h2>{classId ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Choose your class'}</h2>
+          <p>{classId ? `${students.length || 'Your'} students · ${mode === 'attendance' ? 'Attendance register open' : 'Ready for parent updates'}` : 'Select your assigned class to begin.'}</p>
+        </div>
+        <span className="today-status">{mode === 'attendance' ? 'Attendance' : 'Student updates'}</span>
+      </section>
     <section className="two">
       <aside className="card teacher-sidebar">
-        <p className="eyebrow">START HERE</p>
+        <p className="eyebrow">YOUR CLASSROOM</p>
         <h2>Your classroom</h2>
-        <p className="hint">
-          1. Choose a class. 2. Choose a task. 3. Keep families informed.
-        </p>
-        <div className="chips">
+        <p className="hint">Choose a class, then use one of the three school tools below.</p>
+        <div className="chips" aria-label="Assigned classes">
           {classes.map((row) => (
             <button
               key={row.id}
@@ -385,14 +411,15 @@ function Teacher({ profile }: { profile: Profile }) {
             className={mode === 'updates' ? 'active' : ''}
             onClick={() => setMode('updates')}
           >
-            Student updates
+            <Icon name="updates" /> Student updates
           </button>
           <button
             className={mode === 'attendance' ? 'active' : ''}
             onClick={() => setMode('attendance')}
           >
-            Attendance
+            <Icon name="attendance" /> Attendance
           </button>
+          <span className="quick-action-static"><Icon name="notice" /> School notices</span>
         </div>
         {mode === 'updates' && (
           <>
@@ -415,8 +442,8 @@ function Teacher({ profile }: { profile: Profile }) {
                     aria-pressed={student?.id === row.id}
                     onClick={() => setStudent(row)}
                   >
-                    <span>{row.full_name}</span>
-                    <small>Roll {row.roll_number}</small>
+                    <span className="student-name"><i>{initials(row.full_name)}</i><span>{row.full_name}<small>Grade {classes.find((item) => item.id === classId)?.grade}{classes.find((item) => item.id === classId)?.division} · Roll {row.roll_number}</small></span></span>
+                    <span className="student-chevron" aria-hidden="true">›</span>
                   </button>
                 ))}
               </div>
@@ -435,8 +462,8 @@ function Teacher({ profile }: { profile: Profile }) {
             <>
               <p className="eyebrow">STEP 3 · PARENT UPDATE FOR</p>
               <div className="selected-student">
-                <h2>{student.full_name}</h2>
-                <span>Roll {student.roll_number}</span>
+                <span className="student-avatar">{initials(student.full_name)}</span>
+                <div><h2>{student.full_name}</h2><span>Grade {classes.find((row) => row.id === classId)?.grade}{classes.find((row) => row.id === classId)?.division} · Roll {student.roll_number}</span></div>
               </div>
               <h2 className="form-title">Send an update</h2>
               <form onSubmit={send}>
@@ -521,6 +548,7 @@ function Teacher({ profile }: { profile: Profile }) {
           onSave={saveAttendance}
         />
       )}
+    </section>
     </section>
   );
 }
@@ -688,15 +716,33 @@ function Parent({ profile }: { profile: Profile }) {
         (acknowledgement) => acknowledgement.parent_id === profile.id,
       ),
   );
+  const acknowledgeUpdate = async (updateId: string) => {
+    if (acknowledgingId) return;
+    setAcknowledgementNote('');
+    setAcknowledgementError('');
+    setAcknowledgingId(updateId);
+    const { error } = await db.rpc('acknowledge_update', { p_update_id: updateId });
+    setAcknowledgingId('');
+    if (error) {
+      setAcknowledgementError('We could not save your acknowledgement. Please try again.');
+    } else {
+      setAcknowledgementNote('Acknowledgement saved. Your child’s teacher can now see it.');
+      refresh();
+    }
+  };
   return (
     <section className="parent-dashboard">
       <section
-        className="parent-welcome"
+        className="parent-welcome child-identity-card"
         aria-labelledby="parent-child-heading"
       >
-        <p className="eyebrow">YOUR CHILD</p>
-        <h1 id="parent-child-heading">{child?.full_name || 'Your child'}</h1>
-        <p className="parent-class">{className}</p>
+        <span className="child-avatar" aria-hidden="true">{initials(child?.full_name || 'Your child')}</span>
+        <div className="child-identity-copy">
+          <p className="eyebrow">YOUR CHILD</p>
+          <h1 id="parent-child-heading">{child?.full_name || 'Your child'}</h1>
+          <p className="parent-class">{className}</p>
+          <p className="child-status">Latest attendance: {attendance[0] ? <b className={`status ${attendance[0].status}`}>{nice(attendance[0].status)}</b> : 'Not marked yet'}</p>
+        </div>
         {children.length > 1 && (
           <label className="child-switcher">
             Viewing
@@ -720,11 +766,11 @@ function Parent({ profile }: { profile: Profile }) {
             ? 'A teacher update needs your attention'
             : 'You are all caught up'}
         </h2>
-        <p className="attention-copy">
-          {awaitingAcknowledgement.length
-            ? 'Please acknowledge the update in Recent updates below.'
-            : 'No important updates need your attention right now.'}
-        </p>
+        {awaitingAcknowledgement.length ? (
+          <Card update={awaitingAcknowledgement[0]} parent={profile.id} acknowledging={acknowledgingId === awaitingAcknowledgement[0].id} acknowledge={acknowledgeUpdate} />
+        ) : (
+          <p className="attention-copy">No important updates need your attention right now.</p>
+        )}
       </section>
       <AttendanceSummary
         attendance={attendance}
@@ -732,7 +778,7 @@ function Parent({ profile }: { profile: Profile }) {
         error={attendanceError}
       />
       <Announcements profile={profile} parentView />
-      <section aria-labelledby="child-updates-heading">
+      <section className="parent-updates" aria-labelledby="child-updates-heading">
         <div className="section-heading">
           <p className="eyebrow">CHILD-SPECIFIC UPDATES</p>
           <h2 id="child-updates-heading">Recent updates</h2>
@@ -914,21 +960,24 @@ function Principal({ profile }: { profile: Profile }) {
     ),
     markedClassIds = new Set(todayAttendance.map((row) => row.class_id));
   return (
-    <section>
-      <div className="metrics">
+    <section className="principal-dashboard">
+      <section className="communication-overview" aria-labelledby="communication-overview-heading">
+        <div className="overview-heading"><span className="section-icon"><Icon name="updates" /></span><div><p className="eyebrow">COMMUNICATION COVERAGE</p><h2 id="communication-overview-heading">School-to-home communication</h2></div></div>
+        <div className="metrics">
         {[
           ['Important updates', important.length],
           ['Acknowledged', acknowledged.length],
           ['Awaiting acknowledgement', important.length - acknowledged.length],
         ].map(([label, value]) => (
-          <div className="card" key={String(label)}>
+          <div className="metric-cell" key={String(label)}>
             <small>{label}</small>
             <b>{value}</b>
           </div>
         ))}
-      </div>
+        </div>
+      </section>
       <Announcements profile={profile} publish />
-      <div className="card">
+      <div className="card attendance-overview">
         <p className="eyebrow">TODAY’S ATTENDANCE</p>
         <h2>Today&apos;s attendance</h2>
         {attendanceError ? (
