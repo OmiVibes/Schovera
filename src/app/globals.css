@@ -774,24 +774,30 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .app { width: min(1200px, 100%); padding-bottom: 4.5rem; }
 .role-header {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  min-height: 84px; border-bottom: 1px solid var(--line);
+  min-height: 104px; margin: 0 -1.25rem; padding: 1.1rem 1.5rem;
+  border: 0; border-radius: 0 0 24px 24px; background: var(--brand);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--brand) 24%, transparent);
 }
-.role-school-lockup { display: flex; align-items: center; gap: .72rem; color: var(--ink); }
-.role-school-lockup .logo { background: var(--brand); }
+.role-school-lockup { display: flex; align-items: center; gap: .72rem; color: #fff; }
+.role-school-lockup .logo { background: rgb(255 255 255 / .18); color: #fff; }
 .role-school-lockup strong, .role-school-lockup span { display: block; }
 .role-school-lockup strong { font-size: 1.02rem; letter-spacing: -.025em; }
-.role-school-lockup span { color: var(--muted); font-size: .72rem; font-weight: 600; }
+.role-school-lockup span { color: rgb(255 255 255 / .78); font-size: .72rem; font-weight: 600; }
 .account-actions { gap: .55rem; }
 .account-avatar, .child-avatar, .student-avatar {
   display: inline-grid; place-items: center; flex: 0 0 auto; border-radius: 999px;
   background: var(--brand-soft); color: var(--brand-dark); font-size: .78rem; font-weight: 850;
 }
-.account-avatar { width: 34px; height: 34px; border: 1px solid color-mix(in srgb, var(--brand) 25%, white); }
-.role-chip { background: var(--brand-soft); border-color: color-mix(in srgb, var(--brand) 26%, white); color: var(--brand-dark); }
-.dashboard-hero { padding: 2rem 0 1.35rem; }
+.account-avatar { width: 34px; height: 34px; border: 1px solid rgb(255 255 255 / .3); background: #fff; color: var(--brand-dark); }
+.role-chip { background: rgb(255 255 255 / .14); border-color: rgb(255 255 255 / .28); color: #fff; }
+.account-name { color: #fff; }
+.role-header .link { color: #fff; }
+.role-header .link:hover:not(:disabled) { color: #fff; }
+.dashboard-hero { padding: 2.3rem 0 1.55rem; }
 .dashboard-hero h1 { font-size: clamp(2rem, 4vw, 2.85rem); }
 .dashboard-hero .eyebrow, .eyebrow { color: var(--brand); }
 .card { border-radius: 16px; border-color: var(--line); box-shadow: 0 3px 13px rgb(16 24 40 / .045); }
+.dashboard-content { gap: 1.25rem; }
 .login { width: min(1120px, 100%); position: relative; isolation: isolate; gap: clamp(2rem, 8vw, 7rem); }
 .login::before { content: ''; position: fixed; z-index: -1; inset: 0 45% 0 0; background: #0f5d46; }
 .login-intro { position: relative; z-index: 1; color: #fff; padding: 2rem 0; }
