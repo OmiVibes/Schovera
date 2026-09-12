@@ -879,6 +879,21 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .card-topline { display: flex; align-items: center; gap: .38rem; }
 .update-icon { width: 28px; height: 28px; padding: .36rem; border-radius: 9px; }
 .update-card small { display: block; margin-top: .7rem; padding-top: .65rem; border-top: 1px solid var(--line); font-size: .78rem; }
+.student-snapshot { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; margin: .75rem 0 1.1rem; }
+.student-snapshot > span { display: grid; gap: .16rem; min-height: 58px; padding: .55rem .65rem; border: 1px solid color-mix(in srgb, var(--brand) 14%, white); border-radius: 12px; background: var(--brand-soft); }
+.student-snapshot small { color: var(--ink-soft); font-size: .68rem; font-weight: 700; }
+.student-snapshot b { color: var(--brand-dark); font-size: .8rem; }
+.attendance-segments { display: inline-flex; gap: .25rem; flex-wrap: wrap; justify-content: flex-end; }
+.attendance-choice { min-height: 38px; padding: .35rem .5rem; border: 1px solid var(--line); background: #fff; color: var(--ink-soft); font-size: .72rem; }
+.attendance-choice.present.selected { background: var(--success-bg); border-color: var(--success); color: var(--success); }
+.attendance-choice.absent.selected { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+.attendance-choice.late.selected { background: var(--warning-bg); border-color: var(--warning); color: var(--warning); }
+.skeleton { display: grid; gap: .55rem; padding: .3rem 0; }
+.skeleton span { height: 54px; border-radius: 12px; background: linear-gradient(90deg,#f1f4f8 25%,#f8fafc 45%,#f1f4f8 65%); background-size: 280% 100%; animation: skeleton 1.5s ease-in-out infinite; }
+@keyframes skeleton { to { background-position: -180% 0; } }
+.principal-dashboard > .announcements { background: #fdfdff; }
+.principal-dashboard > .card:last-child .update-card { margin: 0; padding: .75rem 0 .75rem .75rem; border-left: 3px solid #4f46e5; }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 .field-with-icon { display: flex; align-items: center; gap: .5rem; position: relative; }
 .field-with-icon > .icon { position: absolute; left: .75rem; z-index: 1; color: var(--muted); }
 .field-with-icon input { padding-left: 2.5rem; }
@@ -886,7 +901,7 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .password-toggle:hover:not(:disabled) { background: var(--brand-soft); }
 .empty { border: 0; background: #f8fafc; box-shadow: inset 0 0 0 1px var(--line); }
 .empty::before { content: '•'; display: block; width: 28px; height: 28px; margin: 0 auto .4rem; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: 1.3rem; line-height: 23px; }
-@media (max-width: 760px) { .right-now-grid { grid-template-columns: 1fr; } .role-header { position: sticky; top: 0; z-index: 20; margin: 0 -1rem; padding: .75rem 1rem; border-radius: 0 0 18px 18px; } }
+@media (max-width: 760px) { .right-now-grid { grid-template-columns: 1fr; } .student-snapshot { grid-template-columns: repeat(2, 1fr); } .roster-row { flex-direction: column; } .attendance-segments { width: 100%; justify-content: stretch; } .attendance-choice { flex: 1; } .role-header { position: sticky; top: 0; z-index: 20; margin: 0 -1rem; padding: .75rem 1rem; border-radius: 0 0 18px 18px; } }
 .attention-panel .update-card { border: 0; border-left: 3px solid #b45309; margin: .75rem 0 0; padding: .85rem 0 .15rem .85rem; }
 .attention-panel .ack { flex-wrap: wrap; }
 .parent-updates .timeline { gap: .65rem; }

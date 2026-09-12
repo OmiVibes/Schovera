@@ -466,6 +466,12 @@ function Teacher({ profile }: { profile: Profile }) {
                 <span className="student-avatar">{initials(student.full_name)}</span>
                 <div><h2>{student.full_name}</h2><span>Grade {classes.find((row) => row.id === classId)?.grade}{classes.find((row) => row.id === classId)?.division} · Roll {student.roll_number}</span></div>
               </div>
+              <div className="student-snapshot" aria-label="Selected student context">
+                <span><small>Students</small><b>{students.length}</b></span>
+                <span><small>Attendance</small><b className={`status ${records[student.id] || 'present'}`}>{nice(records[student.id] || 'present')}</b></span>
+                <span><small>Latest update</small><b>{updates[0] ? nice(updates[0].category) : 'None yet'}</b></span>
+                <span><small>Important</small><b>{updates.find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'Awaiting' : 'Up to date'}</b></span>
+              </div>
               <h2 className="form-title">Send an update</h2>
               <form onSubmit={send}>
                 <label>
@@ -603,7 +609,7 @@ function AttendanceMarker({
             </span>
           </div>
           {busy ? (
-            <p>Loading attendance…</p>
+            <Skeleton label="Loading attendance" rows={4} />
           ) : (
             <div className="roster">
               {students.map((student: any) => (
@@ -612,14 +618,9 @@ function AttendanceMarker({
                     {student.full_name}
                     <small>Roll {student.roll_number}</small>
                   </span>
-                  <select
-                    value={records[student.id] || 'present'}
-                    onChange={(e) => onStatus(student.id, e.target.value)}
-                  >
-                    <option value="present">Present</option>
-                    <option value="absent">Absent</option>
-                    <option value="late">Late</option>
-                  </select>
+                  <span className="attendance-segments" role="group" aria-label={`Attendance for ${student.full_name}`}>
+                    {(['present', 'absent', 'late'] as Status[]).map((status) => <button type="button" key={status} className={`attendance-choice ${status} ${(records[student.id] || 'present') === status ? 'selected' : ''}`} aria-pressed={(records[student.id] || 'present') === status} onClick={() => onStatus(student.id, status)}>{nice(status)}</button>)}
+                  </span>
                 </label>
               ))}
             </div>
@@ -640,6 +641,10 @@ function AttendanceMarker({
       )}
     </div>
   );
+}
+
+function Skeleton({ label, rows = 3 }: { label: string; rows?: number }) {
+  return <div className="skeleton" role="status" aria-label={label}>{Array.from({ length: rows }, (_, index) => <span key={index} />)}</div>;
 }
 
 function Parent({ profile }: { profile: Profile }) {
@@ -1170,7 +1175,7 @@ function Announcements({
         </p>
       )}
       {loading ? (
-        <p>Loading announcements…</p>
+        <Skeleton label="Loading school notices" rows={3} />
       ) : announcements.length ? (
         <div className="announcement-list">
           {announcements.map((announcement) => (
