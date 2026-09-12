@@ -73,6 +73,7 @@ export default function Page() {
     [error, setError] = useState(''),
     [email, setEmail] = useState(''),
     [password, setPassword] = useState(''),
+    [showPassword, setShowPassword] = useState(false),
     [signingIn, setSigningIn] = useState(false);
   const load = async () => {
     setBusy(true);
@@ -151,25 +152,25 @@ export default function Page() {
             Sign in with the account provided by your school.
           </p>
           <label>
-            Email
-            <input
+            <span>Email</span>
+            <span className="field-with-icon"><Icon name="updates" /><input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               placeholder="you@school.org"
-            />
+            /></span>
           </label>
           <label>
-            Password
-            <input
-              type="password"
+            <span>Password</span>
+            <span className="field-with-icon"><Icon name="student" /><input
+              type={showPassword ? 'text' : 'password'}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-            />
+            /><button className="password-toggle" type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? 'Hide' : 'Show'}</button></span>
           </label>
           {error && (
             <p className="error" role="alert">
@@ -772,6 +773,14 @@ function Parent({ profile }: { profile: Profile }) {
           <p className="attention-copy">No important updates need your attention right now.</p>
         )}
       </section>
+      <section className="right-now" aria-labelledby="right-now-heading">
+        <div className="section-heading"><p className="eyebrow">RIGHT NOW</p><h2 id="right-now-heading">At a glance</h2></div>
+        <div className="right-now-grid">
+          <div><Icon name="attendance" /><span>Attendance<b>{attendance[0] ? nice(attendance[0].status) : 'Not marked'}</b></span></div>
+          <div><Icon name="important" /><span>Important<b>{awaitingAcknowledgement.length ? `${awaitingAcknowledgement.length} to read` : 'All caught up'}</b></span></div>
+          <div><Icon name="updates" /><span>Latest update<b>{updates[0] ? nice(updates[0].category) : 'No updates'}</b></span></div>
+        </div>
+      </section>
       <AttendanceSummary
         attendance={attendance}
         counts={counts}
@@ -1207,10 +1216,10 @@ function Card({
           : 'update-card'
       }
     >
-      <span className="badge">{nice(update.category)}</span>
+      <div className="card-topline"><span className="update-icon"><Icon name="updates" /></span><span className="badge">{nice(update.category)}</span>
       {update.importance === 'important' && (
         <span className="important">Important</span>
-      )}
+      )}</div>
       <h3>{update.title}</h3>
       <p>{update.message}</p>
       <small>
