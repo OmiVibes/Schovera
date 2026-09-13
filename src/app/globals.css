@@ -772,11 +772,17 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .role-principal { --brand: #4f46e5; --brand-dark: #3730a3; --brand-soft: #eef2ff; }
 .icon { width: 1.18rem; height: 1.18rem; flex: 0 0 auto; }
 .app { width: min(1200px, 100%); padding-bottom: 4.5rem; }
+.application-shell {
+  position: relative;
+  z-index: 10;
+  margin: 0 -1.25rem;
+  border-radius: 0 0 22px 22px;
+  box-shadow: 0 9px 22px rgb(16 24 40 / .075);
+}
 .role-header {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  min-height: 104px; margin: 0 -1.25rem; padding: 1.1rem 1.5rem;
-  border: 0; border-radius: 0 0 24px 24px; background: var(--brand);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--brand) 24%, transparent);
+  min-height: 82px; margin: 0; padding: .95rem 1.5rem;
+  border: 0; border-radius: 0; background: var(--brand);
 }
 .role-school-lockup { display: flex; align-items: center; gap: .72rem; color: #fff; }
 .role-school-lockup .logo { background: rgb(255 255 255 / .18); color: #fff; }
@@ -793,7 +799,27 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .account-name { color: #fff; }
 .role-header .link { color: #fff; }
 .role-header .link:hover:not(:disabled) { color: #fff; }
-.mobile-section-nav { display: none; }
+.app-section-nav {
+  display: flex; align-items: center; gap: .3rem; min-height: 58px;
+  padding: .48rem .85rem; overflow-x: auto; scrollbar-width: thin;
+  border: 1px solid var(--line); border-top: 0; border-radius: 0 0 22px 22px;
+  background: rgb(255 255 255 / .98);
+}
+.app-section-nav a {
+  display: inline-flex; align-items: center; gap: .5rem; flex: 0 0 auto; min-height: 40px;
+  border: 1px solid transparent; border-radius: 11px; color: var(--ink-soft);
+  padding: .5rem .78rem; font-size: .82rem; font-weight: 780; text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+.app-section-nav a:hover { background: var(--brand-soft); color: var(--brand-dark); }
+.app-section-nav a:focus-visible { outline: 3px solid #9ab6f6; outline-offset: 2px; }
+.app-section-nav a.active {
+  border-color: color-mix(in srgb, var(--brand) 25%, white);
+  background: var(--brand-soft); color: var(--brand-dark);
+  box-shadow: inset 0 -2px 0 var(--brand);
+}
+.app-section-nav .icon { width: 1rem; height: 1rem; }
+.nav-label-short { display: none; }
 .dashboard-hero { padding: 2.3rem 0 1.55rem; }
 .dashboard-hero h1 { font-size: clamp(2rem, 4vw, 2.85rem); }
 .dashboard-hero .eyebrow, .eyebrow { color: var(--brand); }
@@ -904,7 +930,7 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .password-toggle:hover:not(:disabled) { background: var(--brand-soft); }
 .empty { border: 0; background: #f8fafc; box-shadow: inset 0 0 0 1px var(--line); }
 .empty::before { content: '•'; display: block; width: 28px; height: 28px; margin: 0 auto .4rem; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: 1.3rem; line-height: 23px; }
-@media (max-width: 760px) { .right-now-grid { grid-template-columns: 1fr; } .student-snapshot { grid-template-columns: repeat(2, 1fr); } .roster-row { flex-direction: column; } .attendance-segments { width: 100%; justify-content: stretch; } .attendance-choice { flex: 1; } .role-header { position: sticky; top: 0; z-index: 20; margin: 0 -1rem; padding: .75rem 1rem; border-radius: 0 0 18px 18px; } .mobile-section-nav { position: sticky; top: 73px; z-index: 19; display: flex; gap: .35rem; overflow-x: auto; margin: 0 -.85rem; padding: .5rem .85rem; background: var(--canvas); border-bottom: 1px solid var(--line); } .mobile-section-nav a { flex: 0 0 auto; min-height: 36px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink-soft); padding: .42rem .7rem; font-size: .73rem; font-weight: 800; text-decoration: none; } [id] { scroll-margin-top: 126px; } }
+@media (max-width: 760px) { .right-now-grid { grid-template-columns: 1fr; } .student-snapshot { grid-template-columns: repeat(2, 1fr); } .roster-row { flex-direction: column; } .attendance-segments { width: 100%; justify-content: stretch; } .attendance-choice { flex: 1; } .application-shell { position: sticky; top: 0; z-index: 20; margin: 0 -1rem; box-shadow: 0 6px 16px rgb(16 24 40 / .08); } .role-header { position: static; min-height: 72px; margin: 0; padding: .72rem 1rem; } .app-section-nav { position: static; min-height: 52px; gap: .25rem; padding: .38rem .65rem; border-radius: 0; } .app-section-nav a { min-height: 38px; gap: .36rem; border-radius: 10px; padding: .42rem .62rem; font-size: .72rem; } .app-section-nav a.active { box-shadow: inset 0 -2px 0 var(--brand); } .nav-label-long { display: none; } .nav-label-short { display: inline; } [id] { scroll-margin-top: 136px; } }
 .attention-panel .update-card { border: 0; border-left: 3px solid #b45309; margin: .75rem 0 0; padding: .85rem 0 .15rem .85rem; }
 .attention-panel .ack { flex-wrap: wrap; }
 .parent-updates .timeline { gap: .65rem; }
@@ -929,7 +955,6 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .principal-dashboard > .card:last-child { border-top: 3px solid #e5e9f0; }
 
 @media (max-width: 760px) {
-  .role-header { min-height: 74px; }
   .account-name { display: none; }
   .teacher-today-card { align-items: flex-start; flex-wrap: wrap; }
   .today-status { margin-left: auto; }

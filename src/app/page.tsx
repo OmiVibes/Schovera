@@ -66,6 +66,30 @@ function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' 
 const initials = (name: string) =>
   name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 
+const roleNavigation: Record<
+  Role,
+  { label: string; id: string; icon: 'school' | 'student' | 'updates' | 'attendance' | 'notice' }[]
+> = {
+  teacher: [
+    { label: 'Overview', id: 'teacher-home', icon: 'school' },
+    { label: 'Students', id: 'teacher-students', icon: 'student' },
+    { label: 'Attendance', id: 'teacher-attendance', icon: 'attendance' },
+    { label: 'School notices', id: 'teacher-notices', icon: 'notice' },
+  ],
+  parent: [
+    { label: 'Home', id: 'parent-home', icon: 'school' },
+    { label: 'Updates', id: 'parent-updates', icon: 'updates' },
+    { label: 'Attendance', id: 'parent-attendance', icon: 'attendance' },
+    { label: 'School notices', id: 'parent-notices', icon: 'notice' },
+  ],
+  principal: [
+    { label: 'Overview', id: 'principal-overview', icon: 'school' },
+    { label: 'Communication', id: 'principal-communication', icon: 'updates' },
+    { label: 'Attendance', id: 'principal-attendance', icon: 'attendance' },
+    { label: 'School notices', id: 'principal-notices', icon: 'notice' },
+  ],
+};
+
 export default function Page() {
   const db = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null),
@@ -74,7 +98,8 @@ export default function Page() {
     [email, setEmail] = useState(''),
     [password, setPassword] = useState(''),
     [showPassword, setShowPassword] = useState(false),
-    [signingIn, setSigningIn] = useState(false);
+    [signingIn, setSigningIn] = useState(false),
+    [activeSection, setActiveSection] = useState('');
   const load = async () => {
     setBusy(true);
     const {
@@ -185,30 +210,70 @@ export default function Page() {
     );
   return (
     <main className={`app role-${profile.role}`}>
-      <header className="role-header">
-        <div className="role-school-lockup">
-          <div className="logo small" aria-hidden="true">S</div>
-          <div>
-            <strong>Schovera</strong>
-            <span>Schovera International School</span>
+      <header className="application-shell">
+        <div className="role-header">
+          <div className="role-school-lockup">
+            <div className="logo small" aria-hidden="true">S</div>
+            <div>
+              <strong>Schovera</strong>
+              <span>Schovera International School</span>
+            </div>
+          </div>
+          <div className="account-actions">
+            <span className="role-chip">{nice(profile.role)}</span>
+            <span className="account-avatar" aria-hidden="true">{initials(profile.full_name)}</span>
+            <span className="account-name">{profile.full_name}</span>
+            <button
+              className="link"
+              type="button"
+              onClick={() => db.auth.signOut()}
+            >
+              Sign out
+            </button>
           </div>
         </div>
-        <div className="account-actions">
-          <span className="role-chip">{nice(profile.role)}</span>
-          <span className="account-avatar" aria-hidden="true">{initials(profile.full_name)}</span>
-          <span className="account-name">{profile.full_name}</span>
-          <button
-            className="link"
-            type="button"
-            onClick={() => db.auth.signOut()}
-          >
-            Sign out
-          </button>
-        </div>
+        <nav className="app-section-nav" aria-label={`${nice(profile.role)} workspace sections`}>
+          {roleNavigation[profile.role].map((item, index) => {
+            const isActive = activeSection
+              ? activeSection === item.id
+              : index === 0;
+            return (
+              <a
+                key={item.id}
+                className={isActive ? 'active' : ''}
+                href={`#${item.id}`}
+                aria-current={isActive ? 'location' : undefined}
+                onClick={(event) => {
+                  setActiveSection(item.id);
+                  if (
+                    profile.role === 'teacher' &&
+                    (item.id === 'teacher-students' ||
+                      item.id === 'teacher-attendance')
+                  ) {
+                    event.preventDefault();
+                    window.history.replaceState(null, '', `#${item.id}`);
+                    window.dispatchEvent(
+                      new CustomEvent('schovera:section-navigation', {
+                        detail: { id: item.id },
+                      }),
+                    );
+                  }
+                }}
+              >
+                <Icon name={item.icon} />
+                {item.label === 'School notices' ? (
+                  <>
+                    <span className="nav-label-long">School notices</span>
+                    <span className="nav-label-short">Notices</span>
+                  </>
+                ) : (
+                  <span>{item.label}</span>
+                )}
+              </a>
+            );
+          })}
+        </nav>
       </header>
-      <nav className="mobile-section-nav" aria-label="Page sections">
-        {(profile.role === 'parent' ? [['Home','parent-home'],['Updates','parent-updates'],['Attendance','parent-attendance'],['Notices','parent-notices']] : profile.role === 'teacher' ? [['Home','teacher-home'],['Students','teacher-students'],['Attendance','teacher-attendance'],['Notices','teacher-notices']] : [['Overview','principal-overview'],['Attendance','principal-attendance'],['Notices','principal-notices']]).map(([label, id]) => <a key={id} href={`#${id}`}>{label}</a>)}
-      </nav>
       {profile.role !== 'parent' && (
         <section className="dashboard-hero">
           <div>
@@ -253,6 +318,32 @@ function Teacher({ profile }: { profile: Profile }) {
     [attendanceNote, setAttendanceNote] = useState(''),
     [sending, setSending] = useState(false),
     [note, setNote] = useState('');
+  useEffect(() => {
+    const navigateToSection = (event: Event) => {
+      const id = (event as CustomEvent<{ id?: string }>).detail?.id;
+      const nextMode =
+        id === 'teacher-attendance'
+          ? 'attendance'
+          : id === 'teacher-students'
+            ? 'updates'
+            : null;
+      if (!nextMode || !id) return;
+      setMode(nextMode);
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document
+            .getElementById(id)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    };
+    window.addEventListener('schovera:section-navigation', navigateToSection);
+    return () =>
+      window.removeEventListener(
+        'schovera:section-navigation',
+        navigateToSection,
+      );
+  }, []);
   useEffect(() => {
     db.from('teacher_class_assignments')
       .select('classes(id,grade,division)')
@@ -978,7 +1069,7 @@ function Principal({ profile }: { profile: Profile }) {
     markedClassIds = new Set(todayAttendance.map((row) => row.class_id));
   return (
     <section className="principal-dashboard" id="principal-overview">
-      <section className="communication-overview" aria-labelledby="communication-overview-heading">
+      <section className="communication-overview" id="principal-communication" aria-labelledby="communication-overview-heading">
         <div className="overview-heading"><span className="section-icon"><Icon name="updates" /></span><div><p className="eyebrow">COMMUNICATION COVERAGE</p><h2 id="communication-overview-heading">School-to-home communication</h2></div></div>
         <div className="metrics">
         {[
