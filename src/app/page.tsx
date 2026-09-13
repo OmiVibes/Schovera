@@ -1227,9 +1227,14 @@ function Announcements({
     }
   };
   return (
-    <div className="card announcements">
-      <p className="eyebrow">SCHOOL NOTICES</p>
-      <h2>{publish ? 'Publish a school notice' : 'School Notices'}</h2>
+    <section className={`card announcements ${publish ? 'announcements-publish' : ''}`} aria-labelledby={publish ? 'notice-publish-heading' : 'school-notices-heading'}>
+      <div className="notice-section-heading">
+        <span className="notice-section-icon" aria-hidden="true"><Icon name="notice" /></span>
+        <div>
+          <p className="eyebrow">{publish ? 'CREATE NOTICE' : 'SCHOOL NOTICES'}</p>
+          <h2 id={publish ? 'notice-publish-heading' : 'school-notices-heading'}>{publish ? 'Publish a school notice' : 'Official updates from your school'}</h2>
+        </div>
+      </div>
       {parentView && (
         <p className="hint">
           These are school-wide notices. They are separate from updates about
@@ -1237,7 +1242,7 @@ function Announcements({
         </p>
       )}
       {publish && (
-        <form onSubmit={submit}>
+        <form className="notice-composer" onSubmit={submit}>
           <label>
             Title
             <input
@@ -1275,32 +1280,53 @@ function Announcements({
         <p
           className={
             note.startsWith('Could') || note.includes('loaded')
-              ? 'error'
-              : 'success'
+              ? 'error notice-feedback'
+              : 'success notice-feedback'
           }
+          role={note.startsWith('Could') || note.includes('loaded') ? 'alert' : 'status'}
         >
+          {!note.startsWith('Could') && !note.includes('loaded') && <Icon name="check" />}
           {note}
         </p>
       )}
+      {publish && !loading && <div className="published-notices-heading"><span>RECENT SCHOOL NOTICES</span><p>Official messages already shared with your school community.</p></div>}
       {loading ? (
-        <Skeleton label="Loading school notices" rows={3} />
+        <NoticeSkeleton />
       ) : announcements.length ? (
         <div className="announcement-list">
           {announcements.map((announcement) => (
-            <article key={announcement.id}>
-              <span className="badge">School-wide notice</span>
-              {announcement.priority === 'important' && (
-                <span className="important">Important</span>
-              )}
+            <article className={`school-notice-card ${announcement.priority === 'important' ? 'important-notice' : ''}`} key={announcement.id}>
+              <header>
+                <span className="notice-card-icon" aria-hidden="true"><Icon name="school" /></span>
+                <span className="notice-origin">School-wide notice</span>
+                {announcement.priority === 'important' && <span className="notice-important"><Icon name="important" /> Important</span>}
+              </header>
               <h3>{announcement.title}</h3>
               <p>{announcement.body}</p>
-              <small>Published {displayDate(announcement.published_at)}</small>
+              <footer>
+                <Icon name="school" />
+                <span>Schovera International School</span>
+                <span aria-hidden="true">•</span>
+                <time dateTime={announcement.published_at}>Published {displayDate(announcement.published_at)}</time>
+              </footer>
             </article>
           ))}
         </div>
       ) : (
-        <p className="empty">No new school notices.</p>
+        <div className="notice-empty-state">
+          <span className="notice-card-icon" aria-hidden="true"><Icon name="notice" /></span>
+          <div><h3>{publish ? 'No notices published yet' : 'No school notices yet'}</h3><p>{publish ? 'Publish the first school notice above.' : 'New school-wide announcements will appear here.'}</p></div>
+        </div>
       )}
+    </section>
+  );
+}
+
+function NoticeSkeleton() {
+  return (
+    <div className="notice-skeleton" aria-label="Loading school notices" role="status">
+      <span className="notice-skeleton-icon" />
+      <div><span className="notice-skeleton-title" /><span className="notice-skeleton-line" /><span className="notice-skeleton-line short" /><span className="notice-skeleton-meta" /></div>
     </div>
   );
 }
