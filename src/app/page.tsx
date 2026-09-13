@@ -846,6 +846,7 @@ function Parent({ profile }: { profile: Profile }) {
   };
   return (
     <section className="parent-dashboard" id="parent-home">
+      <div className="parent-top-grid">
       <section
         className="parent-welcome child-identity-card"
         aria-labelledby="parent-child-heading"
@@ -886,6 +887,7 @@ function Parent({ profile }: { profile: Profile }) {
           <p className="attention-copy">No important updates need your attention right now.</p>
         )}
       </section>
+      </div>
       <section className="right-now" aria-labelledby="right-now-heading">
         <div className="section-heading"><p className="eyebrow">RIGHT NOW</p><h2 id="right-now-heading">At a glance</h2></div>
         <div className="right-now-grid">
@@ -904,6 +906,7 @@ function Parent({ profile }: { profile: Profile }) {
         <div className="section-heading">
           <p className="eyebrow">CHILD-SPECIFIC UPDATES</p>
           <h2 id="child-updates-heading">Recent updates</h2>
+          <p className="hint">Recent communication from your child&apos;s teacher.</p>
         </div>
         {acknowledgementNote && (
           <p className="success" role="status">
