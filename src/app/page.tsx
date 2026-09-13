@@ -50,7 +50,7 @@ const displayDate = (value: string) =>
     timeStyle: 'short',
   });
 
-function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'important' | 'check' }) {
+function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'important' | 'check' | 'academic' | 'achievement' | 'behaviour' | 'homework' | 'general' }) {
   const paths = {
     school: <><path d="M3 10.5 12 5l9 5.5v8.5H3z" /><path d="M7 21v-6h10v6M9 12h.01M12 12h.01M15 12h.01" /></>,
     student: <><circle cx="12" cy="8" r="3.25" /><path d="M5.5 21c.7-3.65 2.85-5.5 6.5-5.5s5.8 1.85 6.5 5.5" /></>,
@@ -59,12 +59,24 @@ function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' 
     notice: <><path d="M6 5h12v14H6z" /><path d="M9 9h6M9 12h6M9 15h4" /></>,
     important: <><path d="M12 3 21 20H3z" /><path d="M12 9v4M12 17h.01" /></>,
     check: <path d="m5 12 4.2 4.2L19 6.5" />,
+    academic: <><path d="m4 6 8-3 8 3-8 3zM6.5 10v5.5c3.2 2.1 7.8 2.1 11 0V10" /><path d="M20 6v6" /></>,
+    achievement: <><path d="M8 4h8v5a4 4 0 0 1-8 0z" /><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8.5 21h7M9 17h6" /></>,
+    behaviour: <><circle cx="12" cy="8" r="3" /><path d="M6 21c.6-3.7 2.6-5.5 6-5.5s5.4 1.8 6 5.5M18 4l1 1 2-1" /></>,
+    homework: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4v3M15 4v3M9 11h6M9 15h4" /></>,
+    general: <><path d="M5 5h14v10H9l-4 4z" /><path d="M8 9h8M8 12h5" /></>,
   }[name];
   return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths}</svg>;
 }
 
 const initials = (name: string) =>
   name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+
+const categoryIcon = (category: string): 'academic' | 'attendance' | 'achievement' | 'behaviour' | 'homework' | 'general' =>
+  category === 'homework_task'
+    ? 'homework'
+    : ['academic', 'attendance', 'achievement', 'behaviour', 'general'].includes(category)
+      ? (category as 'academic' | 'attendance' | 'achievement' | 'behaviour' | 'general')
+      : 'general';
 
 const roleNavigation: Record<
   Role,
@@ -548,21 +560,25 @@ function Teacher({ profile }: { profile: Profile }) {
         <div className="card teacher-task-panel">
           {student ? (
             <>
-              <p className="eyebrow">STEP 3 · PARENT UPDATE FOR</p>
+              <p className="eyebrow">PARENT UPDATE FOR</p>
               <div className="selected-student">
                 <span className="student-avatar">{initials(student.full_name)}</span>
                 <div><h2>{student.full_name}</h2><span>Grade {classes.find((row) => row.id === classId)?.grade}{classes.find((row) => row.id === classId)?.division} · Roll {student.roll_number}</span></div>
+                <span className="selected-indicator"><Icon name="check" /> Selected</span>
               </div>
               <div className="student-snapshot" aria-label="Selected student context">
-                <span><small>Students</small><b>{students.length}</b></span>
                 <span><small>Attendance</small><b className={`status ${records[student.id] || 'present'}`}>{nice(records[student.id] || 'present')}</b></span>
                 <span><small>Latest update</small><b>{updates[0] ? nice(updates[0].category) : 'None yet'}</b></span>
-                <span><small>Important</small><b>{updates.find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'Awaiting' : 'Up to date'}</b></span>
+                <span><small>Last sent</small><b>{updates[0] ? new Date(updates[0].sent_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '—'}</b></span>
+                <span><small>Important update</small><b className={updates.find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'snapshot-awaiting' : 'snapshot-acknowledged'}>{updates.find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'Awaiting' : 'Up to date'}</b></span>
               </div>
-              <h2 className="form-title">Send an update</h2>
-              <form onSubmit={send}>
-                <label>
-                  Category
+              <div className="teacher-form-heading">
+                <div><p className="eyebrow">NEW COMMUNICATION</p><h2 className="form-title">Send an update</h2></div>
+                <span>About {student.full_name.split(' ')[0]}</span>
+              </div>
+              <form className="teacher-update-form" onSubmit={send}>
+                <label className="category-field">
+                  <span><Icon name="updates" /> Category</span>
                   <select name="category">
                     {categories.map((category) => (
                       <option key={category} value={category}>
@@ -592,9 +608,9 @@ function Teacher({ profile }: { profile: Profile }) {
                     placeholder="Write a short, kind, specific update…"
                   />
                 </label>
-                <label className="check">
-                  <input name="important" type="checkbox" /> Important —
-                  acknowledgement required
+                <label className="check importance-control">
+                  <input name="important" type="checkbox" />
+                  <span><b>Important update</b><small>Ask the linked parent to acknowledge this message.</small></span>
                 </label>
                 <button disabled={sending}>
                   {sending ? 'Sending update…' : 'Send update to parent'}
@@ -1302,31 +1318,32 @@ function Card({
   const mine = update.acknowledgements?.find(
     (acknowledgement) => acknowledgement.parent_id === parent,
   );
+  const acknowledged = Boolean(mine || (!parent && update.acknowledgements?.length));
   return (
     <article
       className={
         update.importance === 'important'
-          ? 'update-card important-update'
-          : 'update-card'
+          ? `update-card important-update${teacher ? ' teacher-update-card' : ''}`
+          : `update-card${teacher ? ' teacher-update-card' : ''}`
       }
     >
-      <div className="card-topline"><span className="update-icon"><Icon name="updates" /></span><span className="badge">{nice(update.category)}</span>
+      <div className="card-topline"><span className="update-icon"><Icon name={teacher ? categoryIcon(update.category) : 'updates'} /></span><span className="badge">{nice(update.category)}</span>
       {update.importance === 'important' && (
         <span className="important">Important</span>
       )}</div>
       <h3>{update.title}</h3>
       <p>{update.message}</p>
-      <small>
+      <small className={teacher ? 'teacher-update-meta' : undefined}>
         {update.profiles?.full_name && `${update.profiles.full_name} · `}
         {update.students?.full_name && `${update.students.full_name} · `}
         {displayDate(update.sent_at)}
       </small>
       {update.importance === 'important' && (
-        <div className="ack">
-          {mine || (!parent && update.acknowledgements?.length) ? (
-            <b className="status present">✓ Acknowledged</b>
+        <div className={`ack${teacher ? ' teacher-ack' : ''}`}>
+          {acknowledged ? (
+            <b className="status present">{teacher && <Icon name="check" />}Acknowledged</b>
           ) : teacher ? (
-            <span className="status pending">Awaiting acknowledgement</span>
+            <span className="status pending"><Icon name="important" /> Awaiting acknowledgement</span>
           ) : (
             <>
               <span>Please acknowledge this update.</span>
