@@ -1211,6 +1211,38 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .notice-empty-state { display: flex; align-items: center; gap: .75rem; margin-top: .9rem; border: 1px solid #e3e8f0; border-radius: 15px; background: #fafbfe; padding: .9rem; }
 .notice-empty-state h3 { margin: 0 0 .14rem; color: #27354a; font-size: .94rem; }.notice-empty-state p { margin: 0; color: #68768a; font-size: .84rem; }
 
+/* Parent child communication and read-only attendance details. */
+.parent-dashboard .parent-update-card { margin: 0 0 .7rem; border: 1px solid #e1e6ee; border-left: 3px solid #d28725; border-radius: 15px; background: #fff; padding: .9rem .95rem .8rem; box-shadow: 0 3px 10px rgb(16 24 40 / .035); }
+.parent-dashboard .parent-update-card:not(.important-update) { border-left-color: #cbd5e1; background: #fff; }
+.parent-dashboard .parent-update-card:not(.important-update) .update-icon { background: #f4f6f9; color: #607086; }
+.parent-dashboard .parent-update-card.important-update { border-left-color: #bd6a08; background: #fffdf8; }
+.parent-dashboard .parent-update-card.acknowledged-update { border-color: #cfe8dd; border-left-color: #16805d; background: #fbfffc; }
+.parent-update-card > small { display: none; }
+.parent-update-card .card-topline { gap: .42rem; }
+.parent-update-card .update-icon { width: 30px; height: 30px; padding: .42rem; border-radius: 10px; background: #fff1d5; color: #b65a08; }
+.parent-update-card .badge, .parent-update-card .important { min-height: 22px; padding: .16rem .45rem; font-size: .68rem; }
+.parent-update-card h3 { margin: .6rem 0 .18rem; color: #1e293b; font-size: .98rem; line-height: 1.32; }
+.parent-update-context { display: inline-flex; align-items: center; gap: .28rem; margin: 0 0 .42rem !important; color: #7a613d !important; font-size: .74rem !important; font-weight: 650; line-height: 1.35 !important; }
+.parent-update-context .icon { width: .86rem; height: .86rem; color: #b65a08; }
+.parent-update-card > p:not(.parent-update-context) { max-width: 68ch; margin: .18rem 0 .62rem; color: #4c5b70; font-size: .88rem; line-height: 1.52; }
+.parent-update-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; margin-top: .45rem; border-top: 1px solid #e7ebf0; padding-top: .55rem; color: #718096; font-size: .73rem; }
+.parent-update-meta span::after { content: '•'; margin-left: .45rem; color: #b3bdca; }.parent-update-meta time { color: #667085; }
+.parent-update-card .ack { margin-top: .65rem; border-top: 0; padding-top: 0; }
+.parent-update-card .ack-copy { color: #925300; font-size: .78rem; font-weight: 750; }
+.parent-update-card .ack button { min-height: 40px; padding: .5rem .8rem; background: #b65a08; font-size: .78rem; }
+.parent-update-card .ack button:hover:not(:disabled) { background: #914705; }
+.parent-acknowledged { display: inline-flex; align-items: center; gap: .42rem; color: #087a55; font-size: .78rem; }
+.parent-acknowledged > .icon { width: 1.5rem; height: 1.5rem; padding: .32rem; border-radius: 50%; background: #e9f8f0; }
+.parent-acknowledged > span { display: grid; gap: .04rem; }.parent-acknowledged b { font-size: .8rem; }.parent-acknowledged small { color: #547469; font-size: .7rem; font-weight: 550; }
+.parent-dashboard #parent-attendance .attendance-card { border-top: 3px solid #d99542; }
+.attendance-latest { display: flex; align-items: center; gap: .65rem; margin: .65rem 0 .85rem; border: 1px solid #e2e8ef; border-radius: 13px; background: #fbfcfe; padding: .65rem; }
+.attendance-latest-icon { display: inline-grid; flex: 0 0 auto; place-items: center; width: 2.15rem; height: 2.15rem; border-radius: 10px; }
+.attendance-latest-icon .icon { width: 1.05rem; height: 1.05rem; }.attendance-latest > div { display: grid; gap: .04rem; }.attendance-latest > div > span, .attendance-latest time { color: #718096; font-size: .7rem; font-weight: 650; }.attendance-latest b { font-size: .94rem; }
+.attendance-latest.present .attendance-latest-icon { background: #e9f8f0; color: #087a55; }.attendance-latest.absent .attendance-latest-icon { background: #fff0ef; color: #b42318; }.attendance-latest.late .attendance-latest-icon { background: #fff3d7; color: #b65a08; }
+.attendance-history-row { display: flex; align-items: center; justify-content: space-between; gap: .7rem; border-top: 1px solid #e8ecf1; padding: .55rem 0; color: #526174; font-size: .8rem; }
+.attendance-history-row > span { display: inline-flex; align-items: center; gap: .3rem; border-radius: 999px; padding: .22rem .45rem; font-size: .72rem; font-weight: 750; }.attendance-history-row .icon { width: .82rem; height: .82rem; }
+.attendance-history-row.present > span { background: #e9f8f0; color: #087a55; }.attendance-history-row.absent > span { background: #fff0ef; color: #b42318; }.attendance-history-row.late > span { background: #fff3d7; color: #b65a08; }
+
 /* Parent dashboard architecture: child communication leads; school data supports. */
 .parent-dashboard {
   max-width: 1200px;

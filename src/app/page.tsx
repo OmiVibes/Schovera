@@ -882,7 +882,7 @@ function Parent({ profile }: { profile: Profile }) {
             : 'You are all caught up'}
         </h2>
         {awaitingAcknowledgement.length ? (
-          <Card update={awaitingAcknowledgement[0]} parent={profile.id} acknowledging={acknowledgingId === awaitingAcknowledgement[0].id} acknowledge={acknowledgeUpdate} />
+          <Card update={awaitingAcknowledgement[0]} parent={profile.id} childContext={`${child?.full_name || 'Your child'} • ${className}`} acknowledging={acknowledgingId === awaitingAcknowledgement[0].id} acknowledge={acknowledgeUpdate} />
         ) : (
           <p className="attention-copy">No important updates need your attention right now.</p>
         )}
@@ -923,6 +923,7 @@ function Parent({ profile }: { profile: Profile }) {
           key={update.id}
           update={update}
           parent={profile.id}
+          childContext={`${child?.full_name || 'Your child'} • ${className}`}
           acknowledging={acknowledgingId === update.id}
           acknowledge={async (updateId) => {
             if (acknowledgingId) return;
@@ -985,12 +986,10 @@ function AttendanceSummary({
     <div className="card attendance-card">
       <p className="eyebrow">ATTENDANCE</p>
       <h2>Attendance</h2>
-      <p className="attendance-today">
-        Latest:{' '}
-        <b className={`status ${attendance[0].status}`}>
-          {nice(attendance[0].status)}
-        </b>
-      </p>
+      <div className={`attendance-latest ${attendance[0].status}`}>
+        <span className="attendance-latest-icon" aria-hidden="true"><Icon name={attendance[0].status === 'present' ? 'check' : attendance[0].status === 'absent' ? 'important' : 'attendance'} /></span>
+        <div><span>Latest attendance</span><b>{nice(attendance[0].status)}</b><time dateTime={attendance[0].attendance_date}>{new Date(`${attendance[0].attendance_date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}</time></div>
+      </div>
       <h3 className="attendance-recent-heading">Recent attendance</h3>
       <div className="attendance-counts">
         <span>
@@ -1005,12 +1004,10 @@ function AttendanceSummary({
       </div>
       <div className="history-list">
         {attendance.slice(0, 5).map((row) => (
-          <p key={row.id}>
-            <span>
-              {new Date(`${row.attendance_date}T00:00:00`).toLocaleDateString()}
-            </span>
-            <b className={`status ${row.status}`}>{nice(row.status)}</b>
-          </p>
+          <div className={`attendance-history-row ${row.status}`} key={row.id}>
+            <time dateTime={row.attendance_date}>{new Date(`${row.attendance_date}T00:00:00`).toLocaleDateString()}</time>
+            <span><Icon name={row.status === 'present' ? 'check' : row.status === 'absent' ? 'important' : 'attendance'} />{nice(row.status)}</span>
+          </div>
         ))}
       </div>
     </div>
@@ -1338,12 +1335,14 @@ function Card({
   update,
   teacher,
   parent,
+  childContext,
   acknowledging = false,
   acknowledge,
 }: {
   update: Update;
   teacher?: boolean;
   parent?: string;
+  childContext?: string;
   acknowledging?: boolean;
   acknowledge?: (id: string) => void;
 }) {
@@ -1355,32 +1354,43 @@ function Card({
     <article
       className={
         update.importance === 'important'
-          ? `update-card important-update${teacher ? ' teacher-update-card' : ''}`
-          : `update-card${teacher ? ' teacher-update-card' : ''}`
+          ? `update-card important-update${teacher ? ' teacher-update-card' : ''}${parent ? ' parent-update-card' : ''}${parent && acknowledged ? ' acknowledged-update' : ''}`
+          : `update-card${teacher ? ' teacher-update-card' : ''}${parent ? ' parent-update-card' : ''}${parent && acknowledged ? ' acknowledged-update' : ''}`
       }
     >
-      <div className="card-topline"><span className="update-icon"><Icon name={teacher ? categoryIcon(update.category) : 'updates'} /></span><span className="badge">{nice(update.category)}</span>
+      <div className="card-topline"><span className="update-icon" aria-hidden="true"><Icon name={teacher || parent ? categoryIcon(update.category) : 'updates'} /></span><span className="badge">{nice(update.category)}</span>
       {update.importance === 'important' && (
         <span className="important">Important</span>
       )}</div>
       <h3>{update.title}</h3>
+      {parent && childContext && <p className="parent-update-context"><Icon name="student" /> About {childContext}</p>}
       <p>{update.message}</p>
       <small className={teacher ? 'teacher-update-meta' : undefined}>
         {update.profiles?.full_name && `${update.profiles.full_name} · `}
         {update.students?.full_name && `${update.students.full_name} · `}
         {displayDate(update.sent_at)}
       </small>
+      {parent && (
+        <footer className="parent-update-meta">
+          {update.profiles?.full_name && <span>From {update.profiles.full_name}</span>}
+          <time dateTime={update.sent_at}>{displayDate(update.sent_at)}</time>
+        </footer>
+      )}
       {update.importance === 'important' && (
         <div className={`ack${teacher ? ' teacher-ack' : ''}`}>
           {acknowledged ? (
-            <b className="status present">{teacher && <Icon name="check" />}Acknowledged</b>
+            parent ? (
+              <span className="parent-acknowledged" role="status"><Icon name="check" /><span><b>Acknowledged</b>{mine && <small>{displayDate(mine.acknowledged_at)}</small>}</span></span>
+            ) : <b className="status present">{teacher && <Icon name="check" />}Acknowledged</b>
           ) : teacher ? (
             <span className="status pending"><Icon name="important" /> Awaiting acknowledgement</span>
           ) : (
             <>
-              <span>Please acknowledge this update.</span>
+              <span className="ack-copy">Acknowledgement requested</span>
               <button
                 disabled={acknowledging}
+                aria-busy={acknowledging}
+                aria-label={`Acknowledge update: ${update.title}`}
                 onClick={() => acknowledge?.(update.id)}
               >
                 {acknowledging ? 'Acknowledging…' : 'Acknowledge'}
