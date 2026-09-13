@@ -678,70 +678,73 @@ function AttendanceMarker({
   onStatus,
   onSave,
 }: any) {
+  const saved = note.startsWith('Attendance saved');
   return (
-    <div className="card">
+    <div className="card teacher-attendance-register">
       {!classId ? (
-        <p className="empty">Select an assigned class to mark attendance.</p>
+        <div className="attendance-empty-state">
+          <span className="section-icon"><Icon name="attendance" /></span>
+          <h2>Select a class to begin</h2>
+          <p>Choose one of your assigned classes to open its daily register.</p>
+        </div>
       ) : (
         <>
-          <p className="eyebrow">
-            {classLabel
-              ? `GRADE ${classLabel.grade}${classLabel.division} · DAILY ATTENDANCE`
-              : 'DAILY ATTENDANCE'}
-          </p>
-          <h2>Attendance register</h2>
-          <label>
-            Date
-            <input
-              type="date"
-              max={today()}
-              value={date}
-              onChange={(e) => onDate(e.target.value)}
-            />
-          </label>
-          <div className="attendance-counts">
-            <span>
-              <b>{students.length}</b>Total
-            </span>
-            <span>
-              <b>{counts.present}</b>Present
-            </span>
-            <span>
-              <b>{counts.absent}</b>Absent
-            </span>
-            <span>
-              <b>{counts.late}</b>Late
-            </span>
+          <header className="attendance-register-header">
+            <div>
+              <p className="eyebrow">DAILY ATTENDANCE</p>
+              <h2>Attendance register</h2>
+              <p>{classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Selected class'} · {students.length} students</p>
+            </div>
+            <label className="attendance-date-field">
+              <span>Date</span>
+              <input
+                type="date"
+                max={today()}
+                value={date}
+                onChange={(e) => onDate(e.target.value)}
+              />
+            </label>
+          </header>
+          <div className="attendance-register-guidance">
+            <span className="section-icon"><Icon name="check" /></span>
+            <p>Everyone starts as Present. Change only Absent or Late students.</p>
+            <span className={saved ? 'attendance-state saved' : 'attendance-state pending'}>{saved ? <><Icon name="check" /> Saved</> : <>Ready to mark</>}</span>
+          </div>
+          <div className="attendance-counts attendance-live-summary" aria-label="Live attendance summary" aria-live="polite">
+            <span className="attendance-total"><b>{students.length}</b>Total</span>
+            <span className="attendance-present"><b>{counts.present}</b>Present</span>
+            <span className="attendance-absent"><b>{counts.absent}</b>Absent</span>
+            <span className="attendance-late"><b>{counts.late}</b>Late</span>
           </div>
           {busy ? (
             <Skeleton label="Loading attendance" rows={4} />
           ) : (
             <div className="roster">
+              <div className="attendance-roster-heading" aria-hidden="true"><span>Student</span><span>Status</span></div>
               {students.map((student: any) => (
-                <label className="roster-row" key={student.id}>
-                  <span>
-                    {student.full_name}
-                    <small>Roll {student.roll_number}</small>
+                <div className={`roster-row attendance-row ${records[student.id] || 'present'}`} key={student.id}>
+                  <span className="attendance-student-identity">
+                    <i aria-hidden="true">{initials(student.full_name)}</i>
+                    <span><b>{student.full_name}</b><small>Roll {student.roll_number}</small></span>
                   </span>
-                  <span className="attendance-segments" role="group" aria-label={`Attendance for ${student.full_name}`}>
-                    {(['present', 'absent', 'late'] as Status[]).map((status) => <button type="button" key={status} className={`attendance-choice ${status} ${(records[student.id] || 'present') === status ? 'selected' : ''}`} aria-pressed={(records[student.id] || 'present') === status} onClick={() => onStatus(student.id, status)}>{nice(status)}</button>)}
+                  <span className="attendance-segments" role="group" aria-label={`Attendance status for ${student.full_name}`}>
+                    {(['present', 'absent', 'late'] as Status[]).map((status) => <button type="button" key={status} className={`attendance-choice ${status} ${(records[student.id] || 'present') === status ? 'selected' : ''}`} aria-pressed={(records[student.id] || 'present') === status} onClick={() => onStatus(student.id, status)}>{status === 'present' ? <Icon name="check" /> : status === 'absent' ? <Icon name="important" /> : <Icon name="attendance" />}{nice(status)}</button>)}
                   </span>
-                </label>
+                </div>
               ))}
             </div>
           )}
-          <button disabled={busy || !students.length} onClick={onSave}>
-            Save attendance
-          </button>
+          <div className="attendance-save-area">
+            <div><b>{counts.present} Present · {counts.absent} Absent · {counts.late} Late</b><span>{saved ? 'Attendance is saved for this date.' : 'Review exceptions, then save the register.'}</span></div>
+            <button disabled={busy || !students.length} onClick={onSave}>
+              {busy ? 'Saving attendance…' : saved ? 'Save changes' : 'Save attendance'}
+            </button>
+          </div>
           {note && (
             <p className={note.startsWith('Could') ? 'error' : 'success'}>
               {note}
             </p>
           )}
-          <p className="hint">
-            Everyone starts as Present. Change only Absent or Late students,
-            then save.
-          </p>
         </>
       )}
     </div>
