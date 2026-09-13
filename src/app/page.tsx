@@ -248,7 +248,8 @@ export default function Page() {
                   if (
                     profile.role === 'teacher' &&
                     (item.id === 'teacher-students' ||
-                      item.id === 'teacher-attendance')
+                      item.id === 'teacher-attendance' ||
+                      item.id === 'teacher-notices')
                   ) {
                     event.preventDefault();
                     window.history.replaceState(null, '', `#${item.id}`);
@@ -311,7 +312,7 @@ function Teacher({ profile }: { profile: Profile }) {
     [classId, setClassId] = useState(''),
     [student, setStudent] = useState<any>(null),
     [updates, setUpdates] = useState<Update[]>([]),
-    [mode, setMode] = useState<'updates' | 'attendance'>('updates'),
+    [mode, setMode] = useState<'updates' | 'attendance' | 'notices'>('updates'),
     [date, setDate] = useState(today()),
     [records, setRecords] = useState<Record<string, Status>>({}),
     [attendanceBusy, setAttendanceBusy] = useState(false),
@@ -326,7 +327,9 @@ function Teacher({ profile }: { profile: Profile }) {
           ? 'attendance'
           : id === 'teacher-students'
             ? 'updates'
-            : null;
+            : id === 'teacher-notices'
+              ? 'notices'
+              : null;
       if (!nextMode || !id) return;
       setMode(nextMode);
       window.requestAnimationFrame(() => {
@@ -480,15 +483,20 @@ function Teacher({ profile }: { profile: Profile }) {
         <div>
           <p className="eyebrow">TODAY AT SCHOVERA</p>
           <h2>{classId ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Choose your class'}</h2>
-          <p>{classId ? `${students.length || 'Your'} students · ${mode === 'attendance' ? 'Attendance register open' : 'Ready for parent updates'}` : 'Select your assigned class to begin.'}</p>
+          <p>{classId ? `${students.length || 'Your'} students · ${mode === 'attendance' ? 'Attendance register open' : mode === 'notices' ? 'Official school notices' : 'Ready for parent updates'}` : 'Select your assigned class to begin.'}</p>
         </div>
-        <span className="today-status">{mode === 'attendance' ? 'Attendance' : 'Student updates'}</span>
+        <span className="today-status">{mode === 'attendance' ? 'Attendance' : mode === 'notices' ? 'School notices' : 'Student updates'}</span>
       </section>
-    <section className="two">
-      <aside className="card teacher-sidebar">
+    <section className={`two teacher-mode-${mode}`}>
+      <aside className="card teacher-sidebar teacher-class-panel">
         <p className="eyebrow">YOUR CLASSROOM</p>
         <h2>Your classroom</h2>
-        <p className="hint">Choose a class, then use one of the three school tools below.</p>
+        <p className="hint">Choose the class you are working with now.</p>
+        <div className="teacher-class-status" aria-label="Current class status">
+          <span><small>Class</small><b>{classId ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Not selected'}</b></span>
+          <span><small>Students</small><b>{classId ? students.length : '—'}</b></span>
+          <span><small>Selected</small><b>{student ? student.full_name : 'None'}</b></span>
+        </div>
         <div className="chips" aria-label="Assigned classes">
           {classes.map((row) => (
             <button
@@ -500,21 +508,6 @@ function Teacher({ profile }: { profile: Profile }) {
               }}
             >{`Grade ${row.grade}${row.division}`}</button>
           ))}
-        </div>
-        <div className="chips">
-          <button
-            className={mode === 'updates' ? 'active' : ''}
-            onClick={() => setMode('updates')}
-          >
-            <Icon name="updates" /> Student updates
-          </button>
-          <button
-            className={mode === 'attendance' ? 'active' : ''}
-            onClick={() => setMode('attendance')}
-          >
-            <Icon name="attendance" /> Attendance
-          </button>
-          <span className="quick-action-static"><Icon name="notice" /> School notices</span>
         </div>
         {mode === 'updates' && (
           <>
@@ -549,10 +542,10 @@ function Teacher({ profile }: { profile: Profile }) {
             )}
           </>
         )}
-        <div id="teacher-notices"><Announcements profile={profile} /></div>
+        {mode !== 'notices' && <div className="teacher-sidebar-notices"><Announcements profile={profile} /></div>}
       </aside>
       {mode === 'updates' ? (
-        <div className="card">
+        <div className="card teacher-task-panel">
           {student ? (
             <>
               <p className="eyebrow">STEP 3 · PARENT UPDATE FOR</p>
@@ -632,8 +625,8 @@ function Teacher({ profile }: { profile: Profile }) {
             </p>
           )}
         </div>
-      ) : (
-        <div id="teacher-attendance"><AttendanceMarker
+      ) : mode === 'attendance' ? (
+        <div id="teacher-attendance" className="teacher-attendance-panel"><AttendanceMarker
           classId={classId}
           classLabel={classes.find((row) => row.id === classId)}
           students={students}
@@ -648,6 +641,8 @@ function Teacher({ profile }: { profile: Profile }) {
           }
           onSave={saveAttendance}
         /></div>
+      ) : (
+        <div id="teacher-notices" className="teacher-notices-panel"><Announcements profile={profile} /></div>
       )}
     </section>
     </section>

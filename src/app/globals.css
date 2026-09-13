@@ -864,6 +864,90 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .student-name small { font-weight: 500; }
 .student-chevron { color: var(--muted); font-size: 1.5rem; }
 .student.active { background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); border-color: color-mix(in srgb, var(--brand) 28%, white); }
+.role-teacher.app { width: min(1320px, 100%); }
+.role-teacher .teacher-workspace { gap: 1.15rem; }
+.role-teacher .teacher-today-card { min-height: 92px; }
+.teacher-mode-updates {
+  grid-template-columns: minmax(320px, .8fr) minmax(0, 1.5fr);
+  gap: 1.15rem;
+}
+.teacher-class-panel { gap: .8rem; }
+.teacher-class-panel > h2 { margin: -.35rem 0 0; font-size: 1.3rem; }
+.teacher-class-panel > .hint { margin: -.35rem 0 0; max-width: 30rem; }
+.teacher-class-status {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem;
+  padding: .65rem; border: 1px solid color-mix(in srgb, var(--brand) 14%, white);
+  border-radius: 14px; background: var(--brand-soft);
+}
+.teacher-class-status span { display: grid; min-width: 0; gap: .18rem; }
+.teacher-class-status small { color: var(--ink-soft); font-size: .67rem; font-weight: 750; }
+.teacher-class-status b { overflow: hidden; color: var(--brand-dark); font-size: .77rem; text-overflow: ellipsis; white-space: nowrap; }
+.teacher-class-panel > .chips { margin: 0; }
+.teacher-class-panel > .chips button { min-height: 38px; padding: .4rem .65rem; font-size: .78rem; }
+.teacher-mode-updates .teacher-class-panel { grid-row: span 2; }
+.teacher-mode-updates .teacher-sidebar-notices { display: none; }
+.teacher-mode-updates .section-heading { margin-top: .25rem; }
+.teacher-mode-updates .section-heading h2 { font-size: 1.05rem; }
+.teacher-mode-updates .student-list { max-height: min(54vh, 510px); padding-right: .1rem; }
+.teacher-mode-updates .student { min-height: 62px; }
+.teacher-mode-updates .student.active::after { content: 'Selected'; color: var(--brand-dark); font-size: .66rem; font-weight: 850; }
+.teacher-task-panel { min-height: 0; padding: clamp(1rem, 2vw, 1.45rem); }
+.teacher-task-panel > .eyebrow { margin-bottom: .45rem; }
+.teacher-task-panel .selected-student { position: relative; margin-bottom: .8rem; padding: .9rem; }
+.teacher-task-panel .selected-student::after { content: 'Selected student'; position: absolute; top: .55rem; right: .65rem; color: var(--brand-dark); font-size: .65rem; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
+.teacher-task-panel .form-title { margin: 1.05rem 0 .4rem; font-size: 1.2rem; }
+.teacher-task-panel form { border-top: 1px solid var(--line); padding-top: .9rem; }
+.teacher-task-panel form button { width: auto; min-width: 210px; margin-top: .25rem; }
+.teacher-task-panel .history-heading { border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1rem; }
+.teacher-task-panel .history-heading h2 { font-size: 1.05rem; }
+.teacher-task-panel > .empty { max-width: 29rem; margin: 2rem auto; padding: 1.3rem; }
+.teacher-mode-attendance, .teacher-mode-notices { grid-template-columns: 1fr; gap: .85rem; }
+.teacher-mode-attendance .teacher-class-panel, .teacher-mode-notices .teacher-class-panel {
+  display: grid; grid-template-columns: auto minmax(180px, .45fr) minmax(280px, 1fr) auto; align-items: center;
+  gap: 1rem; padding: .9rem 1.05rem;
+}
+.teacher-mode-attendance .teacher-class-panel > .eyebrow, .teacher-mode-notices .teacher-class-panel > .eyebrow { grid-column: 1; margin: 0; }
+.teacher-mode-attendance .teacher-class-panel > h2, .teacher-mode-notices .teacher-class-panel > h2 { grid-column: 1; margin: .15rem 0 0; white-space: nowrap; }
+.teacher-mode-attendance .teacher-class-panel > .hint, .teacher-mode-notices .teacher-class-panel > .hint { display: none; }
+.teacher-mode-attendance .teacher-class-status, .teacher-mode-notices .teacher-class-status { grid-column: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0; border: 0; background: transparent; }
+.teacher-mode-attendance .teacher-class-panel > .chips, .teacher-mode-notices .teacher-class-panel > .chips { grid-column: 3; }
+.teacher-mode-attendance .teacher-sidebar-notices { display: none; }
+.teacher-attendance-panel, .teacher-notices-panel { min-width: 0; }
+.teacher-attendance-panel > .card { min-height: 0; }
+.teacher-notices-panel > .announcements { min-height: 0; }
+.teacher-mode-notices .teacher-sidebar-notices { display: none; }
+.teacher-mode-notices .teacher-class-panel .section-heading, .teacher-mode-notices .teacher-class-panel .student-list { display: none; }
+.teacher-mode-notices .teacher-class-panel::after { grid-column: 4; content: 'Read official school messages.'; max-width: 11rem; color: var(--ink-soft); font-size: .78rem; line-height: 1.45; }
+.teacher-mode-attendance .teacher-class-panel .section-heading, .teacher-mode-attendance .teacher-class-panel .student-list { display: none; }
+.teacher-mode-attendance .teacher-class-panel::after { grid-column: 4; content: 'Record every active student.'; max-width: 10rem; color: var(--ink-soft); font-size: .78rem; line-height: 1.45; }
+.role-teacher .compact-empty { padding: 1rem; }
+@media (max-width: 1020px) {
+  .teacher-mode-updates { grid-template-columns: minmax(285px, .76fr) minmax(0, 1.24fr); gap: .85rem; }
+  .teacher-mode-attendance, .teacher-mode-notices { grid-template-columns: 1fr; gap: .85rem; }
+  .teacher-mode-attendance .teacher-class-panel, .teacher-mode-notices .teacher-class-panel { grid-template-columns: auto minmax(250px, 1fr) auto; }
+  .teacher-mode-attendance .teacher-class-status, .teacher-mode-notices .teacher-class-status { grid-column: 2; }
+  .teacher-mode-attendance .teacher-class-panel > .chips, .teacher-mode-notices .teacher-class-panel > .chips { grid-column: 3; }
+  .teacher-mode-attendance .teacher-class-panel::after, .teacher-mode-notices .teacher-class-panel::after { display: none; }
+  .teacher-class-status { grid-template-columns: 1fr; }
+  .teacher-mode-updates .student-list { max-height: 430px; }
+}
+@media (max-width: 820px) {
+  .role-teacher.app { width: min(1200px, 100%); }
+  .teacher-mode-updates, .teacher-mode-attendance, .teacher-mode-notices { grid-template-columns: 1fr; }
+  .teacher-mode-updates .teacher-class-panel { grid-row: auto; }
+  .teacher-mode-attendance .teacher-class-panel, .teacher-mode-notices .teacher-class-panel { display: grid; grid-template-columns: 1fr; position: static; }
+  .teacher-mode-attendance .teacher-class-panel > .eyebrow, .teacher-mode-notices .teacher-class-panel > .eyebrow, .teacher-mode-attendance .teacher-class-panel > h2, .teacher-mode-notices .teacher-class-panel > h2, .teacher-mode-attendance .teacher-class-status, .teacher-mode-notices .teacher-class-status, .teacher-mode-attendance .teacher-class-panel > .chips, .teacher-mode-notices .teacher-class-panel > .chips { grid-column: 1; }
+  .teacher-class-status { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .teacher-mode-updates .student-list { max-height: none; }
+  .teacher-task-panel > .empty { margin: .2rem 0; }
+  .teacher-task-panel form button { width: 100%; }
+}
+@media (max-width: 430px) {
+  .teacher-class-status { grid-template-columns: 1fr 1fr; }
+  .teacher-class-status span:last-child { grid-column: 1 / -1; }
+  .teacher-task-panel .selected-student { padding-top: 1.35rem; }
+  .teacher-task-panel .selected-student::after { left: .85rem; right: auto; top: .45rem; }
+}
 .selected-student { align-items: center; border: 1px solid color-mix(in srgb, var(--brand) 16%, white); border-radius: 14px; background: var(--brand-soft); padding: .8rem; }
 .student-avatar { width: 42px; height: 42px; }
 .selected-student div { flex: 1; }
