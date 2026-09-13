@@ -899,6 +899,8 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .field-with-icon > .icon { position: absolute; left: .75rem; z-index: 1; color: var(--muted); }
 .field-with-icon input { padding-left: 2.5rem; }
 .password-toggle { position: absolute; right: .35rem; min-height: 32px; padding: .25rem .45rem; background: transparent; color: var(--brand); font-size: .74rem; }
+.password-field-wrap { position: relative; }
+.password-field-wrap .password-toggle { top: 2.05rem; }
 .password-toggle:hover:not(:disabled) { background: var(--brand-soft); }
 .empty { border: 0; background: #f8fafc; box-shadow: inset 0 0 0 1px var(--line); }
 .empty::before { content: '•'; display: block; width: 28px; height: 28px; margin: 0 auto .4rem; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: 1.3rem; line-height: 23px; }

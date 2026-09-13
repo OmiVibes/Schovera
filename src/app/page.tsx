@@ -162,7 +162,7 @@ export default function Page() {
               placeholder="you@school.org"
             /></span>
           </label>
-          <label>
+          <div className="password-field-wrap"><label>
             <span>Password</span>
             <span className="field-with-icon"><Icon name="student" /><input
               type={showPassword ? 'text' : 'password'}
@@ -170,8 +170,8 @@ export default function Page() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-            /><button className="password-toggle" type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? 'Hide' : 'Show'}</button></span>
-          </label>
+            /></span>
+          </label><button className="password-toggle" type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? 'Hide' : 'Show'}</button></div>
           {error && (
             <p className="error" role="alert">
               {error}
