@@ -206,6 +206,9 @@ export default function Page() {
           </button>
         </div>
       </header>
+      <nav className="mobile-section-nav" aria-label="Page sections">
+        {(profile.role === 'parent' ? [['Home','parent-home'],['Updates','parent-updates'],['Attendance','parent-attendance'],['Notices','parent-notices']] : profile.role === 'teacher' ? [['Home','teacher-home'],['Students','teacher-students'],['Attendance','teacher-attendance'],['Notices','teacher-notices']] : [['Overview','principal-overview'],['Attendance','principal-attendance'],['Notices','principal-notices']]).map(([label, id]) => <a key={id} href={`#${id}`}>{label}</a>)}
+      </nav>
       {profile.role !== 'parent' && (
         <section className="dashboard-hero">
           <div>
@@ -380,7 +383,7 @@ function Teacher({ profile }: { profile: Profile }) {
     { present: 0, absent: 0, late: 0 } as Record<Status, number>,
   );
   return (
-    <section className="teacher-workspace">
+    <section className="teacher-workspace" id="teacher-home">
       <section className="teacher-today-card" aria-label="Today's teaching context">
         <div className="section-icon"><Icon name="school" /></div>
         <div>
@@ -429,7 +432,7 @@ function Teacher({ profile }: { profile: Profile }) {
               <h2>Select a student</h2>
             </div>
             {classId ? (
-              <div
+              <div id="teacher-students"
                 className="student-list"
                 aria-label="Students in selected class"
               >
@@ -455,7 +458,7 @@ function Teacher({ profile }: { profile: Profile }) {
             )}
           </>
         )}
-        <Announcements profile={profile} />
+        <div id="teacher-notices"><Announcements profile={profile} /></div>
       </aside>
       {mode === 'updates' ? (
         <div className="card">
@@ -539,7 +542,7 @@ function Teacher({ profile }: { profile: Profile }) {
           )}
         </div>
       ) : (
-        <AttendanceMarker
+        <div id="teacher-attendance"><AttendanceMarker
           classId={classId}
           classLabel={classes.find((row) => row.id === classId)}
           students={students}
@@ -553,7 +556,7 @@ function Teacher({ profile }: { profile: Profile }) {
             setRecords({ ...records, [studentId]: status })
           }
           onSave={saveAttendance}
-        />
+        /></div>
       )}
     </section>
     </section>
@@ -737,7 +740,7 @@ function Parent({ profile }: { profile: Profile }) {
     }
   };
   return (
-    <section className="parent-dashboard">
+    <section className="parent-dashboard" id="parent-home">
       <section
         className="parent-welcome child-identity-card"
         aria-labelledby="parent-child-heading"
@@ -786,13 +789,13 @@ function Parent({ profile }: { profile: Profile }) {
           <div><Icon name="updates" /><span>Latest update<b>{updates[0] ? nice(updates[0].category) : 'No updates'}</b></span></div>
         </div>
       </section>
-      <AttendanceSummary
+      <div id="parent-attendance"><AttendanceSummary
         attendance={attendance}
         counts={counts}
         error={attendanceError}
-      />
-      <Announcements profile={profile} parentView />
-      <section className="parent-updates" aria-labelledby="child-updates-heading">
+      /></div>
+      <div id="parent-notices"><Announcements profile={profile} parentView /></div>
+      <section className="parent-updates" id="parent-updates" aria-labelledby="child-updates-heading">
         <div className="section-heading">
           <p className="eyebrow">CHILD-SPECIFIC UPDATES</p>
           <h2 id="child-updates-heading">Recent updates</h2>
@@ -974,7 +977,7 @@ function Principal({ profile }: { profile: Profile }) {
     ),
     markedClassIds = new Set(todayAttendance.map((row) => row.class_id));
   return (
-    <section className="principal-dashboard">
+    <section className="principal-dashboard" id="principal-overview">
       <section className="communication-overview" aria-labelledby="communication-overview-heading">
         <div className="overview-heading"><span className="section-icon"><Icon name="updates" /></span><div><p className="eyebrow">COMMUNICATION COVERAGE</p><h2 id="communication-overview-heading">School-to-home communication</h2></div></div>
         <div className="metrics">
@@ -990,8 +993,8 @@ function Principal({ profile }: { profile: Profile }) {
         ))}
         </div>
       </section>
-      <Announcements profile={profile} publish />
-      <div className="card attendance-overview">
+      <div id="principal-notices"><Announcements profile={profile} publish /></div>
+      <div className="card attendance-overview" id="principal-attendance">
         <p className="eyebrow">TODAY’S ATTENDANCE</p>
         <h2>Today&apos;s attendance</h2>
         {attendanceError ? (

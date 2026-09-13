@@ -793,6 +793,7 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .account-name { color: #fff; }
 .role-header .link { color: #fff; }
 .role-header .link:hover:not(:disabled) { color: #fff; }
+.mobile-section-nav { display: none; }
 .dashboard-hero { padding: 2.3rem 0 1.55rem; }
 .dashboard-hero h1 { font-size: clamp(2rem, 4vw, 2.85rem); }
 .dashboard-hero .eyebrow, .eyebrow { color: var(--brand); }
@@ -901,7 +902,7 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .password-toggle:hover:not(:disabled) { background: var(--brand-soft); }
 .empty { border: 0; background: #f8fafc; box-shadow: inset 0 0 0 1px var(--line); }
 .empty::before { content: '•'; display: block; width: 28px; height: 28px; margin: 0 auto .4rem; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: 1.3rem; line-height: 23px; }
-@media (max-width: 760px) { .right-now-grid { grid-template-columns: 1fr; } .student-snapshot { grid-template-columns: repeat(2, 1fr); } .roster-row { flex-direction: column; } .attendance-segments { width: 100%; justify-content: stretch; } .attendance-choice { flex: 1; } .role-header { position: sticky; top: 0; z-index: 20; margin: 0 -1rem; padding: .75rem 1rem; border-radius: 0 0 18px 18px; } }
+@media (max-width: 760px) { .right-now-grid { grid-template-columns: 1fr; } .student-snapshot { grid-template-columns: repeat(2, 1fr); } .roster-row { flex-direction: column; } .attendance-segments { width: 100%; justify-content: stretch; } .attendance-choice { flex: 1; } .role-header { position: sticky; top: 0; z-index: 20; margin: 0 -1rem; padding: .75rem 1rem; border-radius: 0 0 18px 18px; } .mobile-section-nav { position: sticky; top: 73px; z-index: 19; display: flex; gap: .35rem; overflow-x: auto; margin: 0 -.85rem; padding: .5rem .85rem; background: var(--canvas); border-bottom: 1px solid var(--line); } .mobile-section-nav a { flex: 0 0 auto; min-height: 36px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink-soft); padding: .42rem .7rem; font-size: .73rem; font-weight: 800; text-decoration: none; } [id] { scroll-margin-top: 126px; } }
 .attention-panel .update-card { border: 0; border-left: 3px solid #b45309; margin: .75rem 0 0; padding: .85rem 0 .15rem .85rem; }
 .attention-panel .ack { flex-wrap: wrap; }
 .parent-updates .timeline { gap: .65rem; }
