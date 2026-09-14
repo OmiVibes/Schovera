@@ -1019,14 +1019,21 @@ function Principal({ profile }: { profile: Profile }) {
   const [all, setAll] = useState<Update[]>([]),
     [classes, setClasses] = useState<any[]>([]),
     [todayAttendance, setTodayAttendance] = useState<Attendance[]>([]),
+    [communicationLoading, setCommunicationLoading] = useState(true),
+    [communicationError, setCommunicationError] = useState(''),
     [attendanceError, setAttendanceError] = useState('');
   const refresh = async () => {
-    const { data } = await db
+    setCommunicationLoading(true);
+    const { data, error } = await db
       .from('student_updates')
       .select('*,students(full_name),acknowledgements(acknowledged_at)')
       .eq('school_id', profile.school_id)
       .order('sent_at', { ascending: false });
     setAll(data || []);
+    setCommunicationError(
+      error ? 'Recent communication could not be loaded.' : '',
+    );
+    setCommunicationLoading(false);
   };
   const loadAttendance = async () => {
     const [classResult, attendanceResult] = await Promise.all([
@@ -1188,13 +1195,18 @@ function Principal({ profile }: { profile: Profile }) {
         <p className="eyebrow">RECENT ACTIVITY</p>
         <h2>Recent communication</h2>
         <p className="hint">
-          A simple school-wide view of family communication. This is not teacher
-          scoring.
+          Teacher updates shared with families. This is not teacher scoring.
         </p>
-        {all.length ? (
+        {communicationError ? (
+          <p className="error">{communicationError}</p>
+        ) : communicationLoading ? (
+          <PrincipalCommunicationSkeleton />
+        ) : all.length ? (
           all
             .slice(0, 6)
-            .map((update) => <Card key={update.id} update={update} teacher />)
+            .map((update) => (
+              <PrincipalCommunicationCard key={update.id} update={update} />
+            ))
         ) : (
           <p className="empty compact-empty">
             No student updates have been sent yet. Communication activity will
@@ -1208,6 +1220,53 @@ function Principal({ profile }: { profile: Profile }) {
         </aside>
       </div>
     </section>
+  );
+}
+
+function PrincipalCommunicationSkeleton() {
+  return (
+    <div className="principal-communication-skeleton" role="status" aria-label="Loading recent communication">
+      <span className="principal-skeleton-avatar" />
+      <div><span /><span /><span className="short" /></div>
+    </div>
+  );
+}
+
+function PrincipalCommunicationCard({ update }: { update: Update }) {
+  const studentName = update.students?.full_name || 'Student';
+  const acknowledged = Boolean(update.acknowledgements?.length);
+  const needsAcknowledgement = update.importance === 'important';
+  return (
+    <article
+      className={`principal-communication-card${needsAcknowledgement ? ' important-update' : ''}${acknowledged ? ' acknowledged-update' : ''}`}
+      aria-label={`${studentName}: ${nice(update.category)} update sent ${displayDate(update.sent_at)}`}
+    >
+      <header>
+        <span className="student-avatar" aria-hidden="true">{initials(studentName)}</span>
+        <div>
+          <p className="principal-student-label">STUDENT UPDATE</p>
+          <h3>{studentName}</h3>
+        </div>
+      </header>
+      <div className="principal-card-tags">
+        <span className="principal-category"><Icon name={categoryIcon(update.category)} />{nice(update.category)}</span>
+        <span className={needsAcknowledgement ? 'principal-importance important' : 'principal-importance'}>
+          {needsAcknowledgement ? 'Important' : 'Normal'}
+        </span>
+      </div>
+      <h4>{update.title}</h4>
+      <p className="principal-update-message">{update.message}</p>
+      <footer>
+        <time dateTime={update.sent_at}>{displayDate(update.sent_at)}</time>
+        {needsAcknowledgement && (
+          acknowledged ? (
+            <span className="principal-acknowledgement acknowledged"><Icon name="check" />Acknowledged</span>
+          ) : (
+            <span className="principal-acknowledgement awaiting"><Icon name="important" />Awaiting acknowledgement</span>
+          )
+        )}
+      </footer>
+    </article>
   );
 }
 
