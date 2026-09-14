@@ -294,13 +294,13 @@ export default function Page() {
             <h1>
               {profile.role === 'teacher'
                 ? `Good morning, ${profile.full_name.split(' ')[0]}.`
-                : 'Communication, clearly connected.'}
+                : `Welcome, ${profile.full_name.split(' ').slice(0, 2).join(' ')}.`}
             </h1>
           </div>
           <p className="hero-support">
             {profile.role === 'teacher'
               ? 'Send clear student updates, record attendance and follow important acknowledgements.'
-              : 'See communication coverage and attendance completion across your school.'}
+              : 'Here\'s your school communication overview.'}
           </p>
         </section>
       )}
@@ -1076,6 +1076,10 @@ function Principal({ profile }: { profile: Profile }) {
     acknowledged = important.filter(
       (update) => update.acknowledgements?.length,
     ),
+    awaiting = important.length - acknowledged.length,
+    communicationCoverage = important.length
+      ? Math.round((acknowledged.length / important.length) * 100)
+      : null,
     attendanceCounts = todayAttendance.reduce(
       (total, row) => ({ ...total, [row.status]: total[row.status] + 1 }),
       { present: 0, absent: 0, late: 0 } as Record<Status, number>,
@@ -1083,22 +1087,46 @@ function Principal({ profile }: { profile: Profile }) {
     markedClassIds = new Set(todayAttendance.map((row) => row.class_id));
   return (
     <section className="principal-dashboard" id="principal-overview">
-      <section className="communication-overview" id="principal-communication" aria-labelledby="communication-overview-heading">
-        <div className="overview-heading"><span className="section-icon"><Icon name="updates" /></span><div><p className="eyebrow">COMMUNICATION COVERAGE</p><h2 id="communication-overview-heading">School-to-home communication</h2></div></div>
-        <div className="metrics">
-        {[
-          ['Important updates', important.length],
-          ['Acknowledged', acknowledged.length],
-          ['Awaiting acknowledgement', important.length - acknowledged.length],
-        ].map(([label, value]) => (
-          <div className="metric-cell" key={String(label)}>
-            <small>{label}</small>
-            <b>{value}</b>
+      <section
+        className="principal-communication-overview"
+        id="principal-communication"
+        aria-labelledby="communication-overview-heading"
+      >
+        <div className="principal-overview-heading">
+          <span className="section-icon" aria-hidden="true"><Icon name="updates" /></span>
+          <div>
+            <p className="eyebrow">COMMUNICATION HEALTH</p>
+            <h2 id="communication-overview-heading">School-to-home communication</h2>
           </div>
-        ))}
+          {communicationCoverage !== null && (
+            <p className="communication-coverage" aria-label={`${communicationCoverage}% of important updates have been acknowledged`}>
+              <b>{communicationCoverage}%</b><span>acknowledged</span>
+            </p>
+          )}
+        </div>
+        <div className="principal-metrics" aria-label="Important school-to-home communication metrics">
+          <article className="principal-metric-card metric-important">
+            <span className="metric-icon" aria-hidden="true"><Icon name="important" /></span>
+            <small>Important sent</small>
+            <b>{important.length}</b>
+            <p>Updates requiring a parent response</p>
+          </article>
+          <article className="principal-metric-card metric-acknowledged">
+            <span className="metric-icon" aria-hidden="true"><Icon name="check" /></span>
+            <small>Acknowledged</small>
+            <b>{acknowledged.length}</b>
+            <p>Confirmed by a parent</p>
+          </article>
+          <article className="principal-metric-card metric-awaiting">
+            <span className="metric-icon" aria-hidden="true"><Icon name="updates" /></span>
+            <small>Awaiting</small>
+            <b>{awaiting}</b>
+            <p>Still awaiting acknowledgement</p>
+          </article>
         </div>
       </section>
-      <div id="principal-notices"><Announcements profile={profile} publish /></div>
+      <div className="principal-main-grid">
+        <div className="principal-primary-column">
       <div className="card attendance-overview" id="principal-attendance">
         <p className="eyebrow">TODAY’S ATTENDANCE</p>
         <h2>Today&apos;s attendance</h2>
@@ -1156,7 +1184,7 @@ function Principal({ profile }: { profile: Profile }) {
           </>
         )}
       </div>
-      <div className="card">
+      <div className="card principal-recent-communication">
         <p className="eyebrow">RECENT ACTIVITY</p>
         <h2>Recent communication</h2>
         <p className="hint">
@@ -1173,6 +1201,11 @@ function Principal({ profile }: { profile: Profile }) {
             appear here when teachers share updates with families.
           </p>
         )}
+      </div>
+        </div>
+        <aside className="principal-support-column" id="principal-notices" aria-label="School notices">
+          <Announcements profile={profile} publish />
+        </aside>
       </div>
     </section>
   );
