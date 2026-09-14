@@ -197,6 +197,78 @@ for (const [title, body, priority] of announcements) {
       }),
     );
 }
+
+const baselineUpdates = [
+  {
+    title: 'Excellent Science Model',
+    message:
+      'Aarav presented his science model clearly and explained the working principle confidently.',
+    category: 'achievement',
+    importance: 'important',
+    acknowledged: true,
+  },
+  {
+    title: 'Mathematics Worksheet',
+    message:
+      'Please complete the assigned mathematics worksheet and bring it to class tomorrow.',
+    category: 'homework_task',
+    importance: 'important',
+    acknowledged: false,
+  },
+  {
+    title: 'Science Revision',
+    message:
+      'Please revise the chapter discussed in class for the upcoming classroom activity.',
+    category: 'academic',
+    importance: 'normal',
+    acknowledged: false,
+  },
+  {
+    title: 'Robotics Practice',
+    message:
+      'Aarav participated actively in today’s robotics practice session.',
+    category: 'general',
+    importance: 'normal',
+    acknowledged: false,
+  },
+];
+for (const baseline of baselineUpdates) {
+  let update = await must(
+    admin
+      .from('student_updates')
+      .select('id')
+      .eq('school_id', school.id)
+      .eq('student_id', aarav.id)
+      .eq('title', baseline.title)
+      .maybeSingle(),
+  );
+  if (!update)
+    update = await must(
+      admin
+        .from('student_updates')
+        .insert({
+          school_id: school.id,
+          class_id: grade7.id,
+          student_id: aarav.id,
+          teacher_id: ids.teacher,
+          category: baseline.category,
+          title: baseline.title,
+          message: baseline.message,
+          importance: baseline.importance,
+        })
+        .select('id')
+        .single(),
+    );
+  if (baseline.acknowledged)
+    await must(
+      admin
+        .from('acknowledgements')
+        .upsert(
+          { update_id: update.id, parent_id: ids.parent },
+          { onConflict: 'update_id,parent_id' },
+        ),
+    );
+}
 console.log(
-  'Seed complete: demo accounts, Grade 7A roster, attendance history, announcements, and parent link are ready.',
+  'Seed complete: demo accounts, Grade 7A roster, attendance, school notices, and communication baseline are ready.',
 );

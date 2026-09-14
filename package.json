@@ -14,6 +14,7 @@
     "test": "npm run verify:phase1",
     "test:watch": "vitest",
     "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs",
+    "clean:demo": "node --env-file=.env.local scripts/clean-demo-data.mjs",
     "verify:phase1": "node --env-file=.env.local scripts/verify-phase1.mjs",
     "verify:attendance": "node --env-file=.env.local scripts/verify-attendance.mjs",
     "verify:announcements": "node --env-file=.env.local scripts/verify-announcements.mjs"

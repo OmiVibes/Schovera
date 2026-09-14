@@ -15,6 +15,7 @@ const temporary = {
   attendanceIds: [],
   classIds: [],
   studentIds: [],
+  attendanceAudit: null,
   schoolIds: [],
   authUserIds: [],
 };
@@ -48,23 +49,32 @@ async function expectDenied(result, message) {
 }
 
 async function cleanup() {
+  if (temporary.attendanceAudit)
+    await must(admin
+      .from('audit_events')
+      .delete()
+      .eq('event_type', 'attendance_saved')
+      .contains('metadata', temporary.attendanceAudit));
   if (temporary.attendanceIds.length)
-    await admin
+    await must(admin
       .from('attendance_records')
       .delete()
-      .in('id', temporary.attendanceIds);
+      .in('id', temporary.attendanceIds));
   if (temporary.studentIds.length) {
-    await admin
+    await must(admin
       .from('parent_student_links')
       .delete()
-      .in('student_id', temporary.studentIds);
-    await admin.from('students').delete().in('id', temporary.studentIds);
+      .in('student_id', temporary.studentIds));
+    await must(admin.from('students').delete().in('id', temporary.studentIds));
   }
   if (temporary.classIds.length)
-    await admin.from('classes').delete().in('id', temporary.classIds);
-  for (const id of temporary.authUserIds) await admin.auth.admin.deleteUser(id);
+    await must(admin.from('classes').delete().in('id', temporary.classIds));
+  for (const id of temporary.authUserIds) {
+    const { error } = await admin.auth.admin.deleteUser(id);
+    if (error) throw error;
+  }
   if (temporary.schoolIds.length)
-    await admin.from('schools').delete().in('id', temporary.schoolIds);
+    await must(admin.from('schools').delete().in('id', temporary.schoolIds));
 }
 
 try {
@@ -283,6 +293,10 @@ try {
     p_records: initialRecords,
   });
   if (saveError) throw saveError;
+  temporary.attendanceAudit = {
+    class_id: assignment.class_id,
+    attendance_date: testDate,
+  };
   const saved = await must(
     admin
       .from('attendance_records')

@@ -142,11 +142,16 @@ try {
     'Announcement verification passed: principal publishing, read-only roles, persistence, priority, and school isolation.',
   );
 } finally {
-  if (temporary.announcementIds.length)
-    await admin
+  if (temporary.announcementIds.length) {
+    await must(admin
+      .from('audit_events')
+      .delete()
+      .in('target_id', temporary.announcementIds));
+    await must(admin
       .from('announcements')
       .delete()
-      .in('id', temporary.announcementIds);
+      .in('id', temporary.announcementIds));
+  }
   if (temporary.schoolIds.length)
-    await admin.from('schools').delete().in('id', temporary.schoolIds);
+    await must(admin.from('schools').delete().in('id', temporary.schoolIds));
 }

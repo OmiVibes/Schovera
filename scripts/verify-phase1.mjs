@@ -179,29 +179,31 @@ async function cleanup() {
     if (channel) await client.removeChannel(channel);
   for (const client of signedInClients) client.realtime.disconnect();
   if (temporary.updateIds.length) {
-    await admin
+    await must(admin
       .from('acknowledgements')
       .delete()
-      .in('update_id', temporary.updateIds);
-    await admin
+      .in('update_id', temporary.updateIds));
+    await must(admin
       .from('audit_events')
       .delete()
-      .in('target_id', temporary.updateIds);
-    await admin.from('student_updates').delete().in('id', temporary.updateIds);
+      .in('target_id', temporary.updateIds));
+    await must(admin.from('student_updates').delete().in('id', temporary.updateIds));
   }
   if (temporary.studentIds.length) {
-    await admin
+    await must(admin
       .from('parent_student_links')
       .delete()
-      .in('student_id', temporary.studentIds);
-    await admin.from('students').delete().in('id', temporary.studentIds);
+      .in('student_id', temporary.studentIds));
+    await must(admin.from('students').delete().in('id', temporary.studentIds));
   }
   if (temporary.classIds.length)
-    await admin.from('classes').delete().in('id', temporary.classIds);
-  for (const authUserId of temporary.authUserIds)
-    await admin.auth.admin.deleteUser(authUserId);
+    await must(admin.from('classes').delete().in('id', temporary.classIds));
+  for (const authUserId of temporary.authUserIds) {
+    const { error } = await admin.auth.admin.deleteUser(authUserId);
+    if (error) throw error;
+  }
   if (temporary.schoolIds.length)
-    await admin.from('schools').delete().in('id', temporary.schoolIds);
+    await must(admin.from('schools').delete().in('id', temporary.schoolIds));
 }
 
 try {
