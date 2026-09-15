@@ -15,7 +15,11 @@ type Update = {
   importance: 'normal' | 'important';
   sent_at: string;
   acknowledgements?: { acknowledged_at: string; parent_id: string }[];
-  students?: { full_name: string };
+  students?: {
+    full_name: string;
+    roll_number?: string;
+    classes?: { grade: string; division: string };
+  };
   profiles?: { full_name: string };
 };
 type Attendance = {
@@ -1066,6 +1070,7 @@ function Principal({ profile }: { profile: Profile }) {
   const [all, setAll] = useState<Update[]>([]),
     [classes, setClasses] = useState<any[]>([]),
     [todayAttendance, setTodayAttendance] = useState<Attendance[]>([]),
+    [communicationFilter, setCommunicationFilter] = useState<'all' | 'awaiting'>('all'),
     [communicationLoading, setCommunicationLoading] = useState(true),
     [communicationError, setCommunicationError] = useState(''),
     [attendanceError, setAttendanceError] = useState('');
@@ -1073,7 +1078,7 @@ function Principal({ profile }: { profile: Profile }) {
     setCommunicationLoading(true);
     const { data, error } = await db
       .from('student_updates')
-      .select('*,students(full_name),acknowledgements(acknowledged_at)')
+      .select('*,students(full_name,roll_number,classes(grade,division)),acknowledgements(acknowledged_at)')
       .eq('school_id', profile.school_id)
       .order('sent_at', { ascending: false });
     setAll(data || []);
@@ -1130,7 +1135,8 @@ function Principal({ profile }: { profile: Profile }) {
     acknowledged = important.filter(
       (update) => update.acknowledgements?.length,
     ),
-    awaiting = important.length - acknowledged.length,
+    awaitingUpdates = important.filter((update) => !update.acknowledgements?.length),
+    awaiting = awaitingUpdates.length,
     communicationCoverage = important.length
       ? Math.round((acknowledged.length / important.length) * 100)
       : null,
@@ -1138,7 +1144,18 @@ function Principal({ profile }: { profile: Profile }) {
       (total, row) => ({ ...total, [row.status]: total[row.status] + 1 }),
       { present: 0, absent: 0, late: 0 } as Record<Status, number>,
     ),
-    markedClassIds = new Set(todayAttendance.map((row) => row.class_id));
+    markedClassIds = new Set(todayAttendance.map((row) => row.class_id)),
+    visibleCommunication = communicationFilter === 'awaiting'
+      ? awaitingUpdates
+      : all.slice(0, 6);
+  const showAwaitingCommunication = () => {
+    setCommunicationFilter('awaiting');
+    window.requestAnimationFrame(() =>
+      document
+        .getElementById('principal-recent-communication')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    );
+  };
   return (
     <section className="principal-dashboard" id="principal-overview">
       <section
@@ -1171,12 +1188,19 @@ function Principal({ profile }: { profile: Profile }) {
             <b>{acknowledged.length}</b>
             <p>Confirmed by a parent</p>
           </article>
-          <article className="principal-metric-card metric-awaiting">
+          <button
+            type="button"
+            className="principal-metric-card metric-awaiting principal-awaiting-metric"
+            onClick={showAwaitingCommunication}
+            aria-controls="principal-recent-communication"
+            aria-label={`View ${awaiting} important update${awaiting === 1 ? '' : 's'} awaiting acknowledgement`}
+          >
             <span className="metric-icon" aria-hidden="true"><Icon name="updates" /></span>
             <small>Awaiting</small>
             <b>{awaiting}</b>
             <p>Still awaiting acknowledgement</p>
-          </article>
+            <span className="principal-metric-action">View details</span>
+          </button>
         </div>
       </section>
       <div className="principal-main-grid">
@@ -1238,22 +1262,35 @@ function Principal({ profile }: { profile: Profile }) {
           </>
         )}
       </div>
-      <div className="card principal-recent-communication">
-        <p className="eyebrow">RECENT ACTIVITY</p>
-        <h2>Recent communication</h2>
-        <p className="hint">
-          Teacher updates shared with families. This is not teacher scoring.
-        </p>
+      <div className="card principal-recent-communication" id="principal-recent-communication">
+        <div className="principal-communication-heading">
+          <div>
+            <p className="eyebrow">RECENT ACTIVITY</p>
+            <h2>{communicationFilter === 'awaiting' ? 'Awaiting acknowledgement' : 'Recent communication'}</h2>
+            <p className="hint">
+              {communicationFilter === 'awaiting'
+                ? 'Important student updates still waiting for a parent acknowledgement.'
+                : 'Teacher updates shared with families. This is not teacher scoring.'}
+            </p>
+          </div>
+          <div className="principal-communication-filter" role="group" aria-label="Filter recent communication">
+            <button type="button" className={communicationFilter === 'all' ? 'active' : ''} aria-pressed={communicationFilter === 'all'} onClick={() => setCommunicationFilter('all')}>All</button>
+            <button type="button" className={communicationFilter === 'awaiting' ? 'active' : ''} aria-pressed={communicationFilter === 'awaiting'} onClick={() => setCommunicationFilter('awaiting')}>Awaiting <span>{awaiting}</span></button>
+          </div>
+        </div>
         {communicationError ? (
           <p className="error">{communicationError}</p>
         ) : communicationLoading ? (
           <PrincipalCommunicationSkeleton />
-        ) : all.length ? (
-          all
-            .slice(0, 6)
-            .map((update) => (
+        ) : visibleCommunication.length ? (
+          visibleCommunication.map((update) => (
               <PrincipalCommunicationCard key={update.id} update={update} />
             ))
+        ) : communicationFilter === 'awaiting' ? (
+          <div className="principal-awaiting-empty" role="status">
+            <span className="section-icon" aria-hidden="true"><Icon name="check" /></span>
+            <div><b>All important updates acknowledged</b><p>There are no important student updates currently waiting for acknowledgement.</p></div>
+          </div>
         ) : (
           <p className="empty compact-empty">
             No student updates have been sent yet. Communication activity will
@@ -1281,6 +1318,12 @@ function PrincipalCommunicationSkeleton() {
 
 function PrincipalCommunicationCard({ update }: { update: Update }) {
   const studentName = update.students?.full_name || 'Student';
+  const studentClass = update.students?.classes
+    ? `Grade ${update.students.classes.grade}${update.students.classes.division}`
+    : '';
+  const studentContext = [studentClass, update.students?.roll_number ? `Roll ${update.students.roll_number}` : '']
+    .filter(Boolean)
+    .join(' Â· ');
   const acknowledged = Boolean(update.acknowledgements?.length);
   const needsAcknowledgement = update.importance === 'important';
   return (
@@ -1291,7 +1334,7 @@ function PrincipalCommunicationCard({ update }: { update: Update }) {
       <header>
         <span className="student-avatar" aria-hidden="true">{initials(studentName)}</span>
         <div>
-          <p className="principal-student-label">STUDENT UPDATE</p>
+          <p className="principal-student-label">{studentContext || 'STUDENT UPDATE'}</p>
           <h3>{studentName}</h3>
         </div>
       </header>

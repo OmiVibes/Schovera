@@ -1510,6 +1510,25 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .metric-acknowledged .metric-icon { background: #e9f8f0; color: #087a55; }
 .metric-awaiting { border-top: 3px solid #b45309; }
 .metric-awaiting .metric-icon { background: #fff7e3; color: #a15c00; }
+.principal-awaiting-metric {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+}
+.principal-awaiting-metric:hover:not(:disabled) {
+  border-color: #d8a54d;
+  background: #fffdfa;
+  box-shadow: 0 6px 16px rgb(180 83 9 / .1);
+}
+.principal-metric-action {
+  display: inline-flex;
+  align-items: center;
+  gap: .22rem;
+  margin-top: .45rem;
+  color: #985800;
+  font-size: .69rem;
+  font-weight: 850;
+}
 .principal-main-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(320px, .85fr);
@@ -1560,6 +1579,7 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
   .principal-metric-card small { font-size: .62rem; letter-spacing: .01em; }
   .principal-metric-card b { margin-top: .17rem; font-size: 1.5rem; }
   .principal-metric-card p { display: none; }
+  .principal-metric-action { margin-top: .38rem; font-size: .62rem; }
 }
 
 /* Principal communication is a compact operational feed, distinct from parent timelines and school notices. */
@@ -1568,6 +1588,71 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .principal-dashboard .principal-recent-communication > h2,
 .principal-dashboard .principal-recent-communication > .hint { margin: 0; }
 .principal-dashboard .principal-recent-communication > .hint { max-width: 58ch; font-size: .82rem; }
+.principal-communication-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.principal-communication-heading .eyebrow,
+.principal-communication-heading h2,
+.principal-communication-heading .hint { margin: 0; }
+.principal-communication-heading .hint { max-width: 58ch; margin-top: .2rem; font-size: .82rem; }
+.principal-communication-filter {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .2rem;
+  padding: .22rem;
+  border: 1px solid #dde3ed;
+  border-radius: 11px;
+  background: #f8f9fc;
+}
+.principal-communication-filter button {
+  min-height: 32px;
+  padding: .28rem .5rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #59677a;
+  font-size: .72rem;
+  font-weight: 800;
+}
+.principal-communication-filter button:hover:not(:disabled) { background: #eef1f8; color: #3730a3; }
+.principal-communication-filter button.active { background: #fff; color: #3730a3; box-shadow: 0 1px 3px rgb(16 24 40 / .1); }
+.principal-communication-filter span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  min-height: 17px;
+  margin-left: .16rem;
+  border-radius: 999px;
+  background: #fff0d1;
+  color: #985800;
+  font-size: .62rem;
+}
+.principal-awaiting-empty {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  min-height: 76px;
+  padding: .72rem .8rem;
+  border: 1px solid #dcebe4;
+  border-radius: 13px;
+  background: #fbfefc;
+}
+.principal-awaiting-empty .section-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #e9f8f0;
+  color: #087a55;
+}
+.principal-awaiting-empty b { display: block; color: #173d31; font-size: .82rem; }
+.principal-awaiting-empty p { margin: .12rem 0 0; color: #5d746a; font-size: .76rem; line-height: 1.4; }
 .principal-communication-card {
   position: relative;
   border: 1px solid #e1e6ee;
@@ -1657,6 +1742,8 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 
 @media (max-width: 760px) {
   .principal-dashboard .principal-recent-communication { gap: .62rem; }
+  .principal-communication-heading { align-items: stretch; flex-direction: column; }
+  .principal-communication-filter { align-self: flex-start; }
   .principal-communication-card { padding: .72rem .72rem .66rem; border-radius: 13px; }
   .principal-communication-card .student-avatar { width: 32px; height: 32px; }
   .principal-card-tags { margin: .58rem 0 .42rem; }
