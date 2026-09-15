@@ -50,7 +50,7 @@ const displayDate = (value: string) =>
     timeStyle: 'short',
   });
 
-function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'important' | 'check' | 'academic' | 'achievement' | 'behaviour' | 'homework' | 'general' }) {
+function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'important' | 'check' | 'search' | 'academic' | 'achievement' | 'behaviour' | 'homework' | 'general' }) {
   const paths = {
     school: <><path d="M3 10.5 12 5l9 5.5v8.5H3z" /><path d="M7 21v-6h10v6M9 12h.01M12 12h.01M15 12h.01" /></>,
     student: <><circle cx="12" cy="8" r="3.25" /><path d="M5.5 21c.7-3.65 2.85-5.5 6.5-5.5s5.8 1.85 6.5 5.5" /></>,
@@ -59,6 +59,7 @@ function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' 
     notice: <><path d="M6 5h12v14H6z" /><path d="M9 9h6M9 12h6M9 15h4" /></>,
     important: <><path d="M12 3 21 20H3z" /><path d="M12 9v4M12 17h.01" /></>,
     check: <path d="m5 12 4.2 4.2L19 6.5" />,
+    search: <><circle cx="10.75" cy="10.75" r="6.25" /><path d="m16 16 4.25 4.25" /></>,
     academic: <><path d="m4 6 8-3 8 3-8 3zM6.5 10v5.5c3.2 2.1 7.8 2.1 11 0V10" /><path d="M20 6v6" /></>,
     achievement: <><path d="M8 4h8v5a4 4 0 0 1-8 0z" /><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8.5 21h7M9 17h6" /></>,
     behaviour: <><circle cx="12" cy="8" r="3" /><path d="M6 21c.6-3.7 2.6-5.5 6-5.5s5.4 1.8 6 5.5M18 4l1 1 2-1" /></>,
@@ -323,6 +324,7 @@ function Teacher({ profile }: { profile: Profile }) {
     [students, setStudents] = useState<any[]>([]),
     [classId, setClassId] = useState(''),
     [student, setStudent] = useState<any>(null),
+    [studentSearch, setStudentSearch] = useState(''),
     [updates, setUpdates] = useState<Update[]>([]),
     [mode, setMode] = useState<'updates' | 'attendance' | 'notices'>('updates'),
     [date, setDate] = useState(today()),
@@ -488,6 +490,15 @@ function Teacher({ profile }: { profile: Profile }) {
     }),
     { present: 0, absent: 0, late: 0 } as Record<Status, number>,
   );
+  const normalizedStudentSearch = studentSearch.trim().toLocaleLowerCase();
+  const filteredStudents = normalizedStudentSearch
+    ? students.filter((row) =>
+        row.full_name.toLocaleLowerCase().includes(normalizedStudentSearch) ||
+        String(row.roll_number || '')
+          .toLocaleLowerCase()
+          .includes(normalizedStudentSearch),
+      )
+    : students;
   return (
     <section className="teacher-workspace" id="teacher-home">
       <section className="teacher-today-card" aria-label="Today's teaching context">
@@ -517,6 +528,7 @@ function Teacher({ profile }: { profile: Profile }) {
               onClick={() => {
                 setClassId(row.id);
                 setStudent(null);
+                setStudentSearch('');
               }}
             >{`Grade ${row.grade}${row.division}`}</button>
           ))}
@@ -528,11 +540,38 @@ function Teacher({ profile }: { profile: Profile }) {
               <h2>Select a student</h2>
             </div>
             {classId ? (
+              <div className="teacher-roster-search-area">
+                <label className="teacher-roster-search">
+                  <span className="sr-only">Search students</span>
+                  <Icon name="search" />
+                  <input
+                    type="search"
+                    value={studentSearch}
+                    onChange={(event) => setStudentSearch(event.target.value)}
+                    placeholder="Search by name or roll number"
+                    aria-describedby="teacher-roster-search-count"
+                  />
+                  {studentSearch && (
+                    <button
+                      type="button"
+                      className="teacher-roster-search-clear"
+                      onClick={() => setStudentSearch('')}
+                      aria-label="Clear student search"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </label>
+                <p id="teacher-roster-search-count" className="teacher-roster-search-count" aria-live="polite">
+                  {normalizedStudentSearch
+                    ? `${filteredStudents.length} of ${students.length} students`
+                    : `${students.length} students`}
+                </p>
               <div id="teacher-students"
                 className="student-list"
                 aria-label="Students in selected class"
               >
-                {students.map((row) => (
+                {filteredStudents.map((row) => (
                   <button
                     className={
                       student?.id === row.id ? 'student active' : 'student'
@@ -546,6 +585,14 @@ function Teacher({ profile }: { profile: Profile }) {
                     <span className="student-chevron" aria-hidden="true">›</span>
                   </button>
                 ))}
+                {normalizedStudentSearch && !filteredStudents.length && (
+                  <div className="teacher-roster-no-results" role="status">
+                    <span className="section-icon" aria-hidden="true"><Icon name="search" /></span>
+                    <div><b>No students found</b><p>Try another name or roll number.</p></div>
+                    <button type="button" onClick={() => setStudentSearch('')}>Clear search</button>
+                  </div>
+                )}
+              </div>
               </div>
             ) : (
               <p className="empty compact-empty">
