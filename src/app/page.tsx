@@ -1541,11 +1541,17 @@ function Announcements({
     if (publishing) return;
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
+    const title = String(form.get('title') || '').trim();
+    const body = String(form.get('body') || '').trim();
     setNote('');
+    if (!title || !body) {
+      setNote('Please add a title and message before publishing.');
+      return;
+    }
     setPublishing(true);
     const { error } = await db.rpc('publish_announcement', {
-      p_title: form.get('title'),
-      p_body: form.get('body'),
+      p_title: title,
+      p_body: body,
       p_priority: form.get('priority'),
     });
     setPublishing(false);

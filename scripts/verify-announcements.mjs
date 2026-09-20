@@ -35,6 +35,19 @@ try {
     parent = await signIn('parent@schovera.demo', 'parent');
   const normalTitle = `Verification normal ${suffix}`,
     importantTitle = `Verification important ${suffix}`;
+  for (const invalidNotice of [
+    { p_title: ' \t\n ', p_body: 'A valid announcement body.' },
+    { p_title: 'A valid announcement title', p_body: ' \t\r\n ' },
+  ]) {
+    const invalid = await principal.rpc('publish_announcement', {
+      ...invalidNotice,
+      p_priority: 'normal',
+    });
+    expect(
+      Boolean(invalid.error),
+      'Whitespace-only announcement content was accepted.',
+    );
+  }
   let response = await principal.rpc('publish_announcement', {
     p_title: normalTitle,
     p_body: 'A persisted normal official notice for verification.',
