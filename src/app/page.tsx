@@ -1009,11 +1009,21 @@ function Parent({ profile }: { profile: Profile }) {
         { event: 'INSERT', schema: 'public', table: 'student_updates' },
         () => refresh(),
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'acknowledgements',
+          filter: `parent_id=eq.${profile.id}`,
+        },
+        () => refresh(),
+      )
       .subscribe();
     return () => {
       db.removeChannel(channel);
     };
-  }, [db, childId]);
+  }, [db, childId, profile.id]);
   const counts = attendance.reduce(
     (total, row) => ({ ...total, [row.status]: total[row.status] + 1 }),
     { present: 0, absent: 0, late: 0 } as Record<Status, number>,
