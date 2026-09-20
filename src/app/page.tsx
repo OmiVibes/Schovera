@@ -324,16 +324,26 @@ export default function Page() {
 
 function Teacher({ profile }: { profile: Profile }) {
   const db = useMemo(() => createClient(), []);
+  const activeClassIdRef = useRef('');
+  const classRequestVersionRef = useRef(0);
+  const activeStudentIdRef = useRef('');
+  const studentRequestVersionRef = useRef(0);
+  const activeAttendanceContextRef = useRef('');
+  const attendanceRequestVersionRef = useRef(0);
   const [classes, setClasses] = useState<any[]>([]),
     [students, setStudents] = useState<any[]>([]),
     [classId, setClassId] = useState(''),
     [student, setStudent] = useState<any>(null),
     [studentSearch, setStudentSearch] = useState(''),
     [updates, setUpdates] = useState<Update[]>([]),
+    [classLoading, setClassLoading] = useState(false),
+    [updatesLoading, setUpdatesLoading] = useState(false),
+    [updatesError, setUpdatesError] = useState(''),
     [mode, setMode] = useState<'updates' | 'attendance' | 'notices'>('updates'),
     [date, setDate] = useState(today()),
     [records, setRecords] = useState<Record<string, Status>>({}),
-    [attendanceBusy, setAttendanceBusy] = useState(false),
+    [attendanceLoading, setAttendanceLoading] = useState(false),
+    [attendanceSaving, setAttendanceSaving] = useState(false),
     [attendanceNote, setAttendanceNote] = useState(''),
     [sending, setSending] = useState(false),
     [note, setNote] = useState('');
@@ -375,29 +385,93 @@ function Teacher({ profile }: { profile: Profile }) {
       );
   }, [db, profile]);
   useEffect(() => {
+    activeClassIdRef.current = classId;
+    const requestVersion = classRequestVersionRef.current + 1;
+    classRequestVersionRef.current = requestVersion;
+    activeStudentIdRef.current = '';
+    studentRequestVersionRef.current += 1;
+    setStudents([]);
+    setStudent(null);
+    setUpdates([]);
+    setUpdatesError('');
+    setRecords({});
+    setAttendanceNote('');
+    setNote('');
     if (!classId) {
-      setStudents([]);
+      setClassLoading(false);
       return;
     }
+    setClassLoading(true);
     db.from('students')
       .select('*')
       .eq('class_id', classId)
       .eq('active', true)
       .order('full_name')
-      .then(({ data }) => setStudents(data || []));
+      .then(({ data }) => {
+        if (
+          classId === activeClassIdRef.current &&
+          requestVersion === classRequestVersionRef.current
+        ) {
+          setStudents(data || []);
+          setClassLoading(false);
+        }
+      });
   }, [db, classId]);
-  const loadAttendance = async () => {
-    if (!classId || !students.length) return;
-    setAttendanceBusy(true);
-    setAttendanceNote('');
+  const refreshUpdates = async (
+    targetStudentId = activeStudentIdRef.current,
+    requestVersion = studentRequestVersionRef.current,
+  ) => {
+    if (!targetStudentId) return;
+    const { data, error } = await db
+      .from('student_updates')
+      .select('*,acknowledgements(acknowledged_at,parent_id)')
+      .eq('student_id', targetStudentId)
+      .order('sent_at', { ascending: false });
+    if (
+      targetStudentId === activeStudentIdRef.current &&
+      requestVersion === studentRequestVersionRef.current
+    ) {
+      setUpdates(data || []);
+      setUpdatesError(error ? 'Could not load recent communication.' : '');
+      setUpdatesLoading(false);
+    }
+  };
+  useEffect(() => {
+    const targetStudentId = student?.id || '';
+    activeStudentIdRef.current = targetStudentId;
+    const requestVersion = studentRequestVersionRef.current + 1;
+    studentRequestVersionRef.current = requestVersion;
+    setUpdates([]);
+    setUpdatesError('');
+    setNote('');
+    if (!targetStudentId) {
+      setUpdatesLoading(false);
+      return;
+    }
+    setUpdatesLoading(true);
+    refreshUpdates(targetStudentId, requestVersion);
+  }, [student?.id]);
+  const loadAttendance = async (
+    targetClassId: string,
+    targetDate: string,
+    roster: any[],
+    requestVersion: number,
+  ) => {
+    if (!targetClassId || !roster.length) return;
     const { data, error } = await db
       .from('attendance_records')
       .select('student_id,status')
-      .eq('class_id', classId)
-      .eq('attendance_date', date);
+      .eq('class_id', targetClassId)
+      .eq('attendance_date', targetDate);
+    const context = `${targetClassId}:${targetDate}`;
+    if (
+      context !== activeAttendanceContextRef.current ||
+      requestVersion !== attendanceRequestVersionRef.current
+    )
+      return;
     if (error) {
       setAttendanceNote('Could not load attendance. Try again.');
-      setAttendanceBusy(false);
+      setAttendanceLoading(false);
       return;
     }
     const existing = Object.fromEntries(
@@ -405,33 +479,38 @@ function Teacher({ profile }: { profile: Profile }) {
     );
     setRecords(
       Object.fromEntries(
-        students.map((row) => [row.id, existing[row.id] || 'present']),
+        roster.map((row) => [row.id, existing[row.id] || 'present']),
       ),
     );
-    setAttendanceBusy(false);
+    setAttendanceLoading(false);
   };
   useEffect(() => {
-    if (mode === 'attendance') loadAttendance();
-  }, [mode, classId, date, students]);
-  const refreshUpdates = async () => {
-    if (!student) return;
-    const { data } = await db
-      .from('student_updates')
-      .select('*,acknowledgements(acknowledged_at,parent_id)')
-      .eq('student_id', student.id)
-      .order('sent_at', { ascending: false });
-    setUpdates(data || []);
-  };
-  useEffect(() => {
-    refreshUpdates();
-  }, [student]);
+    if (mode !== 'attendance') return;
+    const context = `${classId}:${date}`;
+    activeAttendanceContextRef.current = context;
+    const requestVersion = attendanceRequestVersionRef.current + 1;
+    attendanceRequestVersionRef.current = requestVersion;
+    setRecords({});
+    setAttendanceNote('');
+    if (
+      !classId ||
+      classLoading ||
+      !students.length ||
+      students.some((row) => row.class_id !== classId)
+    ) {
+      setAttendanceLoading(classLoading);
+      return;
+    }
+    setAttendanceLoading(true);
+    loadAttendance(classId, date, students, requestVersion);
+  }, [mode, classId, date, students, classLoading]);
   useEffect(() => {
     const channel = db
       .channel('teacher-acks')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'acknowledgements' },
-        refreshUpdates,
+        () => refreshUpdates(),
       )
       .subscribe();
     return () => {
@@ -441,6 +520,8 @@ function Teacher({ profile }: { profile: Profile }) {
   const send = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!student || sending) return;
+    const targetStudentId = student.id;
+    const targetClassId = classId;
     const formElement = e.currentTarget;
     const form = new FormData(formElement);
     const title = String(form.get('title') || '').trim();
@@ -452,24 +533,28 @@ function Teacher({ profile }: { profile: Profile }) {
     }
     setSending(true);
     const { error } = await db.rpc('send_student_update', {
-      p_class_id: classId,
-      p_student_id: student.id,
+      p_class_id: targetClassId,
+      p_student_id: targetStudentId,
       p_category: form.get('category'),
       p_title: title,
       p_message: message,
       p_importance: form.get('important') ? 'important' : 'normal',
     });
     setSending(false);
-    if (error) setNote('Could not send update. Try again.');
-    else {
+    const contextIsCurrent =
+      targetClassId === activeClassIdRef.current &&
+      targetStudentId === activeStudentIdRef.current;
+    if (error && contextIsCurrent) setNote('Could not send update. Try again.');
+    else if (!error && contextIsCurrent) {
       formElement.reset();
       setNote('Update sent and saved.');
-      refreshUpdates();
+      refreshUpdates(targetStudentId, studentRequestVersionRef.current);
     }
   };
   const saveAttendance = async () => {
     if (!classId || !students.length) return;
-    setAttendanceBusy(true);
+    const targetContext = `${classId}:${date}`;
+    setAttendanceSaving(true);
     setAttendanceNote('');
     const p_records = students.map((row) => ({
       student_id: row.id,
@@ -480,13 +565,15 @@ function Teacher({ profile }: { profile: Profile }) {
       p_attendance_date: date,
       p_records,
     });
-    setAttendanceBusy(false);
-    setAttendanceNote(
-      error
-        ? 'Could not save attendance. Check the roster and try again.'
-        : `Attendance saved for ${new Date(`${date}T00:00:00`).toLocaleDateString()}.`,
-    );
+    setAttendanceSaving(false);
+    if (targetContext === activeAttendanceContextRef.current)
+      setAttendanceNote(
+        error
+          ? 'Could not save attendance. Check the roster and try again.'
+          : `Attendance saved for ${new Date(`${date}T00:00:00`).toLocaleDateString()}.`,
+      );
   };
+  const attendanceBusy = attendanceLoading || attendanceSaving;
   const counts = students.reduce(
     (total, row) => ({
       ...total,
@@ -530,9 +617,21 @@ function Teacher({ profile }: { profile: Profile }) {
               key={row.id}
               className={classId === row.id ? 'active' : ''}
               onClick={() => {
+                activeClassIdRef.current = row.id;
+                classRequestVersionRef.current += 1;
+                activeStudentIdRef.current = '';
+                studentRequestVersionRef.current += 1;
+                activeAttendanceContextRef.current = '';
+                attendanceRequestVersionRef.current += 1;
                 setClassId(row.id);
+                setStudents([]);
                 setStudent(null);
                 setStudentSearch('');
+                setUpdates([]);
+                setUpdatesError('');
+                setRecords({});
+                setAttendanceNote('');
+                setNote('');
               }}
             >{`Grade ${row.grade}${row.division}`}</button>
           ))}
@@ -575,7 +674,9 @@ function Teacher({ profile }: { profile: Profile }) {
                 className="student-list"
                 aria-label="Students in selected class"
               >
-                {filteredStudents.map((row) => (
+                {classLoading ? (
+                  <Skeleton label="Loading students" rows={4} />
+                ) : filteredStudents.map((row) => (
                   <button
                     className={
                       student?.id === row.id ? 'student active' : 'student'
@@ -583,7 +684,14 @@ function Teacher({ profile }: { profile: Profile }) {
                     key={row.id}
                     type="button"
                     aria-pressed={student?.id === row.id}
-                    onClick={() => setStudent(row)}
+                    onClick={() => {
+                      activeStudentIdRef.current = row.id;
+                      studentRequestVersionRef.current += 1;
+                      setStudent(row);
+                      setUpdates([]);
+                      setUpdatesError('');
+                      setNote('');
+                    }}
                   >
                     <span className="student-name"><i>{initials(row.full_name)}</i><span>{row.full_name}<small>Grade {classes.find((item) => item.id === classId)?.grade}{classes.find((item) => item.id === classId)?.division} · Roll {row.roll_number}</small></span></span>
                     <span className="student-chevron" aria-hidden="true">›</span>
@@ -676,7 +784,11 @@ function Teacher({ profile }: { profile: Profile }) {
                 <p className="eyebrow">SENT UPDATES</p>
                 <h2>Recent communication</h2>
               </div>
-              {updates.length ? (
+              {updatesLoading ? (
+                <Skeleton label="Loading recent communication" rows={3} />
+              ) : updatesError ? (
+                <p className="error" role="alert">{updatesError}</p>
+              ) : updates.length ? (
                 updates.map((update) => (
                   <Card key={update.id} update={update} teacher />
                 ))
@@ -702,7 +814,13 @@ function Teacher({ profile }: { profile: Profile }) {
           counts={counts}
           busy={attendanceBusy}
           note={attendanceNote}
-          onDate={setDate}
+          onDate={(nextDate: string) => {
+            activeAttendanceContextRef.current = '';
+            attendanceRequestVersionRef.current += 1;
+            setDate(nextDate);
+            setRecords({});
+            setAttendanceNote('');
+          }}
           onStatus={(studentId: string, status: Status) =>
             setRecords({ ...records, [studentId]: status })
           }
