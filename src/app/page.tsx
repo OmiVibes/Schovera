@@ -877,6 +877,9 @@ function Parent({ profile }: { profile: Profile }) {
       setAttendanceError('');
       return;
     }
+    setUpdates([]);
+    setAttendance([]);
+    setAttendanceError('');
     refresh(childId, requestVersion);
     loadAttendance(childId, requestVersion);
   }, [childId]);
