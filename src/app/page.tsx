@@ -1,6 +1,6 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 type Role = 'teacher' | 'parent' | 'principal';
@@ -808,6 +808,8 @@ function Skeleton({ label, rows = 3 }: { label: string; rows?: number }) {
 
 function Parent({ profile }: { profile: Profile }) {
   const db = useMemo(() => createClient(), []);
+  const activeChildIdRef = useRef('');
+  const childRequestVersionRef = useRef(0);
   const [children, setChildren] = useState<any[]>([]),
     [childId, setChildId] = useState(''),
     [updates, setUpdates] = useState<Update[]>([]),
@@ -827,31 +829,56 @@ function Parent({ profile }: { profile: Profile }) {
         setChildId(linked[0]?.id || '');
       });
   }, [db, profile]);
-  const refresh = async () => {
-    if (!childId) return;
+  const refresh = async (
+    targetChildId = childId,
+    requestVersion = childRequestVersionRef.current,
+  ) => {
+    if (!targetChildId) return;
     const { data } = await db
       .from('student_updates')
       .select(
         '*,profiles!student_updates_teacher_id_fkey(full_name),acknowledgements(acknowledged_at,parent_id)',
       )
-      .eq('student_id', childId)
+      .eq('student_id', targetChildId)
       .order('sent_at', { ascending: false });
-    setUpdates(data || []);
+    if (
+      targetChildId === activeChildIdRef.current &&
+      requestVersion === childRequestVersionRef.current
+    ) {
+      setUpdates(data || []);
+    }
   };
-  const loadAttendance = async () => {
-    if (!childId) return;
+  const loadAttendance = async (
+    targetChildId = childId,
+    requestVersion = childRequestVersionRef.current,
+  ) => {
+    if (!targetChildId) return;
     const { data, error } = await db
       .from('attendance_records')
       .select('id,class_id,student_id,attendance_date,status')
-      .eq('student_id', childId)
+      .eq('student_id', targetChildId)
       .order('attendance_date', { ascending: false })
       .limit(10);
-    setAttendance(data || []);
-    setAttendanceError(error ? 'Attendance could not be loaded.' : '');
+    if (
+      targetChildId === activeChildIdRef.current &&
+      requestVersion === childRequestVersionRef.current
+    ) {
+      setAttendance(data || []);
+      setAttendanceError(error ? 'Attendance could not be loaded.' : '');
+    }
   };
   useEffect(() => {
-    refresh();
-    loadAttendance();
+    activeChildIdRef.current = childId;
+    const requestVersion = childRequestVersionRef.current + 1;
+    childRequestVersionRef.current = requestVersion;
+    if (!childId) {
+      setUpdates([]);
+      setAttendance([]);
+      setAttendanceError('');
+      return;
+    }
+    refresh(childId, requestVersion);
+    loadAttendance(childId, requestVersion);
   }, [childId]);
   useEffect(() => {
     const channel = db
@@ -859,7 +886,7 @@ function Parent({ profile }: { profile: Profile }) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'student_updates' },
-        refresh,
+        () => refresh(),
       )
       .subscribe();
     return () => {
