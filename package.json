@@ -17,7 +17,8 @@
     "clean:demo": "node --env-file=.env.local scripts/clean-demo-data.mjs",
     "verify:phase1": "node --env-file=.env.local scripts/verify-phase1.mjs",
     "verify:attendance": "node --env-file=.env.local scripts/verify-attendance.mjs",
-    "verify:announcements": "node --env-file=.env.local scripts/verify-announcements.mjs"
+    "verify:announcements": "node --env-file=.env.local scripts/verify-announcements.mjs",
+    "verify:corrections": "node --env-file=.env.local scripts/verify-corrections.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

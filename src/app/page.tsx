@@ -9,6 +9,7 @@ type Profile = { id: string; school_id: string; role: Role; full_name: string };
 type Update = {
   id: string;
   student_id: string;
+  corrects_update_id?: string | null;
   category: string;
   title: string;
   message: string;
@@ -53,6 +54,18 @@ const displayDate = (value: string) =>
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+
+const correctedUpdateIds = (updates: Update[]) =>
+  new Set(
+    updates
+      .map((update) => update.corrects_update_id)
+      .filter((id): id is string => Boolean(id)),
+  );
+
+const effectiveUpdates = (updates: Update[]) => {
+  const corrected = correctedUpdateIds(updates);
+  return updates.filter((update) => !corrected.has(update.id));
+};
 
 function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'important' | 'check' | 'search' | 'academic' | 'achievement' | 'behaviour' | 'homework' | 'general' }) {
   const paths = {
@@ -346,6 +359,7 @@ function Teacher({ profile }: { profile: Profile }) {
     [attendanceSaving, setAttendanceSaving] = useState(false),
     [attendanceNote, setAttendanceNote] = useState(''),
     [sending, setSending] = useState(false),
+    [correctionTarget, setCorrectionTarget] = useState<Update | null>(null),
     [note, setNote] = useState('');
   useEffect(() => {
     const navigateToSection = (event: Event) => {
@@ -394,6 +408,7 @@ function Teacher({ profile }: { profile: Profile }) {
     setStudent(null);
     setUpdates([]);
     setUpdatesError('');
+    setCorrectionTarget(null);
     setRecords({});
     setAttendanceNote('');
     setNote('');
@@ -443,6 +458,7 @@ function Teacher({ profile }: { profile: Profile }) {
     studentRequestVersionRef.current = requestVersion;
     setUpdates([]);
     setUpdatesError('');
+    setCorrectionTarget(null);
     setNote('');
     if (!targetStudentId) {
       setUpdatesLoading(false);
@@ -551,6 +567,33 @@ function Teacher({ profile }: { profile: Profile }) {
       refreshUpdates(targetStudentId, studentRequestVersionRef.current);
     }
   };
+  const sendCorrection = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!correctionTarget || sending) return;
+    const formElement = e.currentTarget;
+    const form = new FormData(formElement);
+    const title = String(form.get('title') || '').trim();
+    const message = String(form.get('message') || '').trim();
+    setNote('');
+    if (!title || !message) {
+      setNote('Please add a corrected title and message.');
+      return;
+    }
+    setSending(true);
+    const { error } = await db.rpc('send_student_update_correction', {
+      p_original_update_id: correctionTarget.id,
+      p_title: title,
+      p_message: message,
+    });
+    setSending(false);
+    if (error) {
+      setNote('Could not send correction. The update may already have been corrected.');
+      return;
+    }
+    setCorrectionTarget(null);
+    setNote('Correction sent and saved. The original remains in the history.');
+    refreshUpdates(student?.id, studentRequestVersionRef.current);
+  };
   const saveAttendance = async () => {
     if (!classId || !students.length) return;
     const targetContext = `${classId}:${date}`;
@@ -590,6 +633,7 @@ function Teacher({ profile }: { profile: Profile }) {
           .includes(normalizedStudentSearch),
       )
     : students;
+  const teacherCorrectedIds = correctedUpdateIds(updates);
   return (
     <section className="teacher-workspace" id="teacher-home">
       <section className="teacher-today-card" aria-label="Today's teaching context">
@@ -629,6 +673,7 @@ function Teacher({ profile }: { profile: Profile }) {
                 setStudentSearch('');
                 setUpdates([]);
                 setUpdatesError('');
+                setCorrectionTarget(null);
                 setRecords({});
                 setAttendanceNote('');
                 setNote('');
@@ -690,6 +735,7 @@ function Teacher({ profile }: { profile: Profile }) {
                       setStudent(row);
                       setUpdates([]);
                       setUpdatesError('');
+                      setCorrectionTarget(null);
                       setNote('');
                     }}
                   >
@@ -729,14 +775,21 @@ function Teacher({ profile }: { profile: Profile }) {
                 <span><small>Attendance</small><b className={`status ${records[student.id] || 'present'}`}>{nice(records[student.id] || 'present')}</b></span>
                 <span><small>Latest update</small><b>{updates[0] ? nice(updates[0].category) : 'None yet'}</b></span>
                 <span><small>Last sent</small><b>{updates[0] ? new Date(updates[0].sent_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '—'}</b></span>
-                <span><small>Important update</small><b className={updates.find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'snapshot-awaiting' : 'snapshot-acknowledged'}>{updates.find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'Awaiting' : 'Up to date'}</b></span>
+                <span><small>Important update</small><b className={effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'snapshot-awaiting' : 'snapshot-acknowledged'}>{effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'Awaiting' : 'Up to date'}</b></span>
               </div>
               <div className="teacher-form-heading">
-                <div><p className="eyebrow">NEW COMMUNICATION</p><h2 className="form-title">Send an update</h2></div>
+                <div><p className="eyebrow">{correctionTarget ? 'CORRECTING SENT COMMUNICATION' : 'NEW COMMUNICATION'}</p><h2 className="form-title">{correctionTarget ? 'Send a correction' : 'Send an update'}</h2></div>
                 <span>About {student.full_name.split(' ')[0]}</span>
               </div>
-              <form className="teacher-update-form" onSubmit={send}>
-                <label className="category-field">
+              {correctionTarget && (
+                <div className="correction-context" role="status">
+                  <span className="update-icon" aria-hidden="true"><Icon name="updates" /></span>
+                  <span><b>Correcting: {correctionTarget.title}</b><small>The original stays in the family history. Category and importance are preserved.</small></span>
+                  <button type="button" className="link" onClick={() => setCorrectionTarget(null)}>Cancel</button>
+                </div>
+              )}
+              <form className="teacher-update-form" onSubmit={correctionTarget ? sendCorrection : send}>
+                {!correctionTarget && <label className="category-field">
                   <span><Icon name="updates" /> Category</span>
                   <select name="category">
                     {categories.map((category) => (
@@ -745,7 +798,7 @@ function Teacher({ profile }: { profile: Profile }) {
                       </option>
                     ))}
                   </select>
-                </label>
+                </label>}
                 <label>
                   Title
                   <input
@@ -753,6 +806,8 @@ function Teacher({ profile }: { profile: Profile }) {
                     required
                     minLength={3}
                     maxLength={120}
+                    key={`title-${correctionTarget?.id || 'new'}`}
+                    defaultValue={correctionTarget?.title || ''}
                     placeholder="Clear update title"
                   />
                 </label>
@@ -764,15 +819,17 @@ function Teacher({ profile }: { profile: Profile }) {
                     minLength={3}
                     maxLength={1000}
                     rows={4}
+                    key={`message-${correctionTarget?.id || 'new'}`}
+                    defaultValue={correctionTarget?.message || ''}
                     placeholder="Write a short, kind, specific update…"
                   />
                 </label>
-                <label className="check importance-control">
+                {!correctionTarget && <label className="check importance-control">
                   <input name="important" type="checkbox" />
                   <span><b>Important update</b><small>Ask the linked parent to acknowledge this message.</small></span>
-                </label>
+                </label>}
                 <button disabled={sending}>
-                  {sending ? 'Sending update…' : 'Send update to parent'}
+                  {sending ? 'Sending…' : correctionTarget ? 'Send correction to parent' : 'Send update to parent'}
                 </button>
               </form>
               {note && (
@@ -790,7 +847,7 @@ function Teacher({ profile }: { profile: Profile }) {
                 <p className="error" role="alert">{updatesError}</p>
               ) : updates.length ? (
                 updates.map((update) => (
-                  <Card key={update.id} update={update} teacher />
+                  <Card key={update.id} update={update} teacher corrected={teacherCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? updates.find((item) => item.id === update.corrects_update_id)?.title : undefined} onCorrect={teacherCorrectedIds.has(update.id) ? undefined : setCorrectionTarget} />
                 ))
               ) : (
                 <p className="empty compact-empty">
@@ -1032,7 +1089,8 @@ function Parent({ profile }: { profile: Profile }) {
   const className = child?.classes
     ? `Grade ${child.classes.grade}${child.classes.division}`
     : 'Your child';
-  const awaitingAcknowledgement = updates.filter(
+  const parentCorrectedIds = correctedUpdateIds(updates);
+  const awaitingAcknowledgement = effectiveUpdates(updates).filter(
     (update) =>
       update.importance === 'important' &&
       !update.acknowledgements?.some(
@@ -1132,6 +1190,8 @@ function Parent({ profile }: { profile: Profile }) {
           key={update.id}
           update={update}
           parent={profile.id}
+          corrected={parentCorrectedIds.has(update.id)}
+          correctionOf={update.corrects_update_id ? updates.find((item) => item.id === update.corrects_update_id)?.title : undefined}
           childContext={`${child?.full_name || 'Your child'} • ${className}`}
           acknowledging={acknowledgingId === update.id}
           acknowledge={async (updateId) => {
@@ -1289,7 +1349,8 @@ function Principal({ profile }: { profile: Profile }) {
       db.removeChannel(channel);
     };
   }, [db, profile]);
-  const important = all.filter((update) => update.importance === 'important'),
+  const principalCorrectedIds = correctedUpdateIds(all),
+    important = effectiveUpdates(all).filter((update) => update.importance === 'important'),
     acknowledged = important.filter(
       (update) => update.acknowledgements?.length,
     ),
@@ -1442,7 +1503,7 @@ function Principal({ profile }: { profile: Profile }) {
           <PrincipalCommunicationSkeleton />
         ) : visibleCommunication.length ? (
           visibleCommunication.map((update) => (
-              <PrincipalCommunicationCard key={update.id} update={update} />
+              <PrincipalCommunicationCard key={update.id} update={update} corrected={principalCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? all.find((item) => item.id === update.corrects_update_id)?.title : undefined} />
             ))
         ) : communicationFilter === 'awaiting' ? (
           <div className="principal-awaiting-empty" role="status">
@@ -1474,7 +1535,7 @@ function PrincipalCommunicationSkeleton() {
   );
 }
 
-function PrincipalCommunicationCard({ update }: { update: Update }) {
+function PrincipalCommunicationCard({ update, corrected, correctionOf }: { update: Update; corrected: boolean; correctionOf?: string }) {
   const studentName = update.students?.full_name || 'Student';
   const studentClass = update.students?.classes
     ? `Grade ${update.students.classes.grade}${update.students.classes.division}`
@@ -1498,17 +1559,23 @@ function PrincipalCommunicationCard({ update }: { update: Update }) {
       </header>
       <div className="principal-card-tags">
         <span className="principal-category"><Icon name={categoryIcon(update.category)} />{nice(update.category)}</span>
+        {correctionOf && <span className="correction-badge">Correction</span>}
+        {corrected && <span className="corrected-badge">Corrected</span>}
         <span className={needsAcknowledgement ? 'principal-importance important' : 'principal-importance'}>
           {needsAcknowledgement ? 'Important' : 'Normal'}
         </span>
       </div>
       <h4>{update.title}</h4>
+      {correctionOf && <p className="correction-reference">Corrects: {correctionOf}</p>}
+      {corrected && <p className="correction-reference">A newer correction is available in this history.</p>}
       <p className="principal-update-message">{update.message}</p>
       <footer>
         <time dateTime={update.sent_at}>{displayDate(update.sent_at)}</time>
         {needsAcknowledgement && (
           acknowledged ? (
             <span className="principal-acknowledgement acknowledged"><Icon name="check" />Acknowledged</span>
+          ) : corrected ? (
+            <span className="principal-acknowledgement corrected">Corrected</span>
           ) : (
             <span className="principal-acknowledgement awaiting"><Icon name="important" />Awaiting acknowledgement</span>
           )
@@ -1682,6 +1749,9 @@ function Card({
   teacher,
   parent,
   childContext,
+  corrected = false,
+  correctionOf,
+  onCorrect,
   acknowledging = false,
   acknowledge,
 }: {
@@ -1689,6 +1759,9 @@ function Card({
   teacher?: boolean;
   parent?: string;
   childContext?: string;
+  corrected?: boolean;
+  correctionOf?: string;
+  onCorrect?: (update: Update) => void;
   acknowledging?: boolean;
   acknowledge?: (id: string) => void;
 }) {
@@ -1705,10 +1778,14 @@ function Card({
       }
     >
       <div className="card-topline"><span className="update-icon" aria-hidden="true"><Icon name={teacher || parent ? categoryIcon(update.category) : 'updates'} /></span><span className="badge">{nice(update.category)}</span>
+      {correctionOf && <span className="correction-badge">Correction</span>}
+      {corrected && <span className="corrected-badge">Corrected</span>}
       {update.importance === 'important' && (
         <span className="important">Important</span>
       )}</div>
       <h3>{update.title}</h3>
+      {correctionOf && <p className="correction-reference">Corrects: {correctionOf}</p>}
+      {corrected && <p className="correction-reference">This update was corrected by a newer communication.</p>}
       {parent && childContext && <p className="parent-update-context"><Icon name="student" /> About {childContext}</p>}
       <p>{update.message}</p>
       <small className={teacher ? 'teacher-update-meta' : undefined}>
@@ -1722,14 +1799,21 @@ function Card({
           <time dateTime={update.sent_at}>{displayDate(update.sent_at)}</time>
         </footer>
       )}
+      {teacher && onCorrect && (
+        <button type="button" className="send-correction" onClick={() => onCorrect(update)}>
+          Send correction
+        </button>
+      )}
       {update.importance === 'important' && (
         <div className={`ack${teacher ? ' teacher-ack' : ''}`}>
           {acknowledged ? (
             parent ? (
               <span className="parent-acknowledged" role="status"><Icon name="check" /><span><b>Acknowledged</b>{mine && <small>{displayDate(mine.acknowledged_at)}</small>}</span></span>
             ) : <b className="status present">{teacher && <Icon name="check" />}Acknowledged</b>
-          ) : teacher ? (
+          ) : teacher && !corrected ? (
             <span className="status pending"><Icon name="important" /> Awaiting acknowledgement</span>
+          ) : corrected ? (
+            <span className="status neutral">Replaced by a newer correction</span>
           ) : (
             <>
               <span className="ack-copy">Acknowledgement requested</span>

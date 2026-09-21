@@ -1117,6 +1117,18 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .role-teacher .teacher-update-card .teacher-ack { margin-top: .55rem; padding-top: .5rem; border-top: 1px solid color-mix(in srgb, var(--line) 80%, white); }
 .role-teacher .teacher-update-card .status { gap: .25rem; min-height: 22px; padding: .16rem .42rem; font-size: .68rem; }
 .role-teacher .teacher-update-card .status .icon { width: .78rem; height: .78rem; }
+.correction-context { display: flex; align-items: center; gap: .65rem; margin: 0 0 .8rem; border: 1px solid #cfd8f6; border-radius: 13px; background: #f5f7ff; padding: .7rem .75rem; color: #394a85; }
+.correction-context > span:nth-child(2) { display: grid; min-width: 0; gap: .12rem; flex: 1; font-size: .8rem; }
+.correction-context small { color: #667085; font-size: .72rem; }
+.correction-context .update-icon { width: 32px; height: 32px; flex: 0 0 auto; background: #e8ecff; color: #4f46e5; }
+.correction-context .link { min-height: 32px; padding: .3rem .45rem; color: #4f46e5; font-size: .74rem; }
+.correction-badge, .corrected-badge { display: inline-flex; align-items: center; min-height: 22px; border-radius: 999px; padding: .15rem .44rem; font-size: .67rem; font-weight: 800; white-space: nowrap; }
+.correction-badge { background: #eef2ff; color: #4f46e5; }
+.corrected-badge { background: #f0f2f6; color: #566275; }
+.correction-reference { margin: .22rem 0 !important; color: #667085 !important; font-size: .74rem !important; font-style: italic; }
+.send-correction { min-height: 32px; margin-top: .55rem; border: 1px solid #cfd8f6; border-radius: 9px; background: #f5f7ff; color: #414ba0; padding: .28rem .5rem; font-size: .7rem; font-weight: 800; }
+.send-correction:hover:not(:disabled) { background: #e8ecff; }
+.status.neutral { background: #f0f2f6; color: #566275; }
 @media (max-width: 430px) {
   .role-teacher .student { min-height: 64px; padding: .55rem .62rem; }
   .role-teacher .student-name i { width: 36px; height: 36px; }
@@ -1698,6 +1710,7 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .principal-category .icon { width: .76rem; height: .76rem; }
 .principal-importance { border: 1px solid #e4e8ee; background: #f8fafc; color: #667085; }
 .principal-importance.important { border-color: #f0d49b; background: #fff7e3; color: #a15c00; }
+.principal-card-tags .correction-badge, .principal-card-tags .corrected-badge { font-size: .64rem; }
 .principal-communication-card h4 { margin: 0 0 .16rem; color: #27354a; font-size: .86rem; line-height: 1.3; }
 .principal-update-message { max-width: 64ch; margin: 0; color: #59677a; font-size: .8rem; line-height: 1.45; }
 .principal-communication-card footer {
@@ -1716,6 +1729,7 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .principal-acknowledgement .icon { width: .78rem; height: .78rem; }
 .principal-acknowledgement.acknowledged { background: #e9f8f0; color: #087a55; }
 .principal-acknowledgement.awaiting { background: #fff7e3; color: #a15c00; }
+.principal-acknowledgement.corrected { background: #f0f2f6; color: #566275; }
 .principal-communication-skeleton {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
