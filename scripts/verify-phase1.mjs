@@ -43,65 +43,7 @@ async function signIn(email) {
   return client;
 }
 
-function waitForRealtime(client, table, filter, label) {
-  let channel;
-  let settled = false;
-  let resolveEvent;
-  let eventTimer;
-  const event = new Promise((resolve, reject) => {
-    resolveEvent = (payload) => {
-      clearTimeout(eventTimer);
-      resolve(payload);
-    };
-    eventTimer = setTimeout(
-      () => reject(new Error(`Realtime event timed out for ${label}.`)),
-      15000,
-    );
-  });
-  const ready = new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`Realtime subscription timed out for ${label}.`)),
-      12000,
-    );
-    channel = client
-      .channel(`phase1-${table}-${randomUUID()}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table, filter },
-        (payload) => {
-          if (!settled) {
-            settled = true;
-            resolveEvent(payload);
-          }
-        },
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          clearTimeout(timer);
-          resolve();
-        }
-        if (
-          status === 'CHANNEL_ERROR' ||
-          status === 'TIMED_OUT' ||
-          status === 'CLOSED'
-        ) {
-          clearTimeout(timer);
-          reject(
-            new Error(`Realtime subscription failed for ${label}: ${status}.`),
-          );
-        }
-      });
-  });
-  channels.push({
-    client,
-    get channel() {
-      return channel;
-    },
-  });
-  return { ready, event };
-}
-
-function subscribeToRealtimeEvents(client, table, label) {
+function subscribeToRealtimeEvents(client, table, label, filter) {
   let channel;
   const pending = [];
   const received = [];
@@ -124,7 +66,7 @@ function subscribeToRealtimeEvents(client, table, label) {
       .channel(`phase1-${table}-stream-${randomUUID()}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table },
+        { event: 'INSERT', schema: 'public', table, ...(filter ? { filter } : {}) },
         deliver,
       )
       .subscribe((status) => {
@@ -170,7 +112,10 @@ function subscribeToRealtimeEvents(client, table, label) {
 }
 
 async function expectRpcDenied(client, parameters) {
-  const { error } = await client.rpc('send_student_update', parameters);
+  const { error } = await client.rpc('send_student_update', {
+    ...parameters,
+    p_client_request_id: randomUUID(),
+  });
   expect(Boolean(error), 'Unauthorized RPC unexpectedly succeeded.');
 }
 
@@ -396,13 +341,13 @@ try {
   });
   console.log('Phase 1 security checks passed.');
 
-  const parentSubscriptionPreflight = waitForRealtime(
+  const parentUpdatesStream = subscribeToRealtimeEvents(
     parent,
     'student_updates',
-    `student_id=eq.${student.id}`,
     'Teacher-to-parent subscription preflight',
+    `student_id=eq.${student.id}`,
   );
-  await parentSubscriptionPreflight.ready;
+  await parentUpdatesStream.ready;
   const { data: preflightUpdateId, error: preflightError } = await teacher.rpc(
     'send_student_update',
     {
@@ -413,19 +358,15 @@ try {
       p_message:
         'This real persisted update confirms the parent subscription is active before the acceptance event.',
       p_importance: 'normal',
+      p_client_request_id: randomUUID(),
     },
   );
   if (preflightError) throw preflightError;
   temporary.updateIds.push(preflightUpdateId);
-  await parentSubscriptionPreflight.event;
-
-  const parentLive = waitForRealtime(
-    parent,
-    'student_updates',
-    `student_id=eq.${student.id}`,
-    'Teacher-to-parent acceptance update',
+  await parentUpdatesStream.waitFor(
+    (payload) => payload.new.id === preflightUpdateId,
+    'Teacher-to-parent subscription preflight',
   );
-  await parentLive.ready;
   const { data: importantUpdateId, error: importantError } = await teacher.rpc(
     'send_student_update',
     {
@@ -436,11 +377,15 @@ try {
       p_message:
         'This persisted update verifies the school-to-home acknowledgement loop.',
       p_importance: 'important',
+      p_client_request_id: randomUUID(),
     },
   );
   if (importantError) throw importantError;
   temporary.updateIds.push(importantUpdateId);
-  await parentLive.event;
+  await parentUpdatesStream.waitFor(
+    (payload) => payload.new.id === importantUpdateId,
+    'Teacher-to-parent acceptance update',
+  );
   const parentImportant = await must(
     parent
       .from('student_updates')
@@ -479,6 +424,7 @@ try {
     p_message:
       'This real persisted update confirms acknowledgement subscriptions before the acceptance event.',
     p_importance: 'important',
+    p_client_request_id: randomUUID(),
   });
   if (acknowledgementPreflightError) throw acknowledgementPreflightError;
   temporary.updateIds.push(acknowledgementPreflightUpdateId);
@@ -593,6 +539,7 @@ try {
       p_message:
         'This normal update is informational and has no acknowledgement requirement.',
       p_importance: 'normal',
+      p_client_request_id: randomUUID(),
     },
   );
   if (normalError) throw normalError;

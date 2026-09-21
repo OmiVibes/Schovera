@@ -23,6 +23,15 @@ type Update = {
   };
   profiles?: { full_name: string };
 };
+type PendingTeacherSend = {
+  requestId: string;
+  classId: string;
+  studentId: string;
+  category: string;
+  importance: 'normal' | 'important';
+  title: string;
+  message: string;
+};
 type Attendance = {
   id: string;
   class_id: string;
@@ -54,6 +63,9 @@ const displayDate = (value: string) =>
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+
+const normalizeCommunicationValue = (value: string) =>
+  value.replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '');
 
 const correctedUpdateIds = (updates: Update[]) =>
   new Set(
@@ -360,7 +372,35 @@ function Teacher({ profile }: { profile: Profile }) {
     [attendanceNote, setAttendanceNote] = useState(''),
     [sending, setSending] = useState(false),
     [correctionTarget, setCorrectionTarget] = useState<Update | null>(null),
+    [pendingSend, setPendingSend] = useState<PendingTeacherSend | null>(null),
     [note, setNote] = useState('');
+  const pendingSendStorageKey = `schovera:pending-teacher-update:${profile.id}`;
+  const clearPendingSend = () => {
+    sessionStorage.removeItem(pendingSendStorageKey);
+    setPendingSend(null);
+  };
+  const persistPendingSend = (pending: PendingTeacherSend) => {
+    sessionStorage.setItem(pendingSendStorageKey, JSON.stringify(pending));
+    setPendingSend(pending);
+  };
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(pendingSendStorageKey);
+      if (!stored) return;
+      const candidate = JSON.parse(stored) as PendingTeacherSend;
+      if (
+        typeof candidate.requestId === 'string' &&
+        typeof candidate.classId === 'string' &&
+        typeof candidate.studentId === 'string' &&
+        typeof candidate.category === 'string' &&
+        (candidate.importance === 'normal' || candidate.importance === 'important') &&
+        typeof candidate.title === 'string' &&
+        typeof candidate.message === 'string'
+      ) setPendingSend(candidate);
+    } catch {
+      sessionStorage.removeItem(pendingSendStorageKey);
+    }
+  }, [pendingSendStorageKey]);
   useEffect(() => {
     const navigateToSection = (event: Event) => {
       const id = (event as CustomEvent<{ id?: string }>).detail?.id;
@@ -398,6 +438,15 @@ function Teacher({ profile }: { profile: Profile }) {
         setClasses((data || []).map((row: any) => row.classes).filter(Boolean)),
       );
   }, [db, profile]);
+  useEffect(() => {
+    if (!pendingSend || classId || !classes.some((row) => row.id === pendingSend.classId)) return;
+    setClassId(pendingSend.classId);
+  }, [classes, classId, pendingSend]);
+  useEffect(() => {
+    if (!pendingSend || classId !== pendingSend.classId || student || !students.length) return;
+    const pendingStudent = students.find((row) => row.id === pendingSend.studentId);
+    if (pendingStudent) setStudent(pendingStudent);
+  }, [classId, pendingSend, student, students]);
   useEffect(() => {
     activeClassIdRef.current = classId;
     const requestVersion = classRequestVersionRef.current + 1;
@@ -540,30 +589,73 @@ function Teacher({ profile }: { profile: Profile }) {
     const targetClassId = classId;
     const formElement = e.currentTarget;
     const form = new FormData(formElement);
-    const title = String(form.get('title') || '').trim();
-    const message = String(form.get('message') || '').trim();
+    const title = normalizeCommunicationValue(String(form.get('title') || ''));
+    const message = normalizeCommunicationValue(String(form.get('message') || ''));
+    const category = String(form.get('category') || '');
+    const importance: 'normal' | 'important' = form.get('important') ? 'important' : 'normal';
     setNote('');
     if (!title || !message) {
       setNote('Please add a title and message before sending.');
       return;
     }
+    const matchingPending = pendingSend &&
+      pendingSend.classId === targetClassId &&
+      pendingSend.studentId === targetStudentId &&
+      pendingSend.category === category &&
+      pendingSend.importance === importance &&
+      pendingSend.title === title &&
+      pendingSend.message === message;
+    if (pendingSend && !matchingPending) {
+      setNote('This pending send differs from the saved update. Discard it before sending changed information.');
+      return;
+    }
+    if (!matchingPending && !globalThis.crypto?.randomUUID) {
+      setNote('This browser cannot safely prepare a new update.');
+      return;
+    }
+    const pending: PendingTeacherSend = matchingPending
+      ? pendingSend
+      : {
+          requestId: globalThis.crypto.randomUUID(),
+          classId: targetClassId,
+          studentId: targetStudentId,
+          category,
+          importance,
+          title,
+          message,
+        };
+    const retrying = Boolean(matchingPending);
+    persistPendingSend(pending);
     setSending(true);
     const { error } = await db.rpc('send_student_update', {
       p_class_id: targetClassId,
       p_student_id: targetStudentId,
-      p_category: form.get('category'),
+      p_category: category,
       p_title: title,
       p_message: message,
-      p_importance: form.get('important') ? 'important' : 'normal',
+      p_importance: importance,
+      p_client_request_id: pending.requestId,
     });
     setSending(false);
     const contextIsCurrent =
       targetClassId === activeClassIdRef.current &&
       targetStudentId === activeStudentIdRef.current;
-    if (error && contextIsCurrent) setNote('Could not send update. Try again.');
+    if (error && contextIsCurrent) {
+      const messageText = error.message.toLowerCase();
+      if (messageText.includes('idempotency conflict'))
+        setNote('This pending send differs from the saved update. Discard it before sending changed information.');
+      else if (messageText.includes('not authorized')) {
+        clearPendingSend();
+        setNote('You are no longer permitted to send this update.');
+      } else if (messageText.includes('invalid'))
+        setNote('Could not send update. Check the information and try again.');
+      else
+        setNote('We could not confirm delivery. Retry sending safely.');
+    }
     else if (!error && contextIsCurrent) {
+      clearPendingSend();
       formElement.reset();
-      setNote('Update sent and saved.');
+      setNote(retrying ? 'Your earlier update was already sent. No duplicate was created.' : 'Update sent and saved.');
       refreshUpdates(targetStudentId, studentRequestVersionRef.current);
     }
   };
@@ -634,6 +726,11 @@ function Teacher({ profile }: { profile: Profile }) {
       )
     : students;
   const teacherCorrectedIds = correctedUpdateIds(updates);
+  const pendingForSelectedStudent = pendingSend &&
+    pendingSend.classId === classId &&
+    pendingSend.studentId === student?.id
+    ? pendingSend
+    : null;
   return (
     <section className="teacher-workspace" id="teacher-home">
       <section className="teacher-today-card" aria-label="Today's teaching context">
@@ -763,6 +860,13 @@ function Teacher({ profile }: { profile: Profile }) {
       </aside>
       {mode === 'updates' ? (
         <div className="card teacher-task-panel">
+          {pendingSend && !pendingForSelectedStudent && !correctionTarget && (
+            <div className="pending-send-recovery pending-send-other" role="status">
+              <span className="update-icon" aria-hidden="true"><Icon name="updates" /></span>
+              <span><b>An earlier send still needs confirmation</b><small>Return to its student to retry it safely, or discard it before creating changed information.</small></span>
+              <button type="button" className="link" onClick={() => { clearPendingSend(); setNote('Pending send discarded. You can create a new update.'); }}>Discard</button>
+            </div>
+          )}
           {student ? (
             <>
               <p className="eyebrow">PARENT UPDATE FOR</p>
@@ -788,10 +892,18 @@ function Teacher({ profile }: { profile: Profile }) {
                   <button type="button" className="link" onClick={() => setCorrectionTarget(null)}>Cancel</button>
                 </div>
               )}
-              <form className="teacher-update-form" onSubmit={correctionTarget ? sendCorrection : send}>
+              {pendingForSelectedStudent && !correctionTarget && (
+                <div className="pending-send-recovery" role="status">
+                  <span className="update-icon" aria-hidden="true"><Icon name="updates" /></span>
+                  <span><b>We could not confirm delivery</b><small>Retrying uses the same send action, so no duplicate can be created.</small></span>
+                  <button type="button" onClick={() => (document.getElementById('teacher-update-form') as HTMLFormElement | null)?.requestSubmit()}>Retry sending</button>
+                  <button type="button" className="link" onClick={() => { clearPendingSend(); setNote('Pending send discarded. You can create a new update.'); }}>Discard</button>
+                </div>
+              )}
+              <form id="teacher-update-form" className="teacher-update-form" onSubmit={correctionTarget ? sendCorrection : send}>
                 {!correctionTarget && <label className="category-field">
                   <span><Icon name="updates" /> Category</span>
-                  <select name="category">
+                  <select key={`category-${pendingForSelectedStudent?.requestId || 'new'}`} name="category" defaultValue={pendingForSelectedStudent?.category || 'academic'}>
                     {categories.map((category) => (
                       <option key={category} value={category}>
                         {nice(category)}
@@ -806,8 +918,8 @@ function Teacher({ profile }: { profile: Profile }) {
                     required
                     minLength={3}
                     maxLength={120}
-                    key={`title-${correctionTarget?.id || 'new'}`}
-                    defaultValue={correctionTarget?.title || ''}
+                    key={`title-${correctionTarget?.id || pendingForSelectedStudent?.requestId || 'new'}`}
+                    defaultValue={correctionTarget?.title || pendingForSelectedStudent?.title || ''}
                     placeholder="Clear update title"
                   />
                 </label>
@@ -819,13 +931,13 @@ function Teacher({ profile }: { profile: Profile }) {
                     minLength={3}
                     maxLength={1000}
                     rows={4}
-                    key={`message-${correctionTarget?.id || 'new'}`}
-                    defaultValue={correctionTarget?.message || ''}
+                    key={`message-${correctionTarget?.id || pendingForSelectedStudent?.requestId || 'new'}`}
+                    defaultValue={correctionTarget?.message || pendingForSelectedStudent?.message || ''}
                     placeholder="Write a short, kind, specific update…"
                   />
                 </label>
                 {!correctionTarget && <label className="check importance-control">
-                  <input name="important" type="checkbox" />
+                  <input key={`important-${pendingForSelectedStudent?.requestId || 'new'}`} name="important" type="checkbox" defaultChecked={pendingForSelectedStudent?.importance === 'important'} />
                   <span><b>Important update</b><small>Ask the linked parent to acknowledge this message.</small></span>
                 </label>}
                 <button disabled={sending}>

@@ -64,6 +64,7 @@ async function createUpdate(teacher, assignment, student, title, importance = 'n
   const { data, error } = await teacher.rpc('send_student_update', {
     p_class_id: assignment.class_id, p_student_id: student.id, p_category: category,
     p_title: title, p_message: `A clear, respectful message for ${title}.`, p_importance: importance,
+    p_client_request_id: randomUUID(),
   });
   if (error) throw error;
   temporary.updateIds.push(data);
