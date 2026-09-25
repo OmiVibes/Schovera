@@ -1506,6 +1506,7 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
     const channel = db.channel(`student-profile-${role}-${student.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records', filter: `student_id=eq.${student.id}` }, () => setRefreshTick((value) => value + 1))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'student_updates', filter: `student_id=eq.${student.id}` }, () => setRefreshTick((value) => value + 1))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'acknowledgements' }, () => setRefreshTick((value) => value + 1))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments', filter: `class_id=eq.${student.class_id}` }, () => setRefreshTick((value) => value + 1))
       .subscribe();
     return () => { db.removeChannel(channel); };
