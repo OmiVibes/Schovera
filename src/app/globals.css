@@ -1147,6 +1147,16 @@ body { font-family: var(--font-geist-sans), Arial, sans-serif; }
 .assignment-form .assignment-description-field { grid-column: span 2; }
 .assignment-form button { min-height: 42px; }
 .assignment-list-heading { display: flex; align-items: center; justify-content: space-between; margin: 1.25rem 0 .55rem; }
+.student-profile { display: grid; gap: 1rem; margin: 1rem 0; scroll-margin-top: 6rem; }
+.student-profile-identity { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; border: 1px solid #d9e5ee; border-radius: 20px; background: linear-gradient(135deg,#eff8f4,#fff); }
+.student-profile-identity .student-avatar { width: 62px; height: 62px; font-size: 1.1rem; flex: 0 0 auto; }
+.student-profile-identity h1 { margin: .1rem 0; font-size: clamp(1.45rem,3vw,2rem); }.student-profile-identity p,.student-profile-identity small { margin: .15rem 0; color: #52647b; }
+.student-profile-summary,.student-profile-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .75rem; }
+.student-profile-summary article { display:flex; gap:.65rem; align-items:center; padding: .85rem; border:1px solid #dfe8ef; border-radius:14px; background:#fff; }.student-profile-summary .icon { width:22px; color:#0f5d46; }.student-profile-summary small { display:block; color:#667085; }.student-profile-summary b { display:block; font-size:.95rem; color:#172033; }
+.profile-section { min-height: 172px; }.profile-section h2 { margin:.1rem 0 .7rem; font-size:1.05rem; }.profile-update-title { display:flex; align-items:center; gap:.5rem; margin:.25rem 0; }.profile-update-title .update-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:9px; background:#eef2ff; color:#4f46e5; }.profile-section .status { display:inline-flex; margin-top:.3rem; }
+.profile-link { margin: .75rem 0 0; background: transparent; color:#0f5d46; border:1px solid #9bcbb8; border-radius:10px; padding:.55rem .8rem; font-weight:700; }
+.principal-students { margin: 0 0 1rem; padding:1rem; border:1px solid #dfe8ef; border-radius:18px; background:#fff; }.principal-student-results { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; margin:.7rem 0; }.principal-student-results .student { text-align:left; }
+@media (max-width: 760px) { .student-profile-summary,.student-profile-grid { grid-template-columns:1fr; }.student-profile-identity { padding:1rem; }.principal-student-results { grid-template-columns:1fr; } }
 .assignment-list-heading h2 { margin: .05rem 0; font-size: 1.05rem; }.assignment-list-heading .eyebrow { margin: 0; }
 .assignment-list-heading > span { display: grid; min-width: 28px; min-height: 28px; place-items: center; border-radius: 999px; background: #edf6f2; color: #087a55; font-size: .75rem; font-weight: 800; }
 .assignment-card { position: relative; margin: .55rem 0; border: 1px solid #dfe7ef; border-left: 3px solid #4f46e5; border-radius: 14px; background: #fff; padding: .75rem .8rem; box-shadow: 0 1px 2px rgb(16 24 40 / .03); }

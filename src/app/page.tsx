@@ -128,12 +128,14 @@ const roleNavigation: Record<
   teacher: [
     { label: 'Overview', id: 'teacher-home', icon: 'school' },
     { label: 'Students', id: 'teacher-students', icon: 'student' },
+    { label: 'Profile', id: 'teacher-profile', icon: 'student' },
     { label: 'Attendance', id: 'teacher-attendance', icon: 'attendance' },
     { label: 'Homework', id: 'teacher-homework', icon: 'homework' },
     { label: 'School notices', id: 'teacher-notices', icon: 'notice' },
   ],
   parent: [
     { label: 'Home', id: 'parent-home', icon: 'school' },
+    { label: 'Profile', id: 'parent-profile', icon: 'student' },
     { label: 'Updates', id: 'parent-updates', icon: 'updates' },
     { label: 'Attendance', id: 'parent-attendance', icon: 'attendance' },
     { label: 'Homework', id: 'parent-homework', icon: 'homework' },
@@ -141,6 +143,7 @@ const roleNavigation: Record<
   ],
   principal: [
     { label: 'Overview', id: 'principal-overview', icon: 'school' },
+    { label: 'Students', id: 'principal-students', icon: 'student' },
     { label: 'Communication', id: 'principal-communication', icon: 'updates' },
     { label: 'Attendance', id: 'principal-attendance', icon: 'attendance' },
     { label: 'Homework', id: 'principal-homework', icon: 'homework' },
@@ -381,7 +384,7 @@ function Teacher({ profile }: { profile: Profile }) {
     [classLoading, setClassLoading] = useState(false),
     [updatesLoading, setUpdatesLoading] = useState(false),
     [updatesError, setUpdatesError] = useState(''),
-    [mode, setMode] = useState<'updates' | 'attendance' | 'homework' | 'notices'>('updates'),
+    [mode, setMode] = useState<'updates' | 'attendance' | 'homework' | 'notices' | 'profile'>('updates'),
     [date, setDate] = useState(today()),
     [records, setRecords] = useState<Record<string, Status>>({}),
     [attendanceLoading, setAttendanceLoading] = useState(false),
@@ -426,6 +429,8 @@ function Teacher({ profile }: { profile: Profile }) {
           ? 'attendance'
           : id === 'teacher-students'
             ? 'updates'
+            : id === 'teacher-profile'
+              ? 'profile'
             : id === 'teacher-homework'
               ? 'homework'
               : id === 'teacher-notices'
@@ -797,7 +802,7 @@ function Teacher({ profile }: { profile: Profile }) {
             >{`Grade ${row.grade}${row.division}`}</button>
           ))}
         </div>
-        {mode === 'updates' && (
+        {(mode === 'updates' || mode === 'profile') && (
           <>
             <div className="section-heading">
               <p className="eyebrow">STUDENT UPDATES</p>
@@ -900,6 +905,7 @@ function Teacher({ profile }: { profile: Profile }) {
                 <span><small>Last sent</small><b>{updates[0] ? new Date(updates[0].sent_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '—'}</b></span>
                 <span><small>Important update</small><b className={effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'snapshot-awaiting' : 'snapshot-acknowledged'}>{effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'Awaiting' : 'Up to date'}</b></span>
               </div>
+              <button type="button" className="profile-link" onClick={() => setMode('profile')}>View student profile</button>
               <div className="teacher-form-heading">
                 <div><p className="eyebrow">{correctionTarget ? 'CORRECTING SENT COMMUNICATION' : 'NEW COMMUNICATION'}</p><h2 className="form-title">{correctionTarget ? 'Send a correction' : 'Send an update'}</h2></div>
                 <span>About {student.full_name.split(' ')[0]}</span>
@@ -992,6 +998,8 @@ function Teacher({ profile }: { profile: Profile }) {
             </p>
           )}
         </div>
+      ) : mode === 'profile' ? (
+        <div id="teacher-profile"><StudentOverview student={student} classLabel={classes.find((row) => row.id === classId)} role="teacher" /></div>
       ) : mode === 'attendance' ? (
         <div id="teacher-attendance" className="teacher-attendance-panel"><AttendanceMarker
           classId={classId}
@@ -1339,6 +1347,7 @@ function Parent({ profile }: { profile: Profile }) {
         )}
       </section>
       </div>
+      <StudentOverview student={child} classLabel={child?.classes} role="parent" />
       <section className="right-now" aria-labelledby="right-now-heading">
         <div className="section-heading"><p className="eyebrow">RIGHT NOW</p><h2 id="right-now-heading">At a glance</h2></div>
         <div className="right-now-grid">
@@ -1466,6 +1475,66 @@ function AttendanceSummary({
       </div>
     </div>
   );
+}
+
+function StudentOverview({ student, classLabel, role }: { student: any; classLabel?: any; role: Role }) {
+  const db = useMemo(() => createClient(), []);
+  const requestRef = useRef(0);
+  const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [updates, setUpdates] = useState<Update[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [errors, setErrors] = useState({ attendance: '', updates: '', homework: '' });
+  useEffect(() => {
+    const version = ++requestRef.current;
+    if (!student?.id) { setAttendance([]); setUpdates([]); setAssignments([]); setLoading(false); return; }
+    setLoading(true);
+    Promise.all([
+      db.from('attendance_records').select('id,class_id,student_id,attendance_date,status').eq('student_id', student.id).order('attendance_date', { ascending: false }).limit(10),
+      db.from('student_updates').select('*,acknowledgements(acknowledged_at,parent_id)').eq('student_id', student.id).order('sent_at', { ascending: false }).limit(12),
+      db.from('class_assignments').select('*').eq('class_id', student.class_id).order('due_date', { ascending: true }).limit(8),
+    ]).then(([attendanceResult, updatesResult, homeworkResult]) => {
+      if (version !== requestRef.current) return;
+      setAttendance(attendanceResult.data || []); setUpdates(updatesResult.data || []); setAssignments(homeworkResult.data || []);
+      setErrors({ attendance: attendanceResult.error ? "We couldn't load attendance right now." : '', updates: updatesResult.error ? "We couldn't load recent updates right now." : '', homework: homeworkResult.error ? "We couldn't load homework right now." : '' });
+      setLoading(false);
+    });
+  }, [db, student?.id, student?.class_id, refreshTick]);
+  useEffect(() => {
+    if (!student?.id || !student?.class_id) return;
+    const channel = db.channel(`student-profile-${role}-${student.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records', filter: `student_id=eq.${student.id}` }, () => setRefreshTick((value) => value + 1))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_updates', filter: `student_id=eq.${student.id}` }, () => setRefreshTick((value) => value + 1))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments', filter: `class_id=eq.${student.class_id}` }, () => setRefreshTick((value) => value + 1))
+      .subscribe();
+    return () => { db.removeChannel(channel); };
+  }, [db, role, student?.id, student?.class_id]);
+  if (!student) return <section className="card student-profile-empty" id={`${role}-profile`}><span className="section-icon"><Icon name="student" /></span><h2>Select a student to view their profile</h2><p>Choose an authorized student to see their current school context.</p></section>;
+  const counts = attendance.reduce((total, row) => ({ ...total, [row.status]: total[row.status] + 1 }), { present: 0, absent: 0, late: 0 } as Record<Status, number>);
+  const currentUpdates = effectiveUpdates(updates); const latest = currentUpdates[0];
+  const awaiting = currentUpdates.filter((item) => item.importance === 'important' && !item.acknowledgements?.length).length;
+  const upcoming = assignments.filter((item) => item.due_date >= today()); const next = upcoming[0];
+  const grade = classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : student.classes ? `Grade ${student.classes.grade}${student.classes.division}` : 'Class';
+  return <section className="student-profile" id={`${role}-profile`} aria-labelledby={`${role}-profile-heading`}>
+    <header className="student-profile-identity"><span className="student-avatar" aria-hidden="true">{initials(student.full_name)}</span><div><p className="eyebrow">STUDENT OVERVIEW</p><h1 id={`${role}-profile-heading`}>{student.full_name}</h1><p>{grade} · Roll {student.roll_number || '—'}</p><small>Schovera International School</small></div></header>
+    {loading ? <Skeleton label="Loading student profile" rows={4} /> : <>
+      <div className="student-profile-summary" aria-label="Student profile at a glance"><article><Icon name="attendance" /><span><small>Attendance</small><b>{attendance.length ? nice(attendance[0].status) : 'Not recorded'}</b></span></article><article><Icon name="updates" /><span><small>Communication</small><b>{awaiting ? `${awaiting} awaiting` : latest ? 'Up to date' : 'No updates'}</b></span></article><article><Icon name="homework" /><span><small>Homework</small><b>{upcoming.length ? `${upcoming.length} upcoming` : 'None upcoming'}</b></span></article></div>
+      <div className="student-profile-grid">
+        <section className="card profile-section"><p className="eyebrow">ATTENDANCE</p><h2>Recent attendance</h2>{errors.attendance ? <p className="error" role="alert">{errors.attendance}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>Present</span><span><b>{counts.absent}</b>Absent</span><span><b>{counts.late}</b>Late</span></div><p className="hint">Latest: <b className={`status ${attendance[0].status}`}>{nice(attendance[0].status)}</b> · {new Date(`${attendance[0].attendance_date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p></> : <p className="empty compact-empty">No attendance recorded yet.</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">COMMUNICATION</p><h2>Teacher updates</h2>{errors.updates ? <p className="error" role="alert">{errors.updates}</p> : latest ? <><p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p><p className="hint">{nice(latest.category)} · {displayDate(latest.sent_at)}</p>{latest.importance === 'important' && <p className={awaiting ? 'status pending' : 'status present'}>{awaiting ? 'Awaiting acknowledgement' : 'Acknowledged'}</p>}</> : <p className="empty compact-empty">No teacher updates yet.</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">HOMEWORK</p><h2>Upcoming homework</h2>{errors.homework ? <p className="error" role="alert">{errors.homework}</p> : next ? <><p className="profile-update-title"><span className="update-icon"><Icon name="homework" /></span><b>{next.title}</b></p><p className="hint">{next.subject} · {dueLabel(next.due_date)}</p><p className="hint">{upcoming.length} upcoming assignment{upcoming.length === 1 ? '' : 's'}</p></> : <p className="empty compact-empty">No upcoming homework.</p>}</section>
+      </div>
+    </>}
+  </section>;
+}
+
+function PrincipalStudentOverview({ profile }: { profile: Profile }) {
+  const db = useMemo(() => createClient(), []); const requestRef = useRef(0);
+  const [query, setQuery] = useState(''); const [students, setStudents] = useState<any[]>([]); const [selected, setSelected] = useState<any>(null);
+  useEffect(() => { const version = ++requestRef.current; db.from('students').select('*,classes(grade,division)').eq('school_id', profile.school_id).eq('active', true).order('full_name').then(({ data }) => { if (version === requestRef.current) setStudents(data || []); }); }, [db, profile.school_id]);
+  const normalized = query.trim().toLocaleLowerCase(); const results = normalized ? students.filter((student) => student.full_name.toLocaleLowerCase().includes(normalized) || String(student.roll_number || '').toLocaleLowerCase().includes(normalized)) : students.slice(0, 8);
+  return <section className="principal-students" id="principal-students"><div className="section-heading"><p className="eyebrow">STUDENT OVERVIEW</p><h2>Find a student</h2><p className="hint">Search students in your school by name or roll number.</p></div><label className="teacher-roster-search"><span className="sr-only">Search students</span><Icon name="search" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or roll number" /></label><div className="principal-student-results">{results.map((student) => <button type="button" key={student.id} className={selected?.id === student.id ? 'student active' : 'student'} onClick={() => setSelected(student)}><span className="student-name"><i>{initials(student.full_name)}</i><span>{student.full_name}<small>Grade {student.classes?.grade}{student.classes?.division} · Roll {student.roll_number}</small></span></span><span className="student-chevron">›</span></button>)}{normalized && !results.length && <p className="empty compact-empty">No students found.</p>}</div><StudentOverview student={selected} classLabel={selected?.classes} role="principal" /></section>;
 }
 
 function Principal({ profile }: { profile: Profile }) {
@@ -1609,6 +1678,7 @@ function Principal({ profile }: { profile: Profile }) {
       </section>
       <div className="principal-main-grid">
         <div className="principal-primary-column">
+      <PrincipalStudentOverview profile={profile} />
       <PrincipalHomework profile={profile} />
       <div className="card attendance-overview" id="principal-attendance">
         <p className="eyebrow">TODAY’S ATTENDANCE</p>
