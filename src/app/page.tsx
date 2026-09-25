@@ -1503,11 +1503,17 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
   }, [db, student?.id, student?.class_id, refreshTick]);
   useEffect(() => {
     if (!student?.id || !student?.class_id) return;
+    const refreshForCurrentStudent = (event: any) => {
+      if (event.new?.student_id === student.id || event.old?.student_id === student.id) setRefreshTick((value) => value + 1);
+    };
+    const refreshForCurrentClass = (event: any) => {
+      if (event.new?.class_id === student.class_id || event.old?.class_id === student.class_id) setRefreshTick((value) => value + 1);
+    };
     const channel = db.channel(`student-profile-${role}-${student.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records', filter: `student_id=eq.${student.id}` }, () => setRefreshTick((value) => value + 1))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_updates', filter: `student_id=eq.${student.id}` }, () => setRefreshTick((value) => value + 1))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, refreshForCurrentStudent)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_updates' }, refreshForCurrentStudent)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'acknowledgements' }, () => setRefreshTick((value) => value + 1))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments', filter: `class_id=eq.${student.class_id}` }, () => setRefreshTick((value) => value + 1))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments' }, refreshForCurrentClass)
       .subscribe();
     return () => { db.removeChannel(channel); };
   }, [db, role, student?.id, student?.class_id]);
