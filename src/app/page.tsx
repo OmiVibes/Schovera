@@ -1506,14 +1506,14 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
     const refreshForCurrentStudent = (event: any) => {
       if (event.new?.student_id === student.id || event.old?.student_id === student.id) setRefreshTick((value) => value + 1);
     };
-    const refreshForCurrentClass = (event: any) => {
-      if (event.new?.class_id === student.class_id || event.old?.class_id === student.class_id) setRefreshTick((value) => value + 1);
-    };
     const channel = db.channel(`student-profile-${role}-${student.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, refreshForCurrentStudent)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'student_updates' }, refreshForCurrentStudent)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'acknowledgements' }, () => setRefreshTick((value) => value + 1))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments' }, refreshForCurrentClass)
+      // Realtime has already applied the assignment RLS policy. Refreshing the
+      // currently scoped profile avoids relying on payload shape for the class
+      // identifier; the query itself remains constrained to this class.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments' }, () => setRefreshTick((value) => value + 1))
       .subscribe();
     return () => { db.removeChannel(channel); };
   }, [db, role, student?.id, student?.class_id]);
