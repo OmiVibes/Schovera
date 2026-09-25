@@ -40,6 +40,11 @@ type Attendance = {
   status: Status;
   students?: any;
 };
+type Assignment = {
+  id: string; class_id: string; subject: string; title: string; description: string;
+  due_date: string; created_at: string;
+  classes?: { grade: string; division: string }; profiles?: { full_name: string };
+};
 type Announcement = {
   id: string;
   title: string;
@@ -66,6 +71,14 @@ const displayDate = (value: string) =>
 
 const normalizeCommunicationValue = (value: string) =>
   value.replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '');
+const dueLabel = (dueDate: string) => {
+  const delta = Math.round((new Date(`${dueDate}T00:00:00`).getTime() - new Date(`${today()}T00:00:00`).getTime()) / 86400000);
+  if (delta === 0) return 'Due today';
+  if (delta === 1) return 'Due tomorrow';
+  if (delta > 1 && delta <= 7) return `Due in ${delta} days`;
+  if (delta < 0) return 'Earlier homework';
+  return `Due ${new Date(`${dueDate}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+};
 
 const correctedUpdateIds = (updates: Update[]) =>
   new Set(
@@ -110,24 +123,27 @@ const categoryIcon = (category: string): 'academic' | 'attendance' | 'achievemen
 
 const roleNavigation: Record<
   Role,
-  { label: string; id: string; icon: 'school' | 'student' | 'updates' | 'attendance' | 'notice' }[]
+  { label: string; id: string; icon: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'homework' }[]
 > = {
   teacher: [
     { label: 'Overview', id: 'teacher-home', icon: 'school' },
     { label: 'Students', id: 'teacher-students', icon: 'student' },
     { label: 'Attendance', id: 'teacher-attendance', icon: 'attendance' },
+    { label: 'Homework', id: 'teacher-homework', icon: 'homework' },
     { label: 'School notices', id: 'teacher-notices', icon: 'notice' },
   ],
   parent: [
     { label: 'Home', id: 'parent-home', icon: 'school' },
     { label: 'Updates', id: 'parent-updates', icon: 'updates' },
     { label: 'Attendance', id: 'parent-attendance', icon: 'attendance' },
+    { label: 'Homework', id: 'parent-homework', icon: 'homework' },
     { label: 'School notices', id: 'parent-notices', icon: 'notice' },
   ],
   principal: [
     { label: 'Overview', id: 'principal-overview', icon: 'school' },
     { label: 'Communication', id: 'principal-communication', icon: 'updates' },
     { label: 'Attendance', id: 'principal-attendance', icon: 'attendance' },
+    { label: 'Homework', id: 'principal-homework', icon: 'homework' },
     { label: 'School notices', id: 'principal-notices', icon: 'notice' },
   ],
 };
@@ -291,6 +307,7 @@ export default function Page() {
                     profile.role === 'teacher' &&
                     (item.id === 'teacher-students' ||
                       item.id === 'teacher-attendance' ||
+                      item.id === 'teacher-homework' ||
                       item.id === 'teacher-notices')
                   ) {
                     event.preventDefault();
@@ -364,7 +381,7 @@ function Teacher({ profile }: { profile: Profile }) {
     [classLoading, setClassLoading] = useState(false),
     [updatesLoading, setUpdatesLoading] = useState(false),
     [updatesError, setUpdatesError] = useState(''),
-    [mode, setMode] = useState<'updates' | 'attendance' | 'notices'>('updates'),
+    [mode, setMode] = useState<'updates' | 'attendance' | 'homework' | 'notices'>('updates'),
     [date, setDate] = useState(today()),
     [records, setRecords] = useState<Record<string, Status>>({}),
     [attendanceLoading, setAttendanceLoading] = useState(false),
@@ -409,7 +426,9 @@ function Teacher({ profile }: { profile: Profile }) {
           ? 'attendance'
           : id === 'teacher-students'
             ? 'updates'
-            : id === 'teacher-notices'
+            : id === 'teacher-homework'
+              ? 'homework'
+              : id === 'teacher-notices'
               ? 'notices'
               : null;
       if (!nextMode || !id) return;
@@ -995,6 +1014,8 @@ function Teacher({ profile }: { profile: Profile }) {
           }
           onSave={saveAttendance}
         /></div>
+      ) : mode === 'homework' ? (
+        <div id="teacher-homework"><TeacherAssignments profile={profile} classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
       ) : (
         <div id="teacher-notices" className="teacher-notices-panel"><Announcements profile={profile} /></div>
       )}
@@ -1091,6 +1112,56 @@ function AttendanceMarker({
 
 function Skeleton({ label, rows = 3 }: { label: string; rows?: number }) {
   return <div className="skeleton" role="status" aria-label={label}>{Array.from({ length: rows }, (_, index) => <span key={index} />)}</div>;
+}
+
+function AssignmentCard({ assignment, showClass = false }: { assignment: Assignment; showClass?: boolean }) {
+  const className = assignment.classes ? `Grade ${assignment.classes.grade}${assignment.classes.division}` : '';
+  return <article className={`assignment-card${assignment.due_date < today() ? ' assignment-past' : ''}`}>
+    <header><span className="assignment-icon" aria-hidden="true"><Icon name="homework" /></span><div><p>{assignment.subject}</p><h3>{assignment.title}</h3></div><time dateTime={assignment.due_date}>{dueLabel(assignment.due_date)}</time></header>
+    <p className="assignment-description">{assignment.description}</p>
+    <footer><span>{showClass && className ? className : 'Class homework'}</span><time dateTime={assignment.due_date}>Due {new Date(`${assignment.due_date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</time></footer>
+  </article>;
+}
+
+function TeacherAssignments({ profile, classId, classLabel, studentsCount }: { profile: Profile; classId: string; classLabel?: any; studentsCount: number }) {
+  const db = useMemo(() => createClient(), []);
+  const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [sending, setSending] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('');
+  const refresh = async () => {
+    if (!classId) { setAssignments([]); return; }
+    setLoading(true);
+    const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }).order('created_at', { ascending: false });
+    setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false);
+  };
+  useEffect(() => { refresh(); }, [classId]);
+  useEffect(() => { const channel = db.channel(`teacher-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(); return () => { db.removeChannel(channel); }; }, [db, classId]);
+  const create = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); if (!classId || sending) return;
+    const form = new FormData(event.currentTarget); const subject = normalizeCommunicationValue(String(form.get('subject') || '')); const title = normalizeCommunicationValue(String(form.get('title') || '')); const description = normalizeCommunicationValue(String(form.get('description') || '')); const dueDate = String(form.get('due_date') || '');
+    if (!subject || !title || !description || !dueDate) { setError('Please complete the subject, title, description, and due date.'); return; }
+    setError(''); setNote(''); setSending(true);
+    const { error: rpcError } = await db.rpc('create_class_assignment', { p_class_id: classId, p_subject: subject, p_title: title, p_description: description, p_due_date: dueDate, p_client_request_id: globalThis.crypto.randomUUID() });
+    setSending(false);
+    if (rpcError) setError(rpcError.message.toLowerCase().includes('due date') ? 'Choose today or a future due date.' : 'Homework could not be assigned. Please try again.');
+    else { event.currentTarget.reset(); setNote('Homework assigned to the class.'); refresh(); }
+  };
+  const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
+  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">CLASS HOMEWORK</p><h2 id="teacher-homework-heading">Homework & assignments</h2><p>{classId && classLabel ? `Grade ${classLabel.grade}${classLabel.division} · ${studentsCount} students` : 'Select an assigned class to create homework.'}</p></div></header>{!classId ? <p className="empty compact-empty">Choose a class in Your classroom to begin assigning homework.</p> : <><form className="assignment-form" onSubmit={create}><label>Subject<input name="subject" required maxLength={80} placeholder="Science" /></label><label>Title<input name="title" required maxLength={140} placeholder="Plant Cell Diagram" /></label><label className="assignment-description-field">Description<textarea name="description" required maxLength={1500} rows={3} placeholder="Explain what students should complete." /></label><label>Due date<input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? 'Assigning…' : 'Assign homework'}</button></form>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<div className="assignment-list-heading"><div><p className="eyebrow">UPCOMING</p><h2>Upcoming assignments</h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label="Loading homework" rows={3} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />) : <p className="empty compact-empty">No homework assigned yet.</p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow">EARLIER</p><h2>Past assignments</h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
+}
+
+function ParentHomework({ child, className }: { child?: any; className: string }) {
+  const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''); const requestRef = useRef(0); const classId = child?.class_id;
+  const refresh = async () => { const version = ++requestRef.current; if (!classId) { setAssignments([]); return; } setLoading(true); const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }); if (version === requestRef.current) { setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false); } };
+  useEffect(() => { refresh(); }, [classId]);
+  useEffect(() => { const channel = db.channel(`parent-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(); return () => { db.removeChannel(channel); }; }, [db, classId]);
+  const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
+  return <section className="parent-homework" id="parent-homework" aria-labelledby="parent-homework-heading"><div className="section-heading"><p className="eyebrow">HOMEWORK</p><h2 id="parent-homework-heading">Homework for {child?.full_name?.split(' ')[0] || 'your child'}</h2><p className="hint">{className} · Class assignments from the teacher.</p></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading homework" rows={2} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />) : <p className="empty compact-empty">No upcoming homework for {child?.full_name?.split(' ')[0] || 'your child'}.</p>}{past.length > 0 && <details className="assignment-past-details"><summary>Earlier homework ({past.length})</summary>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</details>}</section>;
+}
+
+function PrincipalHomework({ profile }: { profile: Profile }) {
+  const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]); const refresh = async () => { const { data } = await db.from('class_assignments').select('*,classes(grade,division)').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(8); setAssignments(data || []); };
+  useEffect(() => { refresh(); const channel = db.channel('principal-homework').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments' }, refresh).subscribe(); return () => { db.removeChannel(channel); }; }, [db, profile.school_id]);
+  const upcoming = assignments.filter((assignment) => assignment.due_date >= today());
+  return <section className="card principal-homework" id="principal-homework"><div className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">LEARNING ACTIVITY</p><h2>Homework activity</h2><p>Recent class assignments across your school.</p></div><b>{upcoming.length} upcoming</b></div>{assignments.length ? assignments.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} showClass />) : <p className="empty compact-empty">No assignments to show yet.</p>}</section>;
 }
 
 function Parent({ profile }: { profile: Profile }) {
@@ -1275,6 +1346,7 @@ function Parent({ profile }: { profile: Profile }) {
           <div><Icon name="updates" /><span>Latest update<b>{updates[0] ? nice(updates[0].category) : 'No updates'}</b></span></div>
         </div>
       </section>
+      <ParentHomework child={child} className={className} />
       <div id="parent-attendance"><AttendanceSummary
         attendance={attendance}
         counts={counts}
@@ -1536,6 +1608,7 @@ function Principal({ profile }: { profile: Profile }) {
       </section>
       <div className="principal-main-grid">
         <div className="principal-primary-column">
+      <PrincipalHomework profile={profile} />
       <div className="card attendance-overview" id="principal-attendance">
         <p className="eyebrow">TODAY’S ATTENDANCE</p>
         <h2>Today&apos;s attendance</h2>

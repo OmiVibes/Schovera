@@ -135,6 +135,11 @@ const dateDaysAgo = (days) => {
   date.setDate(date.getDate() - days);
   return date.toISOString().slice(0, 10);
 };
+const dateDaysFromNow = (days) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
 const statuses = [
   ['present', 'present', 'late', 'present', 'absent'],
   ['late', 'present', 'present', 'absent', 'present'],
@@ -196,6 +201,22 @@ for (const [title, body, priority] of announcements) {
         priority,
       }),
     );
+}
+
+const assignments = [
+  ['Science', 'Plant Cell Diagram', 'Draw and label a plant cell clearly in your science notebook.', 1],
+  ['Mathematics', 'Fractions Practice', 'Complete questions 1–10 from the fractions worksheet.', 3],
+  ['English', 'Reading Activity', 'Read the assigned chapter and write five new words with their meanings.', 5],
+];
+for (const [subject, title, description, daysFromNow] of assignments) {
+  const existing = await must(
+    admin.from('class_assignments').select('id').eq('class_id', grade7.id).eq('title', title).maybeSingle(),
+  );
+  if (!existing)
+    await must(admin.from('class_assignments').insert({
+      school_id: school.id, class_id: grade7.id, teacher_id: ids.teacher,
+      subject, title, description, due_date: dateDaysFromNow(daysFromNow),
+    }));
 }
 
 const baselineUpdates = [

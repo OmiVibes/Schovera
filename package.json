@@ -19,6 +19,7 @@
     "verify:attendance": "node --env-file=.env.local scripts/verify-attendance.mjs",
     "verify:announcements": "node --env-file=.env.local scripts/verify-announcements.mjs",
     "verify:corrections": "node --env-file=.env.local scripts/verify-corrections.mjs",
+    "verify:assignments": "node --env-file=.env.local scripts/verify-assignments.mjs",
     "verify:idempotency": "node --env-file=.env.local scripts/verify-idempotency.mjs"
   },
   "dependencies": {
