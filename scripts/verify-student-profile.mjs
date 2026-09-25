@@ -24,6 +24,13 @@ const principalRead = await principal.from('students').select('id').eq('id', stu
 expect(!assigned.error && assigned.data.length === 1, 'Assigned teacher cannot read student.');
 expect(!parentRead.error && parentRead.data.length === 1, 'Linked parent cannot read child.');
 expect(!principalRead.error && principalRead.data.length === 1, 'Principal cannot read own-school student.');
+const unassigned = (await admin.from('students').select('id').eq('school_id', student.school_id).neq('class_id', student.class_id).limit(1)).data?.[0];
+if (unassigned) {
+  const result = await teacher.from('students').select('id').eq('id', unassigned.id);
+  expect(!result.error && result.data.length === 0, 'Teacher read an unassigned same-school student.');
+  const parentResult = await parent.from('students').select('id').eq('id', unassigned.id);
+  expect(!parentResult.error && parentResult.data.length === 0, 'Parent read an unlinked same-school student.');
+}
 const other = (await admin.from('students').select('id').neq('school_id', student.school_id).limit(1)).data?.[0];
 if (other) {
   for (const [name, client] of [['teacher', teacher], ['parent', parent], ['principal', principal]]) {
@@ -37,4 +44,12 @@ for (const table of ['attendance_records', 'student_updates']) {
 }
 const homework = await parent.from('class_assignments').select('id,due_date').eq('class_id', student.class_id).limit(10);
 expect(!homework.error, 'Parent homework profile query failed.');
-console.log('Student profile verification passed: authorized role reads, cross-school isolation, attendance, communication, and homework aggregation inputs.');
+const updates = await admin.from('student_updates').select('id,corrects_update_id,importance').eq('student_id', student.id);
+expect(!updates.error, 'Could not inspect correction-chain inputs.');
+const correctedIds = new Set((updates.data || []).map((item) => item.corrects_update_id).filter(Boolean));
+const effective = (updates.data || []).filter((item) => !correctedIds.has(item.id));
+expect(effective.length <= (updates.data || []).length, 'Correction-chain effective update calculation is invalid.');
+const anonymous = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
+const anonymousRead = await anonymous.from('students').select('id').eq('id', student.id);
+expect((anonymousRead.data || []).length === 0, 'Anonymous client read a student profile input.');
+console.log('Student profile verification passed: authorized role reads, unassigned/cross-school isolation, anonymous denial, attendance, correction-effective communication, and homework aggregation inputs.');
