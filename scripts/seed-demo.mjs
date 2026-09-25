@@ -119,6 +119,17 @@ for (const [roll_number, full_name] of roster) {
   );
 }
 const aarav = students['07'];
+const timetable = [
+  [1, 1, 'Mathematics', '09:00', '09:45'], [1, 2, 'English', '09:50', '10:35'], [1, 3, 'Science', '10:50', '11:35'],
+  [2, 1, 'Social Studies', '09:00', '09:45'], [2, 2, 'Mathematics', '09:50', '10:35'], [2, 3, 'Hindi', '10:50', '11:35'],
+  [3, 1, 'English', '09:00', '09:45'], [3, 2, 'Computer Science', '09:50', '10:35'], [3, 3, 'Science', '10:50', '11:35'],
+  [4, 1, 'Mathematics', '09:00', '09:45'], [4, 2, 'Social Studies', '09:50', '10:35'], [4, 3, 'Physical Education', '10:50', '11:35'],
+  [5, 1, 'Science', '09:00', '09:45'], [5, 2, 'English', '09:50', '10:35'], [5, 3, 'Computer Science', '10:50', '11:35'],
+];
+for (const [weekday, period_number, subject, start_time, end_time] of timetable) {
+  const existing = await must(admin.from('timetable_entries').select('id').eq('class_id', grade7.id).eq('weekday', weekday).eq('period_number', period_number).maybeSingle());
+  if (!existing) await must(admin.from('timetable_entries').insert({ school_id: school.id, class_id: grade7.id, teacher_id: ids.teacher, weekday, period_number, subject, start_time, end_time, created_by: ids.principal }));
+}
 await must(
   admin.from('parent_student_links').upsert(
     {

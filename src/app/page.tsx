@@ -45,6 +45,7 @@ type Assignment = {
   due_date: string; created_at: string;
   classes?: { grade: string; division: string }; profiles?: { full_name: string };
 };
+type TimetableEntry = { id: string; class_id: string; teacher_id: string; weekday: number; period_number: number; subject: string; start_time: string; end_time: string; room?: string | null; profiles?: { full_name: string } };
 type Announcement = {
   id: string;
   title: string;
@@ -61,6 +62,12 @@ const categories = [
   'general',
 ];
 const today = () => new Date().toISOString().slice(0, 10);
+const weekdayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const schoolWeekday = () => {
+  const label = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'Asia/Kolkata' }).format(new Date());
+  return Math.max(1, weekdayNames.indexOf(label) + 1);
+};
+const timeLabel = (value: string) => value.slice(0, 5);
 const nice = (value: string) =>
   value.replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 const displayDate = (value: string) =>
@@ -92,7 +99,7 @@ const effectiveUpdates = (updates: Update[]) => {
   return updates.filter((update) => !corrected.has(update.id));
 };
 
-function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'important' | 'check' | 'search' | 'academic' | 'achievement' | 'behaviour' | 'homework' | 'general' }) {
+function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'important' | 'check' | 'search' | 'academic' | 'achievement' | 'behaviour' | 'homework' | 'general' | 'timetable' }) {
   const paths = {
     school: <><path d="M3 10.5 12 5l9 5.5v8.5H3z" /><path d="M7 21v-6h10v6M9 12h.01M12 12h.01M15 12h.01" /></>,
     student: <><circle cx="12" cy="8" r="3.25" /><path d="M5.5 21c.7-3.65 2.85-5.5 6.5-5.5s5.8 1.85 6.5 5.5" /></>,
@@ -107,6 +114,7 @@ function Icon({ name }: { name: 'school' | 'student' | 'updates' | 'attendance' 
     behaviour: <><circle cx="12" cy="8" r="3" /><path d="M6 21c.6-3.7 2.6-5.5 6-5.5s5.4 1.8 6 5.5M18 4l1 1 2-1" /></>,
     homework: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4v3M15 4v3M9 11h6M9 15h4" /></>,
     general: <><path d="M5 5h14v10H9l-4 4z" /><path d="M8 9h8M8 12h5" /></>,
+    timetable: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16M9 14h2M14 14h2M9 17h2" /></>,
   }[name];
   return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths}</svg>;
 }
@@ -123,7 +131,7 @@ const categoryIcon = (category: string): 'academic' | 'attendance' | 'achievemen
 
 const roleNavigation: Record<
   Role,
-  { label: string; id: string; icon: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'homework' }[]
+  { label: string; id: string; icon: 'school' | 'student' | 'updates' | 'attendance' | 'notice' | 'homework' | 'timetable' }[]
 > = {
   teacher: [
     { label: 'Overview', id: 'teacher-home', icon: 'school' },
@@ -131,6 +139,7 @@ const roleNavigation: Record<
     { label: 'Profile', id: 'teacher-profile', icon: 'student' },
     { label: 'Attendance', id: 'teacher-attendance', icon: 'attendance' },
     { label: 'Homework', id: 'teacher-homework', icon: 'homework' },
+    { label: 'Schedule', id: 'teacher-timetable', icon: 'timetable' },
     { label: 'School notices', id: 'teacher-notices', icon: 'notice' },
   ],
   parent: [
@@ -139,6 +148,7 @@ const roleNavigation: Record<
     { label: 'Updates', id: 'parent-updates', icon: 'updates' },
     { label: 'Attendance', id: 'parent-attendance', icon: 'attendance' },
     { label: 'Homework', id: 'parent-homework', icon: 'homework' },
+    { label: 'Timetable', id: 'parent-timetable', icon: 'timetable' },
     { label: 'School notices', id: 'parent-notices', icon: 'notice' },
   ],
   principal: [
@@ -147,6 +157,7 @@ const roleNavigation: Record<
     { label: 'Communication', id: 'principal-communication', icon: 'updates' },
     { label: 'Attendance', id: 'principal-attendance', icon: 'attendance' },
     { label: 'Homework', id: 'principal-homework', icon: 'homework' },
+    { label: 'Timetable', id: 'principal-timetable', icon: 'timetable' },
     { label: 'School notices', id: 'principal-notices', icon: 'notice' },
   ],
 };
@@ -384,7 +395,7 @@ function Teacher({ profile }: { profile: Profile }) {
     [classLoading, setClassLoading] = useState(false),
     [updatesLoading, setUpdatesLoading] = useState(false),
     [updatesError, setUpdatesError] = useState(''),
-    [mode, setMode] = useState<'updates' | 'attendance' | 'homework' | 'notices' | 'profile'>('updates'),
+    [mode, setMode] = useState<'updates' | 'attendance' | 'homework' | 'timetable' | 'notices' | 'profile'>('updates'),
     [date, setDate] = useState(today()),
     [records, setRecords] = useState<Record<string, Status>>({}),
     [attendanceLoading, setAttendanceLoading] = useState(false),
@@ -431,8 +442,10 @@ function Teacher({ profile }: { profile: Profile }) {
             ? 'updates'
             : id === 'teacher-profile'
               ? 'profile'
-            : id === 'teacher-homework'
-              ? 'homework'
+          : id === 'teacher-homework'
+            ? 'homework'
+            : id === 'teacher-timetable'
+              ? 'timetable'
               : id === 'teacher-notices'
               ? 'notices'
               : null;
@@ -762,9 +775,9 @@ function Teacher({ profile }: { profile: Profile }) {
         <div>
           <p className="eyebrow">TODAY AT SCHOVERA</p>
           <h2>{classId ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Choose your class'}</h2>
-          <p>{classId ? `${students.length || 'Your'} students · ${mode === 'attendance' ? 'Attendance register open' : mode === 'notices' ? 'Official school notices' : 'Ready for parent updates'}` : 'Select your assigned class to begin.'}</p>
+          <p>{classId ? `${students.length || 'Your'} students · ${mode === 'attendance' ? 'Attendance register open' : mode === 'timetable' ? 'Today’s schedule' : mode === 'notices' ? 'Official school notices' : 'Ready for parent updates'}` : 'Select your assigned class to begin.'}</p>
         </div>
-        <span className="today-status">{mode === 'attendance' ? 'Attendance' : mode === 'notices' ? 'School notices' : 'Student updates'}</span>
+        <span className="today-status">{mode === 'attendance' ? 'Attendance' : mode === 'timetable' ? 'Schedule' : mode === 'notices' ? 'School notices' : 'Student updates'}</span>
       </section>
     <section className={`two teacher-mode-${mode}`}>
       <aside className="card teacher-sidebar teacher-class-panel">
@@ -1024,6 +1037,8 @@ function Teacher({ profile }: { profile: Profile }) {
         /></div>
       ) : mode === 'homework' ? (
         <div id="teacher-homework"><TeacherAssignments profile={profile} classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
+      ) : mode === 'timetable' ? (
+        <TimetableView classId={classId} className={classes.find((row) => row.id === classId) ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Your class'} profile={profile} />
       ) : (
         <div id="teacher-notices" className="teacher-notices-panel"><Announcements profile={profile} /></div>
       )}
@@ -1164,6 +1179,27 @@ function ParentHomework({ child, className }: { child?: any; className: string }
   useEffect(() => { const channel = db.channel(`parent-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(); return () => { db.removeChannel(channel); }; }, [db, classId]);
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
   return <section className="parent-homework" id="parent-homework" aria-labelledby="parent-homework-heading"><div className="section-heading"><p className="eyebrow">HOMEWORK</p><h2 id="parent-homework-heading">Homework for {child?.full_name?.split(' ')[0] || 'your child'}</h2><p className="hint">{className} · Class assignments from the teacher.</p></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading homework" rows={2} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />) : <p className="empty compact-empty">No upcoming homework for {child?.full_name?.split(' ')[0] || 'your child'}.</p>}{past.length > 0 && <details className="assignment-past-details"><summary>Earlier homework ({past.length})</summary>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</details>}</section>;
+}
+
+function TimetableView({ classId, className, profile, manage = false }: { classId?: string; className: string; profile: Profile; manage?: boolean }) {
+  const db = useMemo(() => createClient(), []); const [entries, setEntries] = useState<TimetableEntry[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''); const requestRef = useRef(0); const currentDay = schoolWeekday();
+  const refresh = async () => { const version = ++requestRef.current; if (!classId) { setEntries([]); setLoading(false); return; } setLoading(true); const { data, error: loadError } = await db.from('timetable_entries').select('*,profiles(full_name)').eq('class_id', classId).order('weekday').order('start_time'); if (version === requestRef.current) { setEntries(data || []); setError(loadError ? 'Timetable could not be loaded.' : ''); setLoading(false); } };
+  useEffect(() => { setEntries([]); setError(''); refresh(); }, [classId]);
+  useEffect(() => { const channel = db.channel(`timetable-${profile.role}-${classId || 'none'}`).on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' }, (event: any) => { if (!classId || event.new?.class_id === classId || event.old?.class_id === classId) refresh(); }).subscribe(); return () => { db.removeChannel(channel); }; }, [db, classId, profile.role]);
+  const todayEntries = entries.filter((entry) => entry.weekday === currentDay);
+  if (!classId) return <section className="card timetable-empty" id={`${profile.role}-timetable`}><span className="section-icon"><Icon name="timetable" /></span><h2>Select a class to view its timetable</h2><p>Choose an authorized class to see today&apos;s and weekly periods.</p></section>;
+  return <section className="timetable-workspace" id={`${profile.role}-timetable`} aria-labelledby={`${profile.role}-timetable-heading`}><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">{manage ? 'TIMETABLE MANAGEMENT' : 'CLASS SCHEDULE'}</p><h2 id={`${profile.role}-timetable-heading`}>{manage ? 'Weekly timetable' : "Today’s schedule"}</h2><p className="hint">{className} · School time in India Standard Time</p></div></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading timetable" rows={3} /> : <><section className="timetable-today" aria-labelledby={`${profile.role}-today-heading`}><div><p className="eyebrow">TODAY · {weekdayNames[currentDay - 1].toUpperCase()}</p><h3 id={`${profile.role}-today-heading`}>Today&apos;s periods</h3></div>{todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || 'Teacher'}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b>No classes scheduled for today.</b><p>The weekly timetable remains available below.</p></span></div>}</section><section className="timetable-week" aria-labelledby={`${profile.role}-week-heading`}><p className="eyebrow">WEEKLY TIMETABLE</p><h3 id={`${profile.role}-week-heading`}>All school days</h3><div className="timetable-days">{weekdayNames.slice(0, 5).map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{day}</b>{currentDay === index + 1 && <span>Today</span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small>Period {entry.period_number} · {entry.profiles?.full_name || 'Teacher'}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p>No periods</p>}</section>; })}</div></section></>}</section>;
+}
+
+function PrincipalTimetable({ profile }: { profile: Profile }) {
+  const db = useMemo(() => createClient(), []); const [classes, setClasses] = useState<any[]>([]), [teachers, setTeachers] = useState<any[]>([]), [classId, setClassId] = useState(''), [entries, setEntries] = useState<TimetableEntry[]>([]), [form, setForm] = useState({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '' }), [note, setNote] = useState(''), [error, setError] = useState(''), [saving, setSaving] = useState(false), [tick, setTick] = useState(0);
+  useEffect(() => { Promise.all([db.from('classes').select('id,grade,division').eq('school_id', profile.school_id).eq('active', true).order('grade'), db.from('profiles').select('id,full_name').eq('school_id', profile.school_id).eq('role', 'teacher').eq('active', true).order('full_name')]).then(([classResult, teacherResult]) => { setClasses(classResult.data || []); setTeachers(teacherResult.data || []); if (!classId && classResult.data?.[0]) setClassId(classResult.data[0].id); }); }, [db, profile.school_id]);
+  useEffect(() => { if (!classId) { setEntries([]); return; } db.from('timetable_entries').select('*,profiles(full_name)').eq('class_id', classId).order('weekday').order('start_time').then(({ data }) => setEntries(data || [])); }, [db, classId, tick]);
+  useEffect(() => { const channel = db.channel(`principal-timetable-${profile.school_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' }, (event: any) => { if (event.new?.school_id === profile.school_id || event.old?.school_id === profile.school_id) setTick((value) => value + 1); }).subscribe(); return () => { db.removeChannel(channel); }; }, [db, profile.school_id]);
+  const save = async (event: React.FormEvent) => { event.preventDefault(); setNote(''); setError(''); if (!form.subject.trim()) { setError('Subject is required.'); return; } setSaving(true); const { error: rpcError } = await db.rpc('save_timetable_entry', { p_entry_id: form.id || null, p_class_id: classId, p_teacher_id: form.teacherId, p_weekday: Number(form.weekday), p_period_number: Number(form.period), p_subject: form.subject, p_start_time: form.start, p_end_time: form.end, p_room: form.room || null, p_client_request_id: form.id ? null : crypto.randomUUID() }); setSaving(false); if (rpcError) setError(rpcError.message); else { setNote(form.id ? 'Timetable period updated.' : 'Timetable period added.'); setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '' }); setTick((value) => value + 1); } };
+  const edit = (entry: TimetableEntry) => setForm({ id: entry.id, teacherId: entry.teacher_id, weekday: String(entry.weekday), period: String(entry.period_number), subject: entry.subject, start: timeLabel(entry.start_time), end: timeLabel(entry.end_time), room: entry.room || '' });
+  const remove = async (id: string) => { setError(''); const { error: rpcError } = await db.rpc('delete_timetable_entry', { p_entry_id: id }); if (rpcError) setError(rpcError.message); else { setNote('Timetable period removed.'); setTick((value) => value + 1); } };
+  const classLabel = classes.find((row) => row.id === classId); return <section className="principal-timetable" id="principal-timetable"><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">SCHOOL OPERATIONS</p><h2>Timetable</h2><p className="hint">Configure weekly class periods for your school.</p></div></div><label className="timetable-select">Class<select value={classId} onChange={(event) => setClassId(event.target.value)}>{classes.map((row) => <option value={row.id} key={row.id}>Grade {row.grade}{row.division}</option>)}</select></label><div className="principal-timetable-grid"><TimetableView classId={classId} className={classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Class'} profile={profile} manage /><form className="card timetable-form" onSubmit={save}><p className="eyebrow">{form.id ? 'EDIT PERIOD' : 'ADD PERIOD'}</p><h3>{form.id ? 'Update timetable period' : 'Add timetable period'}</h3><label>Teacher<select required value={form.teacherId} onChange={(event) => setForm({ ...form, teacherId: event.target.value })}><option value="">Select teacher</option>{teachers.map((teacher) => <option value={teacher.id} key={teacher.id}>{teacher.full_name}</option>)}</select></label><label>Subject<input value={form.subject} maxLength={80} onChange={(event) => setForm({ ...form, subject: event.target.value })} /></label><div className="timetable-form-grid"><label>Day<select value={form.weekday} onChange={(event) => setForm({ ...form, weekday: event.target.value })}>{weekdayNames.map((day, index) => <option value={index + 1} key={day}>{day}</option>)}</select></label><label>Period<input type="number" min="1" max="20" value={form.period} onChange={(event) => setForm({ ...form, period: event.target.value })} /></label></div><div className="timetable-form-grid"><label>Start<input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>End<input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div><label>Room <span className="hint">(optional)</span><input value={form.room} maxLength={80} onChange={(event) => setForm({ ...form, room: event.target.value })} /></label>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<button className="primary" disabled={saving || !classId || !form.teacherId}>{saving ? 'Saving…' : form.id ? 'Save changes' : 'Add period'}</button>{form.id && <button type="button" className="secondary" onClick={() => setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '' })}>Cancel edit</button>}</form></div><section className="card timetable-manage-list"><h3>Configured periods</h3>{entries.length ? entries.map((entry) => <div key={entry.id}><span>{weekdayNames[entry.weekday - 1]} · P{entry.period_number}</span><b>{entry.subject}</b><small>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)} · {entry.profiles?.full_name || 'Teacher'}</small><button type="button" onClick={() => edit(entry)}>Edit</button><button type="button" onClick={() => remove(entry.id)}>Remove</button></div>) : <p className="empty compact-empty">No timetable periods yet. Add the first period for this class.</p>}</section></section>;
 }
 
 function PrincipalHomework({ profile }: { profile: Profile }) {
@@ -1357,6 +1393,7 @@ function Parent({ profile }: { profile: Profile }) {
         </div>
       </section>
       <ParentHomework child={child} className={className} />
+      <TimetableView classId={child?.class_id} className={className} profile={profile} />
       <div id="parent-attendance"><AttendanceSummary
         attendance={attendance}
         counts={counts}
@@ -1687,6 +1724,7 @@ function Principal({ profile }: { profile: Profile }) {
         <div className="principal-primary-column">
       <PrincipalStudentOverview profile={profile} />
       <PrincipalHomework profile={profile} />
+      <PrincipalTimetable profile={profile} />
       <div className="card attendance-overview" id="principal-attendance">
         <p className="eyebrow">TODAY’S ATTENDANCE</p>
         <h2>Today&apos;s attendance</h2>
