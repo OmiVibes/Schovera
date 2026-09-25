@@ -999,7 +999,7 @@ function Teacher({ profile }: { profile: Profile }) {
           )}
         </div>
       ) : mode === 'profile' ? (
-        <div id="teacher-profile"><StudentOverview student={student} classLabel={classes.find((row) => row.id === classId)} role="teacher" /></div>
+        <div className="teacher-profile-panel"><StudentOverview student={student} classLabel={classes.find((row) => row.id === classId)} role="teacher" /></div>
       ) : mode === 'attendance' ? (
         <div id="teacher-attendance" className="teacher-attendance-panel"><AttendanceMarker
           classId={classId}
