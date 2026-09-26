@@ -21,8 +21,9 @@
     "verify:corrections": "node --env-file=.env.local scripts/verify-corrections.mjs",
     "verify:assignments": "node --env-file=.env.local scripts/verify-assignments.mjs",
     "verify:idempotency": "node --env-file=.env.local scripts/verify-idempotency.mjs",
-    "verify:student-profile": "node --env-file=.env.local scripts/verify-student-profile.mjs"
-    ,"verify:timetable": "node --env-file=.env.local scripts/verify-timetable.mjs"
+    "verify:student-profile": "node --env-file=.env.local scripts/verify-student-profile.mjs",
+    "verify:timetable": "node --env-file=.env.local scripts/verify-timetable.mjs",
+    "verify:reconnect": "node --env-file=.env.local scripts/verify-reconnect.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

@@ -36,7 +36,7 @@ function realtimeStream(client, table, filter, label) {
   const ready = new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`Realtime subscription timed out for ${label}.`)), 12000);
     channel = client.channel(`correction-${table}-${randomUUID()}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table, filter }, deliver)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table, ...(filter ? { filter } : {}) }, deliver)
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') { clearTimeout(timer); resolve(); }
         if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) { clearTimeout(timer); reject(new Error(`Realtime subscription failed for ${label}: ${status}.`)); }

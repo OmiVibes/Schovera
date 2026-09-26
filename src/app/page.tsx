@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRealtimeResync } from '@/lib/use-realtime-resync';
 
 type Role = 'teacher' | 'parent' | 'principal';
 type Status = 'present' | 'absent' | 'late';
@@ -320,8 +321,10 @@ export default function Page() {
                   if (
                     profile.role === 'teacher' &&
                     (item.id === 'teacher-students' ||
+                      item.id === 'teacher-profile' ||
                       item.id === 'teacher-attendance' ||
                       item.id === 'teacher-homework' ||
+                      item.id === 'teacher-timetable' ||
                       item.id === 'teacher-notices')
                   ) {
                     event.preventDefault();
@@ -586,6 +589,24 @@ function Teacher({ profile }: { profile: Profile }) {
     );
     setAttendanceLoading(false);
   };
+  const refreshTeacherContext = async () => {
+    const targetStudentId = activeStudentIdRef.current;
+    const targetClassId = activeClassIdRef.current;
+    const targetDate = date;
+    const requests: Promise<void>[] = [];
+    if (targetStudentId) requests.push(refreshUpdates(targetStudentId));
+    if (mode === 'attendance' && targetClassId && students.length) {
+      const context = `${targetClassId}:${targetDate}`;
+      activeAttendanceContextRef.current = context;
+      const requestVersion = attendanceRequestVersionRef.current + 1;
+      attendanceRequestVersionRef.current = requestVersion;
+      requests.push(loadAttendance(targetClassId, targetDate, students, requestVersion));
+    }
+    await Promise.all(requests);
+  };
+  const { onChannelStatus: onTeacherRealtimeStatus } = useRealtimeResync(
+    refreshTeacherContext,
+  );
   useEffect(() => {
     if (mode !== 'attendance') return;
     const context = `${classId}:${date}`;
@@ -614,7 +635,15 @@ function Teacher({ profile }: { profile: Profile }) {
         { event: '*', schema: 'public', table: 'acknowledgements' },
         () => refreshUpdates(),
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'attendance_records' },
+        (event: any) => {
+          if (event.new?.class_id === activeClassIdRef.current || event.old?.class_id === activeClassIdRef.current)
+            refreshTeacherContext();
+        },
+      )
+      .subscribe(onTeacherRealtimeStatus);
     return () => {
       db.removeChannel(channel);
     };
@@ -1036,7 +1065,7 @@ function Teacher({ profile }: { profile: Profile }) {
           onSave={saveAttendance}
         /></div>
       ) : mode === 'homework' ? (
-        <div id="teacher-homework"><TeacherAssignments profile={profile} classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
+        <div id="teacher-homework"><TeacherAssignments classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
       ) : mode === 'timetable' ? (
         <TimetableView classId={classId} className={classes.find((row) => row.id === classId) ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Your class'} profile={profile} />
       ) : (
@@ -1146,7 +1175,7 @@ function AssignmentCard({ assignment, showClass = false }: { assignment: Assignm
   </article>;
 }
 
-function TeacherAssignments({ profile, classId, classLabel, studentsCount }: { profile: Profile; classId: string; classLabel?: any; studentsCount: number }) {
+function TeacherAssignments({ classId, classLabel, studentsCount }: { classId: string; classLabel?: any; studentsCount: number }) {
   const db = useMemo(() => createClient(), []);
   const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [sending, setSending] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('');
   const refresh = async () => {
@@ -1155,8 +1184,9 @@ function TeacherAssignments({ profile, classId, classLabel, studentsCount }: { p
     const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }).order('created_at', { ascending: false });
     setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false);
   };
+  const { onChannelStatus } = useRealtimeResync(refresh);
   useEffect(() => { refresh(); }, [classId]);
-  useEffect(() => { const channel = db.channel(`teacher-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(); return () => { db.removeChannel(channel); }; }, [db, classId]);
+  useEffect(() => { const channel = db.channel(`teacher-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
   const create = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); if (!classId || sending) return;
     const formElement = event.currentTarget;
@@ -1175,17 +1205,19 @@ function TeacherAssignments({ profile, classId, classLabel, studentsCount }: { p
 function ParentHomework({ child, className }: { child?: any; className: string }) {
   const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''); const requestRef = useRef(0); const classId = child?.class_id;
   const refresh = async () => { const version = ++requestRef.current; if (!classId) { setAssignments([]); return; } setLoading(true); const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }); if (version === requestRef.current) { setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false); } };
+  const { onChannelStatus } = useRealtimeResync(refresh);
   useEffect(() => { refresh(); }, [classId]);
-  useEffect(() => { const channel = db.channel(`parent-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(); return () => { db.removeChannel(channel); }; }, [db, classId]);
+  useEffect(() => { const channel = db.channel(`parent-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
   return <section className="parent-homework" id="parent-homework" aria-labelledby="parent-homework-heading"><div className="section-heading"><p className="eyebrow">HOMEWORK</p><h2 id="parent-homework-heading">Homework for {child?.full_name?.split(' ')[0] || 'your child'}</h2><p className="hint">{className} · Class assignments from the teacher.</p></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading homework" rows={2} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />) : <p className="empty compact-empty">No upcoming homework for {child?.full_name?.split(' ')[0] || 'your child'}.</p>}{past.length > 0 && <details className="assignment-past-details"><summary>Earlier homework ({past.length})</summary>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</details>}</section>;
 }
 
 function TimetableView({ classId, className, profile, manage = false }: { classId?: string; className: string; profile: Profile; manage?: boolean }) {
   const db = useMemo(() => createClient(), []); const [entries, setEntries] = useState<TimetableEntry[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''); const requestRef = useRef(0); const currentDay = schoolWeekday();
-  const refresh = async () => { const version = ++requestRef.current; if (!classId) { setEntries([]); setLoading(false); return; } setLoading(true); const { data, error: loadError } = await db.from('timetable_entries').select('*,profiles(full_name)').eq('class_id', classId).order('weekday').order('start_time'); if (version === requestRef.current) { setEntries(data || []); setError(loadError ? 'Timetable could not be loaded.' : ''); setLoading(false); } };
+  const refresh = async () => { const version = ++requestRef.current; if (!classId) { setEntries([]); setLoading(false); return; } setLoading(true); const result = profile.role === 'principal' ? await db.from('timetable_entries').select('*,profiles!timetable_entries_teacher_id_fkey(full_name)').eq('class_id', classId).order('weekday').order('start_time') : await db.from('timetable_entries').select('*').eq('class_id', classId).order('weekday').order('start_time'); if (version === requestRef.current) { setEntries((result.data || []) as TimetableEntry[]); setError(result.error ? 'Timetable could not be loaded.' : ''); setLoading(false); } };
+  const { onChannelStatus } = useRealtimeResync(refresh);
   useEffect(() => { setEntries([]); setError(''); refresh(); }, [classId]);
-  useEffect(() => { const channel = db.channel(`timetable-${profile.role}-${classId || 'none'}`).on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' }, (event: any) => { if (!classId || event.new?.class_id === classId || event.old?.class_id === classId) refresh(); }).subscribe(); return () => { db.removeChannel(channel); }; }, [db, classId, profile.role]);
+  useEffect(() => { const channel = db.channel(`timetable-${profile.role}-${classId || 'none'}`).on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' }, (event: any) => { if (!classId || event.new?.class_id === classId || event.old?.class_id === classId) refresh(); }).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, profile.role, onChannelStatus]);
   const todayEntries = entries.filter((entry) => entry.weekday === currentDay);
   const regionId = manage ? `${profile.role}-timetable-view` : `${profile.role}-timetable`;
   if (!classId) return <section className="card timetable-empty" id={regionId}><span className="section-icon"><Icon name="timetable" /></span><h2>Select a class to view its timetable</h2><p>Choose an authorized class to see today&apos;s and weekly periods.</p></section>;
@@ -1195,8 +1227,10 @@ function TimetableView({ classId, className, profile, manage = false }: { classI
 function PrincipalTimetable({ profile }: { profile: Profile }) {
   const db = useMemo(() => createClient(), []); const [classes, setClasses] = useState<any[]>([]), [teachers, setTeachers] = useState<any[]>([]), [classId, setClassId] = useState(''), [entries, setEntries] = useState<TimetableEntry[]>([]), [form, setForm] = useState({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '' }), [note, setNote] = useState(''), [error, setError] = useState(''), [saving, setSaving] = useState(false), [tick, setTick] = useState(0);
   useEffect(() => { Promise.all([db.from('classes').select('id,grade,division').eq('school_id', profile.school_id).eq('active', true).order('grade'), db.from('profiles').select('id,full_name').eq('school_id', profile.school_id).eq('role', 'teacher').eq('active', true).order('full_name')]).then(([classResult, teacherResult]) => { setClasses(classResult.data || []); setTeachers(teacherResult.data || []); if (!classId && classResult.data?.[0]) setClassId(classResult.data[0].id); }); }, [db, profile.school_id]);
-  useEffect(() => { if (!classId) { setEntries([]); return; } db.from('timetable_entries').select('*,profiles(full_name)').eq('class_id', classId).order('weekday').order('start_time').then(({ data }) => setEntries(data || [])); }, [db, classId, tick]);
-  useEffect(() => { const channel = db.channel(`principal-timetable-${profile.school_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' }, (event: any) => { if (event.new?.school_id === profile.school_id || event.old?.school_id === profile.school_id) setTick((value) => value + 1); }).subscribe(); return () => { db.removeChannel(channel); }; }, [db, profile.school_id]);
+  const refresh = async () => { if (!classId) { setEntries([]); return; } const { data } = await db.from('timetable_entries').select('*,profiles!timetable_entries_teacher_id_fkey(full_name)').eq('class_id', classId).order('weekday').order('start_time'); setEntries(data || []); };
+  const { onChannelStatus } = useRealtimeResync(refresh);
+  useEffect(() => { refresh(); }, [db, classId, tick]);
+  useEffect(() => { const channel = db.channel(`principal-timetable-${profile.school_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' }, (event: any) => { if (event.new?.school_id === profile.school_id || event.old?.school_id === profile.school_id) setTick((value) => value + 1); }).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, profile.school_id, onChannelStatus]);
   const save = async (event: React.FormEvent) => { event.preventDefault(); setNote(''); setError(''); if (!form.subject.trim()) { setError('Subject is required.'); return; } setSaving(true); const { error: rpcError } = await db.rpc('save_timetable_entry', { p_entry_id: form.id || null, p_class_id: classId, p_teacher_id: form.teacherId, p_weekday: Number(form.weekday), p_period_number: Number(form.period), p_subject: form.subject, p_start_time: form.start, p_end_time: form.end, p_room: form.room || null, p_client_request_id: form.id ? null : crypto.randomUUID() }); setSaving(false); if (rpcError) setError(rpcError.message); else { setNote(form.id ? 'Timetable period updated.' : 'Timetable period added.'); setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '' }); setTick((value) => value + 1); } };
   const edit = (entry: TimetableEntry) => setForm({ id: entry.id, teacherId: entry.teacher_id, weekday: String(entry.weekday), period: String(entry.period_number), subject: entry.subject, start: timeLabel(entry.start_time), end: timeLabel(entry.end_time), room: entry.room || '' });
   const remove = async (id: string) => { setError(''); const { error: rpcError } = await db.rpc('delete_timetable_entry', { p_entry_id: id }); if (rpcError) setError(rpcError.message); else { setNote('Timetable period removed.'); setTick((value) => value + 1); } };
@@ -1204,8 +1238,8 @@ function PrincipalTimetable({ profile }: { profile: Profile }) {
 }
 
 function PrincipalHomework({ profile }: { profile: Profile }) {
-  const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]); const refresh = async () => { const { data } = await db.from('class_assignments').select('*,classes(grade,division)').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(8); setAssignments(data || []); };
-  useEffect(() => { refresh(); const channel = db.channel('principal-homework').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments' }, refresh).subscribe(); return () => { db.removeChannel(channel); }; }, [db, profile.school_id]);
+  const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]); const refresh = async () => { const { data } = await db.from('class_assignments').select('*,classes(grade,division)').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(8); setAssignments(data || []); }; const { onChannelStatus } = useRealtimeResync(refresh);
+  useEffect(() => { refresh(); const channel = db.channel('principal-homework').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments' }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, profile.school_id, onChannelStatus]);
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today());
   return <section className="card principal-homework" id="principal-homework"><div className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">LEARNING ACTIVITY</p><h2>Homework activity</h2><p>Recent class assignments across your school.</p></div><b>{upcoming.length} upcoming</b></div>{assignments.length ? assignments.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} showClass />) : <p className="empty compact-empty">No assignments to show yet.</p>}</section>;
 }
@@ -1271,6 +1305,18 @@ function Parent({ profile }: { profile: Profile }) {
       setAttendanceError(error ? 'Attendance could not be loaded.' : '');
     }
   };
+  const refreshParentContext = async () => {
+    const targetChildId = activeChildIdRef.current;
+    const requestVersion = childRequestVersionRef.current;
+    if (!targetChildId) return;
+    await Promise.all([
+      refresh(targetChildId, requestVersion),
+      loadAttendance(targetChildId, requestVersion),
+    ]);
+  };
+  const { onChannelStatus: onParentRealtimeStatus } = useRealtimeResync(
+    refreshParentContext,
+  );
   useEffect(() => {
     activeChildIdRef.current = childId;
     const requestVersion = childRequestVersionRef.current + 1;
@@ -1305,7 +1351,15 @@ function Parent({ profile }: { profile: Profile }) {
         },
         () => refresh(),
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'attendance_records' },
+        (event: any) => {
+          if (event.new?.student_id === activeChildIdRef.current || event.old?.student_id === activeChildIdRef.current)
+            refreshParentContext();
+        },
+      )
+      .subscribe(onParentRealtimeStatus);
     return () => {
       db.removeChannel(channel);
     };
@@ -1524,6 +1578,9 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
   const [loading, setLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
   const [errors, setErrors] = useState({ attendance: '', updates: '', homework: '' });
+  const { onChannelStatus } = useRealtimeResync(() => {
+    setRefreshTick((value) => value + 1);
+  });
   useEffect(() => {
     const version = ++requestRef.current;
     if (!student?.id) { setAttendance([]); setUpdates([]); setAssignments([]); setLoading(false); return; }
@@ -1552,9 +1609,9 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
       // currently scoped profile avoids relying on payload shape for the class
       // identifier; the query itself remains constrained to this class.
       .on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments' }, () => setRefreshTick((value) => value + 1))
-      .subscribe();
+      .subscribe(onChannelStatus);
     return () => { db.removeChannel(channel); };
-  }, [db, role, student?.id, student?.class_id]);
+  }, [db, role, student?.id, student?.class_id, onChannelStatus]);
   if (!student) return <section className="card student-profile-empty" id={`${role}-profile`}><span className="section-icon"><Icon name="student" /></span><h2>Select a student to view their profile</h2><p>Choose an authorized student to see their current school context.</p></section>;
   const counts = attendance.reduce((total, row) => ({ ...total, [row.status]: total[row.status] + 1 }), { present: 0, absent: 0, late: 0 } as Record<Status, number>);
   const currentUpdates = effectiveUpdates(updates); const latest = currentUpdates[0];
@@ -1625,12 +1682,17 @@ function Principal({ profile }: { profile: Profile }) {
     setAttendanceError(
       classResult.error || attendanceResult.error
         ? 'Attendance overview could not be loaded.'
-        : '',
+      : '',
     );
   };
+  const refreshPrincipalContext = async () => {
+    await Promise.all([refresh(), loadAttendance()]);
+  };
+  const { onChannelStatus: onPrincipalRealtimeStatus } = useRealtimeResync(
+    refreshPrincipalContext,
+  );
   useEffect(() => {
-    refresh();
-    loadAttendance();
+    refreshPrincipalContext();
     const channel = db
       .channel('principal-coverage')
       .on(
@@ -1643,11 +1705,16 @@ function Principal({ profile }: { profile: Profile }) {
         { event: '*', schema: 'public', table: 'acknowledgements' },
         refresh,
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'attendance_records' },
+        loadAttendance,
+      )
+      .subscribe(onPrincipalRealtimeStatus);
     return () => {
       db.removeChannel(channel);
     };
-  }, [db, profile]);
+  }, [db, profile, onPrincipalRealtimeStatus]);
   const principalCorrectedIds = correctedUpdateIds(all),
     important = effectiveUpdates(all).filter((update) => update.importance === 'important'),
     acknowledged = important.filter(
