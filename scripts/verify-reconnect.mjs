@@ -20,6 +20,7 @@ const attendanceStudentIds = [];
 const attendanceDates = [];
 const attendanceAuditIds = [];
 const temporaryStudentIds = [];
+const temporaryClassIds = [];
 const observedSockets = new WeakMap();
 const suffix = randomUUID().slice(0, 8);
 const expect = (condition, message) => { if (!condition) throw new Error(message); };
@@ -51,9 +52,11 @@ async function login(page, email, heading) {
     });
   });
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
-  await page.getByRole('button', { name: 'Sign in securely' }).click();
+  if (await page.locator('input[type="email"]').count()) {
+    await page.locator('input[type="email"]').fill(email);
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole('button', { name: 'Sign in securely' }).click();
+  }
   if (email === 'parent@schovera.demo')
     await page.locator('#parent-child-heading').waitFor({ state: 'visible', timeout: 15000 });
   else await page.getByText(heading).first().waitFor({ state: 'visible', timeout: 15000 });
@@ -133,6 +136,10 @@ async function cleanup() {
     await must(admin.from('parent_student_links').delete().in('student_id', temporaryStudentIds));
     await must(admin.from('students').delete().in('id', temporaryStudentIds));
   }
+  if (temporaryClassIds.length) {
+    await must(admin.from('teacher_class_assignments').delete().in('class_id', temporaryClassIds));
+    await must(admin.from('classes').delete().in('id', temporaryClassIds));
+  }
   const leftoverChecks = [
     ['student_updates', 'id', updateIds],
     ['acknowledgements', 'update_id', updateIds],
@@ -140,6 +147,8 @@ async function cleanup() {
     ['timetable_entries', 'id', timetableIds],
     ['students', 'id', temporaryStudentIds],
     ['parent_student_links', 'student_id', temporaryStudentIds],
+    ['classes', 'id', temporaryClassIds],
+    ['teacher_class_assignments', 'class_id', temporaryClassIds],
     ['audit_events', 'target_id', [...updateIds, ...assignmentIds, ...timetableIds]],
     ['audit_events', 'id', attendanceAuditIds],
   ];
@@ -166,6 +175,11 @@ try {
   const temporarySibling = await must(admin.from('students').insert({ school_id: parentProfile.school_id, class_id: assignment.class_id, roll_number: `R${suffix}`, full_name: `Reconnect Sibling ${suffix}` }).select('id,full_name').single());
   temporaryStudentIds.push(temporarySibling.id);
   await must(admin.from('parent_student_links').insert({ parent_id: parentProfile.id, student_id: temporarySibling.id, relationship_label: 'Parent', status: 'active' }));
+  const temporaryClass = await must(admin.from('classes').insert({ school_id: teacherProfile.school_id, grade: '9', division: `R${suffix.slice(0, 2)}`, academic_year: `verify-reconnect-${suffix}` }).select('id,grade,division').single());
+  temporaryClassIds.push(temporaryClass.id);
+  await must(admin.from('teacher_class_assignments').insert({ teacher_id: teacherProfile.id, class_id: temporaryClass.id }));
+  const temporaryClassStudent = await must(admin.from('students').insert({ school_id: teacherProfile.school_id, class_id: temporaryClass.id, roll_number: `C${suffix}`, full_name: `Reconnect Class Student ${suffix}` }).select('id,full_name').single());
+  temporaryStudentIds.push(temporaryClassStudent.id);
   teacherClient = await signedIn(teacherProfile.email);
   parentClient = await signedIn(parentProfile.email);
   principalClient = await signedIn(principalProfile.email);
@@ -287,6 +301,10 @@ try {
   await restoreConnectivity(principalContext, principalPage);
   const principalCard = principalPage.locator('.principal-communication-card').filter({ hasText: principalTitle }).first();
   await principalCard.getByText('Acknowledged').waitFor({ state: 'visible', timeout: 20000 });
+  await principalPage.locator('.principal-awaiting-metric').click();
+  await principalPage.locator('#principal-recent-communication h2').getByText('Awaiting acknowledgement').waitFor({ state: 'visible', timeout: 15000 });
+  expect(await principalPage.locator('#principal-recent-communication .principal-communication-card').filter({ hasText: principalTitle }).count() === 0, 'Acknowledged offline update remained in Principal Awaiting list.');
+  await principalPage.locator('.principal-communication-filter').getByRole('button', { name: 'All' }).click();
   console.log('Principal multi-event final-state recovery passed.');
 
   await waitForRealtimeSubscription(principalPage, async () => {
@@ -386,13 +404,55 @@ try {
   console.log('Teacher Student Profile homework recovery passed.');
 
   const otherStudent = classStudents.find((row) => row.id !== student.id);
-  if (otherStudent) {
+  expect(otherStudent, 'Teacher class needs a second active student for profile context isolation.');
+  let releaseStaleResponse;
+  let staleResponseStarted;
+  let staleResponseFinished;
+  const staleResponseGate = new Promise((resolve) => { releaseStaleResponse = resolve; });
+  const staleRequestSeen = new Promise((resolve) => { staleResponseStarted = resolve; });
+  const staleRequestDone = new Promise((resolve) => { staleResponseFinished = resolve; });
+  let delayAaravRequest = true;
+  const delayedAaravRequest = async (route) => {
+    const requestUrl = new URL(route.request().url());
+    if (delayAaravRequest && requestUrl.searchParams.get('student_id') === `eq.${student.id}`) {
+      delayAaravRequest = false;
+      const response = await route.fetch();
+      staleResponseStarted();
+      try { await staleResponseGate; await route.fulfill({ response }); }
+      finally { staleResponseFinished(); }
+      return;
+    }
+    await route.continue();
+  };
+  await teacherPage.route('**/rest/v1/student_updates*', delayedAaravRequest);
+  try {
     await teacherPage.getByRole('button', { name: new RegExp(otherStudent.full_name) }).first().click();
-    await teacherPage.locator('#teacher-profile .student-profile-grid').waitFor({ state: 'visible', timeout: 15000 });
-    expect(await teacherPage.locator('#teacher-profile').getByText(profileUpdateTitle).count() === 0, 'Aarav profile communication leaked into another Teacher student profile.');
+    await teacherPage.locator('#teacher-profile h1').getByText(otherStudent.full_name).waitFor({ state: 'visible', timeout: 15000 });
     await teacherPage.getByRole('button', { name: /Aarav Patil/ }).first().click();
-    await teacherPage.locator('#teacher-profile').getByText(profileUpdateTitle).waitFor({ state: 'visible', timeout: 15000 });
+    let staleRequestTimer;
+    try {
+      await Promise.race([
+        staleRequestSeen,
+        new Promise((_, reject) => { staleRequestTimer = setTimeout(() => reject(new Error('Stale Aarav profile request was not observed.')), 15000); }),
+      ]);
+    } finally { clearTimeout(staleRequestTimer); }
+    await teacherPage.getByRole('button', { name: `Grade ${temporaryClass.grade}${temporaryClass.division}` }).click();
+    await teacherPage.getByRole('button', { name: new RegExp(temporaryClassStudent.full_name) }).waitFor({ state: 'visible', timeout: 15000 });
+    await teacherPage.getByRole('button', { name: new RegExp(temporaryClassStudent.full_name) }).click();
+    await teacherPage.locator('#teacher-profile h1').getByText(temporaryClassStudent.full_name).waitFor({ state: 'visible', timeout: 15000 });
+    releaseStaleResponse();
+    await staleRequestDone;
+    await teacherPage.locator('#teacher-profile .student-profile-grid').waitFor({ state: 'visible', timeout: 15000 });
+    expect(await teacherPage.locator('#teacher-profile h1').innerText() === temporaryClassStudent.full_name, 'Out-of-order Aarav response replaced the current class/student context.');
+    expect(await teacherPage.locator('#teacher-profile').getByText(profileUpdateTitle).count() === 0, 'Aarav profile communication leaked into another class/student profile.');
+  } finally {
+    releaseStaleResponse();
+    await teacherPage.unroute('**/rest/v1/student_updates*', delayedAaravRequest);
   }
+  console.log('Teacher student/class context and out-of-order response isolation passed.');
+  await teacherPage.getByRole('button', { name: 'Grade 7A' }).click();
+  await teacherPage.getByRole('button', { name: /Aarav Patil/ }).first().click();
+  await teacherPage.locator('#teacher-profile').getByText(profileUpdateTitle).waitFor({ state: 'visible', timeout: 15000 });
   console.log('Teacher Student Profile context isolation passed.');
 
   // The same offline recovery path serves the parent homework and timetable
@@ -458,6 +518,17 @@ try {
   await principalPage.getByRole('link', { name: 'Timetable' }).click();
   await principalPage.getByText(teacherProfile.full_name).first().waitFor({ state: 'visible', timeout: 15000 });
   console.log('Principal teacher-name timetable view passed.');
+
+  await parentContext.setOffline(true);
+  await parentPage.close();
+  await parentContext.setOffline(false);
+  const restoredParentPage = await parentContext.newPage();
+  await login(restoredParentPage, parentProfile.email, 'Aarav');
+  const restoredChildSelect = restoredParentPage.locator('.child-switcher select');
+  await restoredChildSelect.waitFor({ state: 'visible', timeout: 15000 });
+  await restoredChildSelect.selectOption({ label: 'Aarav Patil' });
+  await restoredParentPage.locator('#parent-profile').getByText(profileUpdateTitle).waitFor({ state: 'visible', timeout: 15000 });
+  console.log('Profile unmount during offline/reconnect and persisted remount passed.');
 
   console.log('Reconnect browser verification passed: role recovery, profiles, multi-child/context isolation, homework, timetable, attendance, multi-event state, and duplicate refresh.');
   await Promise.all([teacherContext.close(), parentContext.close(), parentSecondContext.close(), principalContext.close()]);
