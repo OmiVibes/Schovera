@@ -1,5 +1,6 @@
 /* Server-only development seed. Never expose SUPABASE_SERVICE_ROLE_KEY to the browser. */
 import { createClient } from '@supabase/supabase-js';
+import { schoolToday, shiftSchoolDate } from '../src/lib/school-date.mjs';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -142,14 +143,10 @@ await must(
   ),
 );
 const dateDaysAgo = (days) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
+  return shiftSchoolDate(schoolToday(), -days);
 };
 const dateDaysFromNow = (days) => {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return shiftSchoolDate(schoolToday(), days);
 };
 const statuses = [
   ['present', 'present', 'late', 'present', 'absent'],

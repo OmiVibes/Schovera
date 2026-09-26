@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
+import { schoolToday, shiftSchoolDate } from '../src/lib/school-date.mjs';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -25,7 +26,6 @@ const observedSockets = new WeakMap();
 const suffix = randomUUID().slice(0, 8);
 const expect = (condition, message) => { if (!condition) throw new Error(message); };
 const must = async (result) => { const { data, error } = await result; if (error) throw error; return data; };
-const schoolToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
 async function signedIn(email) {
   const client = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -208,7 +208,7 @@ try {
     await page.waitForFunction(() => Array.from(document.querySelectorAll('.child-switcher select option')).some((option) => option.textContent?.trim() === 'Aarav Patil'), null, { timeout: 15000 });
     await childSelect.selectOption({ label: 'Aarav Patil' });
     await expect((await childSelect.locator('option:checked').textContent())?.trim() === 'Aarav Patil', 'Parent did not select Aarav Patil.');
-    await page.locator('#parent-child-heading').getByText('Aarav Patil').waitFor({ state: 'visible', timeout: 15000 });
+    await page.waitForFunction(() => document.querySelector('#parent-child-heading')?.textContent?.includes('Aarav Patil'), null, { timeout: 15000 });
   }
   await teacherPage.getByRole('button', { name: 'Grade 7A' }).first().click();
   await teacherPage.getByRole('button', { name: /Aarav Patil/ }).first().click();
@@ -220,8 +220,15 @@ try {
   await parentContext.setOffline(true);
   const parentUpdateId = await sendUpdate(teacherClient, assignment.class_id, student.id, parentTitle);
   expect((await must(parentClient.from('student_updates').select('id').eq('id', parentUpdateId))).length === 1, 'Parent-authorized persisted query cannot see missed update.');
+  const parentUpdatesResync = parentPage.waitForResponse((response) =>
+    response.url().includes(`/rest/v1/student_updates?`) &&
+    response.url().includes(`student_id=eq.${student.id}`) &&
+    response.status() === 200,
+    { timeout: 20000 },
+  );
   await restoreConnectivity(parentContext, parentPage);
   console.log(`Parent returned online=${await parentPage.evaluate(() => navigator.onLine)}; selected=${await parentPage.locator('#parent-child-heading').innerText()}.`);
+  await parentUpdatesResync;
   await parentPage.getByText(parentTitle).first().waitFor({ state: 'visible', timeout: 20000 });
   await parentPage.locator('#parent-profile').getByText(parentTitle).waitFor({ state: 'visible', timeout: 20000 });
   await parentPage.locator('#parent-updates .update-card').filter({ hasText: parentTitle }).waitFor({ state: 'visible', timeout: 20000 });
@@ -338,7 +345,7 @@ try {
   await parentPage.getByText(normalTitle).first().waitFor({ state: 'visible', timeout: 20000 });
   expect(await parentPage.getByText(normalTitle, { exact: false }).count() < 3, 'Reconnect duplicated the parent update UI.');
   console.log('Parent duplicate-refresh protection passed.');
-  const dueDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const dueDate = shiftSchoolDate(schoolToday(), 1);
 
   // Open Aarav's loaded Teacher profile and confirm the profile's own scoped
   // channel rehydrates communication, acknowledgements, attendance and homework.
@@ -359,11 +366,11 @@ try {
   console.log('Teacher Student Profile update + acknowledgement recovery passed.');
 
   const classStudents = await must(admin.from('students').select('id,full_name').eq('class_id', assignment.class_id).eq('active', true));
-  const recentRecords = await must(admin.from('attendance_records').select('attendance_date').in('student_id', classStudents.map((row) => row.id)).gte('attendance_date', new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10)));
+  const recentRecords = await must(admin.from('attendance_records').select('attendance_date').in('student_id', classStudents.map((row) => row.id)).gte('attendance_date', shiftSchoolDate(schoolToday(), -90)));
   const occupiedDates = new Set(recentRecords.map((row) => row.attendance_date));
   let profileAttendanceDate = '';
   for (let offset = 0; offset < 90; offset++) {
-    const candidate = new Date(Date.now() - offset * 86400000).toISOString().slice(0, 10);
+    const candidate = shiftSchoolDate(schoolToday(), -offset);
     if (!occupiedDates.has(candidate)) { profileAttendanceDate = candidate; break; }
   }
   expect(profileAttendanceDate, 'Could not find an unused attendance date for isolated profile recovery.');
@@ -391,7 +398,7 @@ try {
     p_subject: 'Science',
     p_title: profileHomeworkTitle,
     p_description: `Reconnect profile homework record ${suffix}.`,
-    p_due_date: schoolToday,
+      p_due_date: schoolToday(),
     p_client_request_id: randomUUID(),
   });
   if (profileHomeworkError) throw profileHomeworkError;
@@ -527,6 +534,8 @@ try {
   const restoredChildSelect = restoredParentPage.locator('.child-switcher select');
   await restoredChildSelect.waitFor({ state: 'visible', timeout: 15000 });
   await restoredChildSelect.selectOption({ label: 'Aarav Patil' });
+  await restoredParentPage.waitForFunction(() => document.querySelector('#parent-child-heading')?.textContent?.includes('Aarav Patil'), null, { timeout: 15000 });
+  await restoredParentPage.locator('#parent-profile .student-profile-grid').waitFor({ state: 'visible', timeout: 15000 });
   await restoredParentPage.locator('#parent-profile').getByText(profileUpdateTitle).waitFor({ state: 'visible', timeout: 15000 });
   console.log('Profile unmount during offline/reconnect and persisted remount passed.');
 

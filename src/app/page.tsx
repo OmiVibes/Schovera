@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRealtimeResync } from '@/lib/use-realtime-resync';
+import { formatSchoolDate, schoolToday } from '@/lib/school-date.mjs';
 
 type Role = 'teacher' | 'parent' | 'principal';
 type Status = 'present' | 'absent' | 'late';
@@ -46,7 +47,7 @@ type Assignment = {
   due_date: string; created_at: string;
   classes?: { grade: string; division: string }; profiles?: { full_name: string };
 };
-type TimetableEntry = { id: string; class_id: string; teacher_id: string; weekday: number; period_number: number; subject: string; start_time: string; end_time: string; room?: string | null; profiles?: { full_name: string } };
+type TimetableEntry = { id: string; class_id: string; teacher_id: string; weekday: number; period_number: number; subject: string; start_time: string; end_time: string; room?: string | null; updated_at: string; profiles?: { full_name: string } };
 type Announcement = {
   id: string;
   title: string;
@@ -62,11 +63,12 @@ const categories = [
   'homework_task',
   'general',
 ];
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => schoolToday();
 const weekdayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const schoolDays = weekdayNames.slice(0, 6);
 const schoolWeekday = () => {
-  const label = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'Asia/Kolkata' }).format(new Date());
-  return Math.max(1, weekdayNames.indexOf(label) + 1);
+  const [year, month, day] = today().split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay() || 7;
 };
 const timeLabel = (value: string) => value.slice(0, 5);
 const nice = (value: string) =>
@@ -76,6 +78,8 @@ const displayDate = (value: string) =>
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+const displaySchoolDate = (value: string, options: Intl.DateTimeFormatOptions = {}) =>
+  formatSchoolDate(value, options);
 
 const normalizeCommunicationValue = (value: string) =>
   value.replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '');
@@ -85,7 +89,7 @@ const dueLabel = (dueDate: string) => {
   if (delta === 1) return 'Due tomorrow';
   if (delta > 1 && delta <= 7) return `Due in ${delta} days`;
   if (delta < 0) return 'Earlier homework';
-  return `Due ${new Date(`${dueDate}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+  return `Due ${displaySchoolDate(dueDate, { month: 'short', day: 'numeric' })}`;
 };
 
 const correctedUpdateIds = (updates: Update[]) =>
@@ -771,7 +775,7 @@ function Teacher({ profile }: { profile: Profile }) {
       setAttendanceNote(
         error
           ? 'Could not save attendance. Check the roster and try again.'
-          : `Attendance saved for ${new Date(`${date}T00:00:00`).toLocaleDateString()}.`,
+          : `Attendance saved for ${displaySchoolDate(date)}.`,
       );
   };
   const attendanceBusy = attendanceLoading || attendanceSaving;
@@ -1171,7 +1175,7 @@ function AssignmentCard({ assignment, showClass = false }: { assignment: Assignm
   return <article className={`assignment-card${assignment.due_date < today() ? ' assignment-past' : ''}`}>
     <header><span className="assignment-icon" aria-hidden="true"><Icon name="homework" /></span><div><p>{assignment.subject}</p><h3>{assignment.title}</h3></div><time dateTime={assignment.due_date}>{dueLabel(assignment.due_date)}</time></header>
     <p className="assignment-description">{assignment.description}</p>
-    <footer><span>{showClass && className ? className : 'Class homework'}</span><time dateTime={assignment.due_date}>Due {new Date(`${assignment.due_date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</time></footer>
+    <footer><span>{showClass && className ? className : 'Class homework'}</span><time dateTime={assignment.due_date}>Due {displaySchoolDate(assignment.due_date, { month: 'short', day: 'numeric', year: 'numeric' })}</time></footer>
   </article>;
 }
 
@@ -1221,20 +1225,21 @@ function TimetableView({ classId, className, profile, manage = false }: { classI
   const todayEntries = entries.filter((entry) => entry.weekday === currentDay);
   const regionId = manage ? `${profile.role}-timetable-view` : `${profile.role}-timetable`;
   if (!classId) return <section className="card timetable-empty" id={regionId}><span className="section-icon"><Icon name="timetable" /></span><h2>Select a class to view its timetable</h2><p>Choose an authorized class to see today&apos;s and weekly periods.</p></section>;
-  return <section className="timetable-workspace" id={regionId} aria-labelledby={`${regionId}-heading`}><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">{manage ? 'TIMETABLE MANAGEMENT' : 'CLASS SCHEDULE'}</p><h2 id={`${regionId}-heading`}>{manage ? 'Weekly timetable' : "Today’s schedule"}</h2><p className="hint">{className} · School time in India Standard Time</p></div></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading timetable" rows={3} /> : <><section className="timetable-today" aria-labelledby={`${profile.role}-today-heading`}><div><p className="eyebrow">TODAY · {weekdayNames[currentDay - 1].toUpperCase()}</p><h3 id={`${profile.role}-today-heading`}>Today&apos;s periods</h3></div>{todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || 'Teacher'}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b>No classes scheduled for today.</b><p>The weekly timetable remains available below.</p></span></div>}</section><section className="timetable-week" aria-labelledby={`${profile.role}-week-heading`}><p className="eyebrow">WEEKLY TIMETABLE</p><h3 id={`${profile.role}-week-heading`}>All school days</h3><div className="timetable-days">{weekdayNames.slice(0, 5).map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{day}</b>{currentDay === index + 1 && <span>Today</span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small>Period {entry.period_number} · {entry.profiles?.full_name || 'Teacher'}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p>No periods</p>}</section>; })}</div></section></>}</section>;
+  return <section className="timetable-workspace" id={regionId} aria-labelledby={`${regionId}-heading`}><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">{manage ? 'TIMETABLE MANAGEMENT' : 'CLASS SCHEDULE'}</p><h2 id={`${regionId}-heading`}>{manage ? 'Weekly timetable' : "Today’s schedule"}</h2><p className="hint">{className} · School time in India Standard Time</p></div></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading timetable" rows={3} /> : <><section className="timetable-today" aria-labelledby={`${profile.role}-today-heading`}><div><p className="eyebrow">TODAY · {weekdayNames[currentDay - 1].toUpperCase()}</p><h3 id={`${profile.role}-today-heading`}>Today&apos;s periods</h3></div>{todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || 'Teacher'}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b>No classes scheduled for today.</b><p>The weekly timetable remains available below.</p></span></div>}</section><section className="timetable-week" aria-labelledby={`${profile.role}-week-heading`}><p className="eyebrow">WEEKLY TIMETABLE</p><h3 id={`${profile.role}-week-heading`}>All school days</h3><div className="timetable-days">{schoolDays.map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{day}</b>{currentDay === index + 1 && <span>Today</span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small>Period {entry.period_number} · {entry.profiles?.full_name || 'Teacher'}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p>No periods</p>}</section>; })}</div></section></>}</section>;
 }
 
 function PrincipalTimetable({ profile }: { profile: Profile }) {
-  const db = useMemo(() => createClient(), []); const [classes, setClasses] = useState<any[]>([]), [teachers, setTeachers] = useState<any[]>([]), [classId, setClassId] = useState(''), [entries, setEntries] = useState<TimetableEntry[]>([]), [form, setForm] = useState({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '' }), [note, setNote] = useState(''), [error, setError] = useState(''), [saving, setSaving] = useState(false), [tick, setTick] = useState(0);
+  const db = useMemo(() => createClient(), []); const [classes, setClasses] = useState<any[]>([]), [teachers, setTeachers] = useState<any[]>([]), [classId, setClassId] = useState(''), [entries, setEntries] = useState<TimetableEntry[]>([]), [form, setForm] = useState({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' }), [note, setNote] = useState(''), [error, setError] = useState(''), [saving, setSaving] = useState(false), [tick, setTick] = useState(0);
+  const createRequestRef = useRef<{ key: string; payload: string } | null>(null);
   useEffect(() => { Promise.all([db.from('classes').select('id,grade,division').eq('school_id', profile.school_id).eq('active', true).order('grade'), db.from('profiles').select('id,full_name').eq('school_id', profile.school_id).eq('role', 'teacher').eq('active', true).order('full_name')]).then(([classResult, teacherResult]) => { setClasses(classResult.data || []); setTeachers(teacherResult.data || []); if (!classId && classResult.data?.[0]) setClassId(classResult.data[0].id); }); }, [db, profile.school_id]);
   const refresh = async () => { if (!classId) { setEntries([]); return; } const { data } = await db.from('timetable_entries').select('*,profiles!timetable_entries_teacher_id_fkey(full_name)').eq('class_id', classId).order('weekday').order('start_time'); setEntries(data || []); };
   const { onChannelStatus } = useRealtimeResync(refresh);
   useEffect(() => { refresh(); }, [db, classId, tick]);
   useEffect(() => { const channel = db.channel(`principal-timetable-${profile.school_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' }, (event: any) => { if (event.new?.school_id === profile.school_id || event.old?.school_id === profile.school_id) setTick((value) => value + 1); }).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, profile.school_id, onChannelStatus]);
-  const save = async (event: React.FormEvent) => { event.preventDefault(); setNote(''); setError(''); if (!form.subject.trim()) { setError('Subject is required.'); return; } setSaving(true); const { error: rpcError } = await db.rpc('save_timetable_entry', { p_entry_id: form.id || null, p_class_id: classId, p_teacher_id: form.teacherId, p_weekday: Number(form.weekday), p_period_number: Number(form.period), p_subject: form.subject, p_start_time: form.start, p_end_time: form.end, p_room: form.room || null, p_client_request_id: form.id ? null : crypto.randomUUID() }); setSaving(false); if (rpcError) setError(rpcError.message); else { setNote(form.id ? 'Timetable period updated.' : 'Timetable period added.'); setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '' }); setTick((value) => value + 1); } };
-  const edit = (entry: TimetableEntry) => setForm({ id: entry.id, teacherId: entry.teacher_id, weekday: String(entry.weekday), period: String(entry.period_number), subject: entry.subject, start: timeLabel(entry.start_time), end: timeLabel(entry.end_time), room: entry.room || '' });
+  const save = async (event: React.FormEvent) => { event.preventDefault(); setNote(''); setError(''); if (!form.subject.trim()) { setError('Subject is required.'); return; } const payloadKey = JSON.stringify({ classId, teacherId: form.teacherId, weekday: form.weekday, period: form.period, subject: form.subject.trim(), start: form.start, end: form.end, room: form.room.trim() }); if (!form.id && createRequestRef.current?.payload !== payloadKey) createRequestRef.current = { key: crypto.randomUUID(), payload: payloadKey }; setSaving(true); const { error: rpcError } = await db.rpc('save_timetable_entry', { p_entry_id: form.id || null, p_class_id: classId, p_teacher_id: form.teacherId, p_weekday: Number(form.weekday), p_period_number: Number(form.period), p_subject: form.subject, p_start_time: form.start, p_end_time: form.end, p_room: form.room || null, p_client_request_id: form.id ? null : createRequestRef.current!.key, p_expected_updated_at: form.expectedUpdatedAt || null }); setSaving(false); if (rpcError) setError(rpcError.message); else { if (!form.id) createRequestRef.current = null; setNote(form.id ? 'Timetable period updated.' : 'Timetable period added.'); setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' }); setTick((value) => value + 1); } };
+  const edit = (entry: TimetableEntry) => { createRequestRef.current = null; setForm({ id: entry.id, teacherId: entry.teacher_id, weekday: String(entry.weekday), period: String(entry.period_number), subject: entry.subject, start: timeLabel(entry.start_time), end: timeLabel(entry.end_time), room: entry.room || '', expectedUpdatedAt: entry.updated_at }); };
   const remove = async (id: string) => { setError(''); const { error: rpcError } = await db.rpc('delete_timetable_entry', { p_entry_id: id }); if (rpcError) setError(rpcError.message); else { setNote('Timetable period removed.'); setTick((value) => value + 1); } };
-  const classLabel = classes.find((row) => row.id === classId); return <section className="principal-timetable" id="principal-timetable"><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">SCHOOL OPERATIONS</p><h2>Timetable</h2><p className="hint">Configure weekly class periods for your school.</p></div></div><label className="timetable-select">Class<select value={classId} onChange={(event) => setClassId(event.target.value)}>{classes.map((row) => <option value={row.id} key={row.id}>Grade {row.grade}{row.division}</option>)}</select></label><div className="principal-timetable-grid"><TimetableView classId={classId} className={classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Class'} profile={profile} manage /><form className="card timetable-form" onSubmit={save}><p className="eyebrow">{form.id ? 'EDIT PERIOD' : 'ADD PERIOD'}</p><h3>{form.id ? 'Update timetable period' : 'Add timetable period'}</h3><label>Teacher<select required value={form.teacherId} onChange={(event) => setForm({ ...form, teacherId: event.target.value })}><option value="">Select teacher</option>{teachers.map((teacher) => <option value={teacher.id} key={teacher.id}>{teacher.full_name}</option>)}</select></label><label>Subject<input value={form.subject} maxLength={80} onChange={(event) => setForm({ ...form, subject: event.target.value })} /></label><div className="timetable-form-grid"><label>Day<select value={form.weekday} onChange={(event) => setForm({ ...form, weekday: event.target.value })}>{weekdayNames.map((day, index) => <option value={index + 1} key={day}>{day}</option>)}</select></label><label>Period<input type="number" min="1" max="20" value={form.period} onChange={(event) => setForm({ ...form, period: event.target.value })} /></label></div><div className="timetable-form-grid"><label>Start<input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>End<input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div><label>Room <span className="hint">(optional)</span><input value={form.room} maxLength={80} onChange={(event) => setForm({ ...form, room: event.target.value })} /></label>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<button className="primary" disabled={saving || !classId || !form.teacherId}>{saving ? 'Saving…' : form.id ? 'Save changes' : 'Add period'}</button>{form.id && <button type="button" className="secondary" onClick={() => setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '' })}>Cancel edit</button>}</form></div><section className="card timetable-manage-list"><h3>Configured periods</h3>{entries.length ? entries.map((entry) => <div key={entry.id}><span>{weekdayNames[entry.weekday - 1]} · P{entry.period_number}</span><b>{entry.subject}</b><small>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)} · {entry.profiles?.full_name || 'Teacher'}</small><button type="button" onClick={() => edit(entry)}>Edit</button><button type="button" onClick={() => remove(entry.id)}>Remove</button></div>) : <p className="empty compact-empty">No timetable periods yet. Add the first period for this class.</p>}</section></section>;
+  const classLabel = classes.find((row) => row.id === classId); return <section className="principal-timetable" id="principal-timetable"><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">SCHOOL OPERATIONS</p><h2>Timetable</h2><p className="hint">Configure weekly class periods for your school.</p></div></div><label className="timetable-select">Class<select value={classId} onChange={(event) => setClassId(event.target.value)}>{classes.map((row) => <option value={row.id} key={row.id}>Grade {row.grade}{row.division}</option>)}</select></label><div className="principal-timetable-grid"><TimetableView classId={classId} className={classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Class'} profile={profile} manage /><form className="card timetable-form" onSubmit={save}><p className="eyebrow">{form.id ? 'EDIT PERIOD' : 'ADD PERIOD'}</p><h3>{form.id ? 'Update timetable period' : 'Add timetable period'}</h3><label>Teacher<select required value={form.teacherId} onChange={(event) => setForm({ ...form, teacherId: event.target.value })}><option value="">Select teacher</option>{teachers.map((teacher) => <option value={teacher.id} key={teacher.id}>{teacher.full_name}</option>)}</select></label><label>Subject<input value={form.subject} maxLength={80} onChange={(event) => setForm({ ...form, subject: event.target.value })} /></label><div className="timetable-form-grid"><label>Day<select value={form.weekday} onChange={(event) => setForm({ ...form, weekday: event.target.value })}>{schoolDays.map((day, index) => <option value={index + 1} key={day}>{day}</option>)}</select></label><label>Period<input type="number" min="1" max="20" value={form.period} onChange={(event) => setForm({ ...form, period: event.target.value })} /></label></div><div className="timetable-form-grid"><label>Start<input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>End<input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div><label>Room <span className="hint">(optional)</span><input value={form.room} maxLength={80} onChange={(event) => setForm({ ...form, room: event.target.value })} /></label>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<button className="primary" disabled={saving || !classId || !form.teacherId}>{saving ? 'Saving…' : form.id ? 'Save changes' : 'Add period'}</button>{form.id && <button type="button" className="secondary" onClick={() => setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' })}>Cancel edit</button>}</form></div><section className="card timetable-manage-list"><h3>Configured periods</h3>{entries.length ? entries.map((entry) => <div key={entry.id}><span>{weekdayNames[entry.weekday - 1]} · P{entry.period_number}</span><b>{entry.subject}</b><small>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)} · {entry.profiles?.full_name || 'Teacher'}</small><button type="button" onClick={() => edit(entry)}>Edit</button><button type="button" onClick={() => remove(entry.id)}>Remove</button></div>) : <p className="empty compact-empty">No timetable periods yet. Add the first period for this class.</p>}</section></section>;
 }
 
 function PrincipalHomework({ profile }: { profile: Profile }) {
@@ -1264,7 +1269,11 @@ function Parent({ profile }: { profile: Profile }) {
       .then(({ data }) => {
         const linked = (data || []).map((row: any) => row.students);
         setChildren(linked);
-        setChildId(linked[0]?.id || '');
+        setChildId((current) =>
+          current && linked.some((child: any) => child.id === current)
+            ? current
+            : linked[0]?.id || '',
+        );
       });
   }, [db, profile]);
   const refresh = async (
@@ -1543,7 +1552,7 @@ function AttendanceSummary({
       <h2>Attendance</h2>
       <div className={`attendance-latest ${attendance[0].status}`}>
         <span className="attendance-latest-icon" aria-hidden="true"><Icon name={attendance[0].status === 'present' ? 'check' : attendance[0].status === 'absent' ? 'important' : 'attendance'} /></span>
-        <div><span>Latest attendance</span><b>{nice(attendance[0].status)}</b><time dateTime={attendance[0].attendance_date}>{new Date(`${attendance[0].attendance_date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}</time></div>
+        <div><span>Latest attendance</span><b>{nice(attendance[0].status)}</b><time dateTime={attendance[0].attendance_date}>{displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' })}</time></div>
       </div>
       <h3 className="attendance-recent-heading">Recent attendance</h3>
       <div className="attendance-counts">
@@ -1560,7 +1569,7 @@ function AttendanceSummary({
       <div className="history-list">
         {attendance.slice(0, 5).map((row) => (
           <div className={`attendance-history-row ${row.status}`} key={row.id}>
-            <time dateTime={row.attendance_date}>{new Date(`${row.attendance_date}T00:00:00`).toLocaleDateString()}</time>
+            <time dateTime={row.attendance_date}>{displaySchoolDate(row.attendance_date)}</time>
             <span><Icon name={row.status === 'present' ? 'check' : row.status === 'absent' ? 'important' : 'attendance'} />{nice(row.status)}</span>
           </div>
         ))}
@@ -1623,7 +1632,7 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
     {loading ? <Skeleton label="Loading student profile" rows={4} /> : <>
       <div className="student-profile-summary" aria-label="Student profile at a glance"><article><Icon name="attendance" /><span><small>Attendance</small><b>{attendance.length ? nice(attendance[0].status) : 'Not recorded'}</b></span></article><article><Icon name="updates" /><span><small>Communication</small><b>{awaiting ? `${awaiting} awaiting` : latest ? 'Up to date' : 'No updates'}</b></span></article><article><Icon name="homework" /><span><small>Homework</small><b>{upcoming.length ? `${upcoming.length} upcoming` : 'None upcoming'}</b></span></article></div>
       <div className="student-profile-grid">
-        <section className="card profile-section"><p className="eyebrow">ATTENDANCE</p><h2>Recent attendance</h2>{errors.attendance ? <p className="error" role="alert">{errors.attendance}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>Present</span><span><b>{counts.absent}</b>Absent</span><span><b>{counts.late}</b>Late</span></div><p className="hint">Latest: <b className={`status ${attendance[0].status}`}>{nice(attendance[0].status)}</b> · {new Date(`${attendance[0].attendance_date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p></> : <p className="empty compact-empty">No attendance recorded yet.</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">ATTENDANCE</p><h2>Recent attendance</h2>{errors.attendance ? <p className="error" role="alert">{errors.attendance}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>Present</span><span><b>{counts.absent}</b>Absent</span><span><b>{counts.late}</b>Late</span></div><p className="hint">Latest: <b className={`status ${attendance[0].status}`}>{nice(attendance[0].status)}</b> · {displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' })}</p></> : <p className="empty compact-empty">No attendance recorded yet.</p>}</section>
         <section className="card profile-section"><p className="eyebrow">COMMUNICATION</p><h2>Teacher updates</h2>{errors.updates ? <p className="error" role="alert">{errors.updates}</p> : latest ? <><p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p><p className="hint">{nice(latest.category)} · {displayDate(latest.sent_at)}</p>{latest.importance === 'important' && <p className={awaiting ? 'status pending' : 'status present'}>{awaiting ? 'Awaiting acknowledgement' : 'Acknowledged'}</p>}</> : <p className="empty compact-empty">No teacher updates yet.</p>}</section>
         <section className="card profile-section"><p className="eyebrow">HOMEWORK</p><h2>Upcoming homework</h2>{errors.homework ? <p className="error" role="alert">{errors.homework}</p> : next ? <><p className="profile-update-title"><span className="update-icon"><Icon name="homework" /></span><b>{next.title}</b></p><p className="hint">{next.subject} · {dueLabel(next.due_date)}</p><p className="hint">{upcoming.length} upcoming assignment{upcoming.length === 1 ? '' : 's'}</p></> : <p className="empty compact-empty">No upcoming homework.</p>}</section>
       </div>
@@ -1968,6 +1977,7 @@ function Announcements({
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [note, setNote] = useState('');
+  const pendingRequestRef = useRef<{ key: string; payload: string } | null>(null);
   const load = async () => {
     setLoading(true);
     const { data, error } = await db
@@ -1989,20 +1999,27 @@ function Announcements({
     const form = new FormData(formElement);
     const title = String(form.get('title') || '').trim();
     const body = String(form.get('body') || '').trim();
+    const priority = String(form.get('priority') || 'normal');
     setNote('');
     if (!title || !body) {
       setNote('Please add a title and message before publishing.');
       return;
     }
+    const payload = JSON.stringify({ title, body, priority });
+    if (pendingRequestRef.current?.payload !== payload) {
+      pendingRequestRef.current = { key: crypto.randomUUID(), payload };
+    }
     setPublishing(true);
     const { error } = await db.rpc('publish_announcement', {
       p_title: title,
       p_body: body,
-      p_priority: form.get('priority'),
+      p_priority: priority,
+      p_client_request_id: pendingRequestRef.current.key,
     });
     setPublishing(false);
     if (error) setNote('Could not publish announcement. Try again.');
     else {
+      pendingRequestRef.current = null;
       formElement.reset();
       setNote('Announcement published.');
       load();

@@ -1,6 +1,7 @@
 /* Server-only Phase 2A verification. It creates and removes only records tagged by its exact IDs. */
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { schoolToday, shiftSchoolDate } from '../src/lib/school-date.mjs';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,9 +22,7 @@ const temporary = {
 };
 const suffix = randomUUID().slice(0, 8);
 const dateDaysAgo = (days) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
+  return shiftSchoolDate(schoolToday(), -days);
 };
 const testDate = dateDaysAgo(21);
 

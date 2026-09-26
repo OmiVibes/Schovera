@@ -42,6 +42,7 @@ try {
     const invalid = await principal.rpc('publish_announcement', {
       ...invalidNotice,
       p_priority: 'normal',
+      p_client_request_id: randomUUID(),
     });
     expect(
       Boolean(invalid.error),
@@ -52,6 +53,7 @@ try {
     p_title: normalTitle,
     p_body: 'A persisted normal official notice for verification.',
     p_priority: 'normal',
+    p_client_request_id: randomUUID(),
   });
   if (response.error) throw response.error;
   temporary.announcementIds.push(response.data);
@@ -59,6 +61,7 @@ try {
     p_title: importantTitle,
     p_body: 'A persisted important official notice for verification.',
     p_priority: 'important',
+    p_client_request_id: randomUUID(),
   });
   if (response.error) throw response.error;
   temporary.announcementIds.push(response.data);
@@ -97,12 +100,14 @@ try {
     p_title: 'Denied announcement',
     p_body: 'Teachers must not publish official notices.',
     p_priority: 'normal',
+    p_client_request_id: randomUUID(),
   });
   expect(Boolean(denied.error), 'Teacher announcement write was not denied.');
   denied = await parent.rpc('publish_announcement', {
     p_title: 'Denied announcement',
     p_body: 'Parents must not publish official notices.',
     p_priority: 'normal',
+    p_client_request_id: randomUUID(),
   });
   expect(Boolean(denied.error), 'Parent announcement write was not denied.');
   const schoolB = await must(

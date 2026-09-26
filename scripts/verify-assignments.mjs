@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { schoolToday, shiftSchoolDate } from '../src/lib/school-date.mjs';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -11,7 +12,7 @@ const temporary = [];
 const expect = (condition, message) => { if (!condition) throw new Error(message); };
 async function must(result) { const { data, error } = await result; if (error) throw error; return data; }
 async function login(email) { const client = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } }); const { error } = await client.auth.signInWithPassword({ email, password }); if (error) throw error; return client; }
-const futureDate = (days) => { const value = new Date(); value.setDate(value.getDate() + days); return value.toISOString().slice(0, 10); };
+const futureDate = (days) => shiftSchoolDate(schoolToday(), days);
 
 try {
   const profiles = await must(admin.from('profiles').select('id,email').in('email', ['teacher@schovera.demo', 'parent@schovera.demo', 'principal@schovera.demo']));

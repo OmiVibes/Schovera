@@ -1,5 +1,6 @@
 /* Server-only targeted cleanup for known Schovera demo and verifier artifacts. */
 import { createClient } from '@supabase/supabase-js';
+import { schoolToday, shiftSchoolDate } from '../src/lib/school-date.mjs';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -15,9 +16,7 @@ const must = async (result) => {
 };
 const ids = (rows) => rows.map((row) => row.id);
 const dateDaysAgo = (days) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
+  return shiftSchoolDate(schoolToday(), -days);
 };
 
 async function deleteDemoUpdates(schoolId) {
