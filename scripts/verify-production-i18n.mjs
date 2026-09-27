@@ -26,6 +26,8 @@ let principalProfile;
 let aarav;
 let teacherUpdateId;
 let priorUpdateIds = [];
+let acceptanceCompleted = false;
+let verificationError;
 
 function waitForRealtimeJoin(page, email) {
   let resolveReady;
@@ -69,21 +71,27 @@ async function cleanup() {
   const found = await admin.from('student_updates').select('id').eq('title', title);
   if (found.error) throw found.error;
   const ids = [...new Set([teacherUpdateId, ...(found.data || []).map((row) => row.id)].filter(Boolean))];
-  if (ids.length) {
-    const { error: ackError } = await admin.from('acknowledgements').delete().in('update_id', ids);
-    if (ackError) throw ackError;
-    const { error: auditError } = await admin.from('audit_events').delete().in('target_id', ids);
-    if (auditError) throw auditError;
-    const { error: updateError } = await admin.from('student_updates').delete().in('id', ids);
-    if (updateError) throw updateError;
+  let leftovers;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (ids.length) {
+      const { error: ackError } = await admin.from('acknowledgements').delete().in('update_id', ids);
+      if (ackError) throw ackError;
+      const { error: auditError } = await admin.from('audit_events').delete().in('target_id', ids);
+      if (auditError) throw auditError;
+      const { error: updateError } = await admin.from('student_updates').delete().in('id', ids);
+      if (updateError) throw updateError;
+    }
+    const [updatesLeft, acknowledgementsLeft, auditsLeft] = await Promise.all([
+      admin.from('student_updates').select('id').eq('title', title),
+      ids.length ? admin.from('acknowledgements').select('id').in('update_id', ids) : Promise.resolve({ data: [], error: null }),
+      ids.length ? admin.from('audit_events').select('id').in('target_id', ids) : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (updatesLeft.error || acknowledgementsLeft.error || auditsLeft.error) throw updatesLeft.error || acknowledgementsLeft.error || auditsLeft.error;
+    leftovers = { updates: updatesLeft.data || [], acknowledgements: acknowledgementsLeft.data || [], audits: auditsLeft.data || [] };
+    if (!leftovers.updates.length && !leftovers.acknowledgements.length && !leftovers.audits.length) break;
+    if (attempt === 0) console.warn(`Cleanup verification found ${leftovers.updates.length} update, ${leftovers.acknowledgements.length} acknowledgement, and ${leftovers.audits.length} audit row(s); retrying exact temporary IDs once.`);
   }
-  const [updatesLeft, acknowledgementsLeft, auditsLeft] = await Promise.all([
-    admin.from('student_updates').select('id').eq('title', title),
-    ids.length ? admin.from('acknowledgements').select('id').in('update_id', ids) : Promise.resolve({ data: [], error: null }),
-    ids.length ? admin.from('audit_events').select('id').in('target_id', ids) : Promise.resolve({ data: [], error: null }),
-  ]);
-  if (updatesLeft.error || acknowledgementsLeft.error || auditsLeft.error) throw updatesLeft.error || acknowledgementsLeft.error || auditsLeft.error;
-  expect(!(updatesLeft.data || []).length && !(acknowledgementsLeft.data || []).length && !(auditsLeft.data || []).length, 'Temporary production update, acknowledgement, or audit rows remain.');
+  expect(leftovers && !leftovers.updates.length && !leftovers.acknowledgements.length && !leftovers.audits.length, 'Temporary production update, acknowledgement, or audit rows remain after bounded cleanup.');
   if (priorUpdateIds.length) {
     const current = await must(admin.from('student_updates').select('id').in('id', priorUpdateIds));
     expect(current.length === priorUpdateIds.length, 'Natural Aarav demo updates changed during cleanup.');
@@ -173,8 +181,19 @@ try {
   await principalCard.getByText('Awaiting acknowledgement').waitFor({ state: 'visible', timeout: 20000 });
   await principalPage.locator('.principal-awaiting-metric b').waitFor({ state: 'visible' });
   const principalBeforeAck = (await principalPage.locator('.principal-metrics b').allTextContents()).map(Number);
+  const acknowledgementResponsePromise = parentPage.waitForResponse((response) => response.url().includes('/rpc/acknowledge_update'), { timeout: 15000 });
   await acknowledgementButton.click();
-  await parentImportantCard.getByText('पुष्टी केली', { exact: true }).waitFor({ state: 'visible', timeout: 20000 });
+  const acknowledgementResponse = await acknowledgementResponsePromise;
+  const persistedAcknowledgements = await must(admin.from('acknowledgements').select('id').eq('update_id', teacherUpdateId));
+  expect(acknowledgementResponse.ok() && persistedAcknowledgements.length === 1, `Production Parent acknowledgement failed at the RPC/database boundary (HTTP ${acknowledgementResponse.status()}, rows ${persistedAcknowledgements.length}).`);
+  try {
+    await parentPage.locator('.attention-panel').getByText('तुम्ही सर्व अपडेट पाहिले आहेत', { exact: true }).waitFor({ state: 'visible', timeout: 20000 });
+    await parentPage.locator('#parent-updates .update-card').filter({ hasText: title }).getByText('पुष्टी केली', { exact: true }).waitFor({ state: 'visible', timeout: 20000 });
+    expect(await parentPage.locator('.attention-panel .update-card').filter({ hasText: title }).count() === 0, 'Acknowledged Important item remained in the urgent Parent panel.');
+  } catch {
+    const panelText = (await parentPage.locator('.attention-panel').innerText()).replaceAll(title, '[controlled update]');
+    throw new Error(`Acknowledgement persisted, but Marathi Parent status did not update without refresh. Panel state: ${panelText}`);
+  }
   await teacherPage.locator('.teacher-update-card').filter({ hasText: title }).getByText('Acknowledged').waitFor({ state: 'visible', timeout: 20000 });
   await principalCard.getByText('Acknowledged').waitFor({ state: 'visible', timeout: 20000 });
   await principalPage.waitForFunction((before) => {
@@ -197,9 +216,29 @@ try {
   await parentPage.locator('.language-selector select').selectOption('en');
   await parentPage.waitForFunction(() => document.documentElement.lang === 'en');
   await parentPage.locator('#parent-updates .update-card').filter({ hasText: title }).getByText('Acknowledged', { exact: true }).waitFor({ state: 'visible', timeout: 10000 });
+  acceptanceCompleted = true;
   console.log('Production Marathi Important update, reconnect recovery, acknowledgement Realtime, metrics, and refresh persistence passed.');
+} catch (error) {
+  verificationError = error;
 } finally {
-  if (contexts.length) await Promise.all(contexts.map((context) => context.setOffline(false).catch(() => {})));
+  try {
+    if (contexts.length) await Promise.all(contexts.map((context) => context.setOffline(false).catch(() => {})));
+    await cleanup();
+    if (acceptanceCompleted) {
+      for (const page of pages) {
+        await page.reload({ waitUntil: 'networkidle' });
+        await page.locator('nav.app-section-nav').waitFor({ state: 'visible', timeout: 20000 });
+        expect(await page.getByText(title, { exact: false }).count() === 0, 'A controlled acceptance update remained visible after production cleanup and refresh.');
+      }
+      expect(await pages[1].locator('.language-selector select').inputValue() === 'en', 'Production Parent final smoke check did not return to English.');
+      console.log('Production post-cleanup smoke passed for Teacher, Parent, and Principal; controlled UI data absent.');
+    }
+  } catch (error) {
+    verificationError = verificationError
+      ? new AggregateError([verificationError, error], 'Production verification and/or cleanup failed.')
+      : error;
+  }
   if (browser) await browser.close();
-  await cleanup();
 }
+
+if (verificationError) throw verificationError;
