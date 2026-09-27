@@ -83,7 +83,7 @@ try {
   const profiles = await must(
     admin
       .from('profiles')
-      .select('id,role,email')
+      .select('id,role,email,school_id')
       .in('email', [
         'teacher@schovera.demo',
         'parent@schovera.demo',
@@ -99,14 +99,18 @@ try {
     teacherProfile && parentProfile && principalProfile,
     'Seed roles are missing. Run npm run seed:demo first.',
   );
+  const aaravRecord = await must(admin.from('students').select('id,class_id').eq('school_id', parentProfile.school_id).eq('full_name', 'Aarav Patil').maybeSingle());
+  expect(aaravRecord, 'Aarav Patil is missing.');
   const assignment = await must(
     admin
       .from('teacher_class_assignments')
       .select('class_id')
       .eq('teacher_id', teacherProfile.id)
+      .eq('class_id', aaravRecord.class_id)
       .is('ended_at', null)
-      .single(),
+      .maybeSingle(),
   );
+  expect(assignment, 'Demo Teacher is not assigned to Aarav Patil\'s class.');
   const roster = await must(
     admin
       .from('students')

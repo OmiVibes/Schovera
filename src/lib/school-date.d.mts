@@ -3,4 +3,5 @@ export function shiftSchoolDate(date: string, days: number): string;
 export function formatSchoolDate(
   date: string,
   options?: Intl.DateTimeFormatOptions,
+  locale?: string,
 ): string;

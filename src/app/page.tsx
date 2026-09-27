@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRealtimeResync } from '@/lib/use-realtime-resync';
 import { formatSchoolDate, schoolToday } from '@/lib/school-date.mjs';
+import { getLocale, translate, type Language, type TranslationKey } from '@/lib/i18n';
+import { I18nProvider, LanguageSelector, useI18n } from '@/lib/i18n-provider';
 
 type Role = 'teacher' | 'parent' | 'principal';
 type Status = 'present' | 'absent' | 'late';
@@ -66,6 +68,19 @@ const categories = [
 const today = () => schoolToday();
 const weekdayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const schoolDays = weekdayNames.slice(0, 6);
+const localizedWeekdays: Record<Language, string[]> = {
+  en: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  hi: ['सोमवार', 'मंगलवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार'],
+  mr: ['सोमवार', 'मंगळवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार'],
+};
+const navigationKeys: Record<string, TranslationKey> = {
+  'parent-home': 'nav.home', 'parent-profile': 'nav.profile', 'parent-updates': 'nav.updates',
+  'parent-attendance': 'nav.attendance', 'parent-homework': 'nav.homework', 'parent-timetable': 'nav.timetable', 'parent-notices': 'nav.notices',
+  'teacher-home': 'nav.overview', 'teacher-students': 'nav.students', 'teacher-profile': 'nav.profile',
+  'teacher-attendance': 'nav.attendance', 'teacher-homework': 'nav.homework', 'teacher-timetable': 'nav.timetable', 'teacher-notices': 'nav.notices',
+  'principal-overview': 'nav.overview', 'principal-students': 'nav.students', 'principal-communication': 'nav.communication',
+  'principal-attendance': 'nav.attendance', 'principal-homework': 'nav.homework', 'principal-timetable': 'nav.timetable', 'principal-notices': 'nav.notices',
+};
 const schoolWeekday = () => {
   const [year, month, day] = today().split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay() || 7;
@@ -73,23 +88,28 @@ const schoolWeekday = () => {
 const timeLabel = (value: string) => value.slice(0, 5);
 const nice = (value: string) =>
   value.replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-const displayDate = (value: string) =>
-  new Date(value).toLocaleString([], {
+const localizedStatus = (value: string, t: (key: string) => string) =>
+  ['present', 'absent', 'late'].includes(value) ? t(`attendance.${value}`) : nice(value);
+const localizedCategory = (value: string, t: (key: string) => string) =>
+  categories.includes(value) ? t(`category.${value}`) : nice(value);
+const displayDate = (value: string, language: Language = 'en') =>
+  new Date(value).toLocaleString(getLocale(language), {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: 'Asia/Kolkata',
   });
-const displaySchoolDate = (value: string, options: Intl.DateTimeFormatOptions = {}) =>
-  formatSchoolDate(value, options);
+const displaySchoolDate = (value: string, options: Intl.DateTimeFormatOptions = {}, language: Language = 'en') =>
+  formatSchoolDate(value, options, getLocale(language));
 
 const normalizeCommunicationValue = (value: string) =>
   value.replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '');
-const dueLabel = (dueDate: string) => {
+const dueLabel = (dueDate: string, language: Language = 'en') => {
   const delta = Math.round((new Date(`${dueDate}T00:00:00`).getTime() - new Date(`${today()}T00:00:00`).getTime()) / 86400000);
-  if (delta === 0) return 'Due today';
-  if (delta === 1) return 'Due tomorrow';
-  if (delta > 1 && delta <= 7) return `Due in ${delta} days`;
-  if (delta < 0) return 'Earlier homework';
-  return `Due ${displaySchoolDate(dueDate, { month: 'short', day: 'numeric' })}`;
+  if (delta === 0) return translate(language, 'parent.dueToday');
+  if (delta === 1) return translate(language, 'parent.dueTomorrow');
+  if (delta > 1 && delta <= 7) return translate(language, 'parent.dueInDays', { count: delta });
+  if (delta < 0) return translate(language, 'parent.pastDue');
+  return translate(language, 'parent.due', { date: displaySchoolDate(dueDate, { month: 'short', day: 'numeric' }, language) });
 };
 
 const correctedUpdateIds = (updates: Update[]) =>
@@ -168,6 +188,11 @@ const roleNavigation: Record<
 };
 
 export default function Page() {
+  return <I18nProvider><SchoveraApp /></I18nProvider>;
+}
+
+function SchoveraApp() {
+  const { t } = useI18n();
   const db = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null),
     [busy, setBusy] = useState(true),
@@ -244,8 +269,8 @@ export default function Page() {
             });
             if (signInError) {
               setError('Sign-in failed. Check your credentials.');
-              setSigningIn(false);
             }
+            setSigningIn(false);
           }}
         >
           <p className="eyebrow">SECURE SIGN IN</p>
@@ -297,7 +322,8 @@ export default function Page() {
             </div>
           </div>
           <div className="account-actions">
-            <span className="role-chip">{nice(profile.role)}</span>
+            <LanguageSelector />
+            <span className="role-chip">{t(`common.${profile.role}`)}</span>
             <span className="account-avatar" aria-hidden="true">{initials(profile.full_name)}</span>
             <span className="account-name">{profile.full_name}</span>
             <button
@@ -305,11 +331,11 @@ export default function Page() {
               type="button"
               onClick={() => db.auth.signOut()}
             >
-              Sign out
+              {t('common.signOut')}
             </button>
           </div>
         </div>
-        <nav className="app-section-nav" aria-label={`${nice(profile.role)} workspace sections`}>
+        <nav className="app-section-nav" aria-label={t('nav.label', { role: t(`common.${profile.role}`) })}>
           {roleNavigation[profile.role].map((item, index) => {
             const isActive = activeSection
               ? activeSection === item.id
@@ -342,14 +368,7 @@ export default function Page() {
                 }}
               >
                 <Icon name={item.icon} />
-                {item.label === 'School notices' ? (
-                  <>
-                    <span className="nav-label-long">School notices</span>
-                    <span className="nav-label-short">Notices</span>
-                  </>
-                ) : (
-                  <span>{item.label}</span>
-                )}
+                <span>{t(navigationKeys[item.id] || 'common.schoolNotices')}</span>
               </a>
             );
           })}
@@ -1170,12 +1189,12 @@ function Skeleton({ label, rows = 3 }: { label: string; rows?: number }) {
   return <div className="skeleton" role="status" aria-label={label}>{Array.from({ length: rows }, (_, index) => <span key={index} />)}</div>;
 }
 
-function AssignmentCard({ assignment, showClass = false }: { assignment: Assignment; showClass?: boolean }) {
+function AssignmentCard({ assignment, showClass = false, language = 'en' }: { assignment: Assignment; showClass?: boolean; language?: Language }) {
   const className = assignment.classes ? `Grade ${assignment.classes.grade}${assignment.classes.division}` : '';
   return <article className={`assignment-card${assignment.due_date < today() ? ' assignment-past' : ''}`}>
-    <header><span className="assignment-icon" aria-hidden="true"><Icon name="homework" /></span><div><p>{assignment.subject}</p><h3>{assignment.title}</h3></div><time dateTime={assignment.due_date}>{dueLabel(assignment.due_date)}</time></header>
+    <header><span className="assignment-icon" aria-hidden="true"><Icon name="homework" /></span><div><p>{assignment.subject}</p><h3>{assignment.title}</h3></div><time dateTime={assignment.due_date}>{dueLabel(assignment.due_date, language)}</time></header>
     <p className="assignment-description">{assignment.description}</p>
-    <footer><span>{showClass && className ? className : 'Class homework'}</span><time dateTime={assignment.due_date}>Due {displaySchoolDate(assignment.due_date, { month: 'short', day: 'numeric', year: 'numeric' })}</time></footer>
+    <footer><span>{showClass && className ? className : translate(language, 'parent.homework')}</span><time dateTime={assignment.due_date}>{translate(language, 'parent.due', { date: displaySchoolDate(assignment.due_date, { month: 'short', day: 'numeric', year: 'numeric' }, language) })}</time></footer>
   </article>;
 }
 
@@ -1207,16 +1226,18 @@ function TeacherAssignments({ classId, classLabel, studentsCount }: { classId: s
 }
 
 function ParentHomework({ child, className }: { child?: any; className: string }) {
+  const { language, t } = useI18n();
   const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''); const requestRef = useRef(0); const classId = child?.class_id;
   const refresh = async () => { const version = ++requestRef.current; if (!classId) { setAssignments([]); return; } setLoading(true); const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }); if (version === requestRef.current) { setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false); } };
   const { onChannelStatus } = useRealtimeResync(refresh);
   useEffect(() => { refresh(); }, [classId]);
   useEffect(() => { const channel = db.channel(`parent-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
-  return <section className="parent-homework" id="parent-homework" aria-labelledby="parent-homework-heading"><div className="section-heading"><p className="eyebrow">HOMEWORK</p><h2 id="parent-homework-heading">Homework for {child?.full_name?.split(' ')[0] || 'your child'}</h2><p className="hint">{className} · Class assignments from the teacher.</p></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading homework" rows={2} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />) : <p className="empty compact-empty">No upcoming homework for {child?.full_name?.split(' ')[0] || 'your child'}.</p>}{past.length > 0 && <details className="assignment-past-details"><summary>Earlier homework ({past.length})</summary>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</details>}</section>;
+  const childName = child?.full_name?.split(' ')[0] || t('parent.childFallback');
+  return <section className="parent-homework" id="parent-homework" aria-labelledby="parent-homework-heading"><div className="section-heading"><p className="eyebrow">{t('parent.homework')}</p><h2 id="parent-homework-heading">{t('parent.homeworkFor', { name: childName })}</h2><p className="hint">{t('parent.classAssignments', { className })}</p></div>{error ? <p className="error" role="alert">{t('parent.homeworkError')}</p> : loading ? <Skeleton label={t('parent.loadingHomework')} rows={2} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} language={language} />) : <p className="empty compact-empty">{t('parent.noHomework', { name: childName })}</p>}{past.length > 0 && <details className="assignment-past-details"><summary>{t('parent.earlierHomework', { count: past.length })}</summary>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} language={language} />)}</details>}</section>;
 }
 
-function TimetableView({ classId, className, profile, manage = false }: { classId?: string; className: string; profile: Profile; manage?: boolean }) {
+function TimetableViewEnglish({ classId, className, profile, manage = false }: { classId?: string; className: string; profile: Profile; manage?: boolean }) {
   const db = useMemo(() => createClient(), []); const [entries, setEntries] = useState<TimetableEntry[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''); const requestRef = useRef(0); const currentDay = schoolWeekday();
   const refresh = async () => { const version = ++requestRef.current; if (!classId) { setEntries([]); setLoading(false); return; } setLoading(true); const result = profile.role === 'principal' ? await db.from('timetable_entries').select('*,profiles!timetable_entries_teacher_id_fkey(full_name)').eq('class_id', classId).order('weekday').order('start_time') : await db.from('timetable_entries').select('*').eq('class_id', classId).order('weekday').order('start_time'); if (version === requestRef.current) { setEntries((result.data || []) as TimetableEntry[]); setError(result.error ? 'Timetable could not be loaded.' : ''); setLoading(false); } };
   const { onChannelStatus } = useRealtimeResync(refresh);
@@ -1226,6 +1247,65 @@ function TimetableView({ classId, className, profile, manage = false }: { classI
   const regionId = manage ? `${profile.role}-timetable-view` : `${profile.role}-timetable`;
   if (!classId) return <section className="card timetable-empty" id={regionId}><span className="section-icon"><Icon name="timetable" /></span><h2>Select a class to view its timetable</h2><p>Choose an authorized class to see today&apos;s and weekly periods.</p></section>;
   return <section className="timetable-workspace" id={regionId} aria-labelledby={`${regionId}-heading`}><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">{manage ? 'TIMETABLE MANAGEMENT' : 'CLASS SCHEDULE'}</p><h2 id={`${regionId}-heading`}>{manage ? 'Weekly timetable' : "Today’s schedule"}</h2><p className="hint">{className} · School time in India Standard Time</p></div></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading timetable" rows={3} /> : <><section className="timetable-today" aria-labelledby={`${profile.role}-today-heading`}><div><p className="eyebrow">TODAY · {weekdayNames[currentDay - 1].toUpperCase()}</p><h3 id={`${profile.role}-today-heading`}>Today&apos;s periods</h3></div>{todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || 'Teacher'}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b>No classes scheduled for today.</b><p>The weekly timetable remains available below.</p></span></div>}</section><section className="timetable-week" aria-labelledby={`${profile.role}-week-heading`}><p className="eyebrow">WEEKLY TIMETABLE</p><h3 id={`${profile.role}-week-heading`}>All school days</h3><div className="timetable-days">{schoolDays.map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{day}</b>{currentDay === index + 1 && <span>Today</span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small>Period {entry.period_number} · {entry.profiles?.full_name || 'Teacher'}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p>No periods</p>}</section>; })}</div></section></>}</section>;
+}
+
+function TimetableView(props: { classId?: string; className: string; profile: Profile; manage?: boolean }) {
+  return props.profile.role === 'parent'
+    ? <ParentTimetableView classId={props.classId} className={props.className} />
+    : <TimetableViewEnglish {...props} />;
+}
+
+function ParentTimetableView({ classId, className }: { classId?: string; className: string }) {
+  const { language, t } = useI18n();
+  const db = useMemo(() => createClient(), []);
+  const [entries, setEntries] = useState<TimetableEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const requestRef = useRef(0);
+  const currentDay = schoolWeekday();
+  const refresh = async () => {
+    const version = ++requestRef.current;
+    if (!classId) { setEntries([]); setLoading(false); return; }
+    setLoading(true);
+    const { data, error: queryError } = await db.from('timetable_entries')
+      .select('*').eq('class_id', classId).order('weekday').order('start_time');
+    if (version === requestRef.current) {
+      setEntries((data || []) as TimetableEntry[]);
+      setError(queryError ? t('parent.timetableError') : '');
+      setLoading(false);
+    }
+  };
+  const { onChannelStatus } = useRealtimeResync(refresh);
+  useEffect(() => { refresh(); }, [classId]);
+  useEffect(() => {
+    const channel = db.channel(`timetable-parent-${classId || 'none'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' },
+        (event: any) => { if (!classId || event.new?.class_id === classId || event.old?.class_id === classId) refresh(); },
+      ).subscribe(onChannelStatus);
+    return () => { db.removeChannel(channel); };
+  }, [db, classId, onChannelStatus]);
+  const regionId = 'parent-timetable';
+  const days = localizedWeekdays[language];
+  const todayEntries = entries.filter((entry) => entry.weekday === currentDay);
+  if (!classId) return <section className="card timetable-empty" id={regionId}><span className="section-icon"><Icon name="timetable" /></span><h2>{t('parent.selectClass')}</h2><p>{t('parent.chooseAuthorizedClass')}</p></section>;
+  return (
+    <section className="timetable-workspace" id={regionId} aria-labelledby={`${regionId}-heading`}>
+      <div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div>
+        <p className="eyebrow">{t('parent.timetable')}</p>
+        <h2 id={`${regionId}-heading`}>{t('parent.today')} · {className}</h2>
+        <p className="hint">{t('parent.schoolTime', { className })}</p>
+      </div></div>
+      {error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label={t('parent.loadingTimetable')} rows={3} /> : <>
+        <section className="timetable-today" aria-labelledby="parent-today-heading">
+          <div><p className="eyebrow">{t('parent.today')} · {days[currentDay - 1]}</p><h3 id="parent-today-heading">{t('parent.todayPeriods')}</h3></div>
+          {todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || 'Teacher'}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b>{t('parent.noClassesToday')}</b><p>{t('parent.weeklyAvailable')}</p></span></div>}
+        </section>
+        <section className="timetable-week" aria-labelledby="parent-week-heading"><p className="eyebrow">{t('parent.weeklyTimetable')}</p><h3 id="parent-week-heading">{t('parent.allSchoolDays')}</h3>
+          <div className="timetable-days">{days.map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{day}</b>{currentDay === index + 1 && <span>{t('parent.today')}</span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small>{t('parent.period', { number: entry.period_number })} · {entry.profiles?.full_name || 'Teacher'}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p>{t('parent.noPeriods')}</p>}</section>; })}</div>
+        </section>
+      </>}
+    </section>
+  );
 }
 
 function PrincipalTimetable({ profile }: { profile: Profile }) {
@@ -1250,14 +1330,18 @@ function PrincipalHomework({ profile }: { profile: Profile }) {
 }
 
 function Parent({ profile }: { profile: Profile }) {
+  const { t } = useI18n();
   const db = useMemo(() => createClient(), []);
   const activeChildIdRef = useRef('');
   const childRequestVersionRef = useRef(0);
   const [children, setChildren] = useState<any[]>([]),
     [childId, setChildId] = useState(''),
     [updates, setUpdates] = useState<Update[]>([]),
+    [updatesLoading, setUpdatesLoading] = useState(true),
+    [updatesError, setUpdatesError] = useState(''),
     [attendance, setAttendance] = useState<Attendance[]>([]),
     [attendanceError, setAttendanceError] = useState(''),
+    [attendanceLoading, setAttendanceLoading] = useState(true),
     [acknowledgementNote, setAcknowledgementNote] = useState(''),
     [acknowledgingId, setAcknowledgingId] = useState(''),
     [acknowledgementError, setAcknowledgementError] = useState('');
@@ -1274,6 +1358,7 @@ function Parent({ profile }: { profile: Profile }) {
             ? current
             : linked[0]?.id || '',
         );
+        if (!linked.length) { setUpdatesLoading(false); setAttendanceLoading(false); }
       });
   }, [db, profile]);
   const refresh = async (
@@ -1281,7 +1366,7 @@ function Parent({ profile }: { profile: Profile }) {
     requestVersion = childRequestVersionRef.current,
   ) => {
     if (!targetChildId) return;
-    const { data } = await db
+    const { data, error } = await db
       .from('student_updates')
       .select(
         '*,profiles!student_updates_teacher_id_fkey(full_name),acknowledgements(acknowledged_at,parent_id)',
@@ -1293,6 +1378,8 @@ function Parent({ profile }: { profile: Profile }) {
       requestVersion === childRequestVersionRef.current
     ) {
       setUpdates(data || []);
+      setUpdatesError(error ? t('parent.updatesError') : '');
+      setUpdatesLoading(false);
     }
   };
   const loadAttendance = async (
@@ -1311,7 +1398,8 @@ function Parent({ profile }: { profile: Profile }) {
       requestVersion === childRequestVersionRef.current
     ) {
       setAttendance(data || []);
-      setAttendanceError(error ? 'Attendance could not be loaded.' : '');
+      setAttendanceError(error ? t('parent.attendanceError') : '');
+      setAttendanceLoading(false);
     }
   };
   const refreshParentContext = async () => {
@@ -1323,7 +1411,7 @@ function Parent({ profile }: { profile: Profile }) {
       loadAttendance(targetChildId, requestVersion),
     ]);
   };
-  const { onChannelStatus: onParentRealtimeStatus } = useRealtimeResync(
+  const { onChannelStatus: onParentRealtimeStatus, connectionState } = useRealtimeResync(
     refreshParentContext,
   );
   useEffect(() => {
@@ -1333,11 +1421,17 @@ function Parent({ profile }: { profile: Profile }) {
     if (!childId) {
       setUpdates([]);
       setAttendance([]);
+      setUpdatesLoading(false);
+      setUpdatesError('');
+      setAttendanceLoading(false);
       setAttendanceError('');
       return;
     }
     setUpdates([]);
     setAttendance([]);
+    setUpdatesLoading(true);
+    setUpdatesError('');
+    setAttendanceLoading(true);
     setAttendanceError('');
     refresh(childId, requestVersion);
     loadAttendance(childId, requestVersion);
@@ -1379,8 +1473,8 @@ function Parent({ profile }: { profile: Profile }) {
   );
   const child = children.find((item) => item.id === childId);
   const className = child?.classes
-    ? `Grade ${child.classes.grade}${child.classes.division}`
-    : 'Your child';
+    ? t('parent.gradeLabel', { class: `${child.classes.grade}${child.classes.division}` })
+    : t('parent.childFallback');
   const parentCorrectedIds = correctedUpdateIds(updates);
   const awaitingAcknowledgement = effectiveUpdates(updates).filter(
     (update) =>
@@ -1397,14 +1491,19 @@ function Parent({ profile }: { profile: Profile }) {
     const { error } = await db.rpc('acknowledge_update', { p_update_id: updateId });
     setAcknowledgingId('');
     if (error) {
-      setAcknowledgementError('We could not save your acknowledgement. Please try again.');
+      setAcknowledgementError(t('ack.failed'));
     } else {
-      setAcknowledgementNote('Acknowledgement saved. Your child’s teacher can now see it.');
+      setAcknowledgementNote(t('ack.saved'));
       refresh();
     }
   };
   return (
     <section className="parent-dashboard" id="parent-home">
+      {connectionState !== 'online' && (
+        <p className="connection-banner" role="status" aria-live="polite">
+          {connectionState === 'reconnecting' ? t('parent.reconnecting') : t('parent.connectionInterrupted')}
+        </p>
+      )}
       <div className="parent-top-grid">
       <section
         className="parent-welcome child-identity-card"
@@ -1412,14 +1511,14 @@ function Parent({ profile }: { profile: Profile }) {
       >
         <span className="child-avatar" aria-hidden="true">{initials(child?.full_name || 'Your child')}</span>
         <div className="child-identity-copy">
-          <p className="eyebrow">YOUR CHILD</p>
-          <h1 id="parent-child-heading">{child?.full_name || 'Your child'}</h1>
+        <p className="eyebrow">{t('parent.yourChild')}</p>
+          <h1 id="parent-child-heading">{child?.full_name || t('parent.childFallback')}</h1>
           <p className="parent-class">{className}</p>
-          <p className="child-status">Latest attendance: {attendance[0] ? <b className={`status ${attendance[0].status}`}>{nice(attendance[0].status)}</b> : 'Not marked yet'}</p>
+          <p className="child-status">{t('parent.latestAttendance')}: {attendance[0] ? <b className={`status ${attendance[0].status}`}>{localizedStatus(attendance[0].status, t)}</b> : t('parent.notMarked')}</p>
         </div>
         {children.length > 1 && (
           <label className="child-switcher">
-            Viewing
+            {t('parent.viewing')}
             <select
               value={childId}
               onChange={(e) => setChildId(e.target.value)}
@@ -1434,26 +1533,26 @@ function Parent({ profile }: { profile: Profile }) {
         )}
       </section>
       <section className="attention-panel" aria-labelledby="important-heading">
-        <p className="eyebrow">IMPORTANT FOR YOU</p>
+        <p className="eyebrow">{t('parent.importantForYou')}</p>
         <h2 id="important-heading">
           {awaitingAcknowledgement.length
-            ? 'A teacher update needs your attention'
-            : 'You are all caught up'}
+            ? t('parent.needsAttention')
+            : t('parent.allCaughtUp')}
         </h2>
         {awaitingAcknowledgement.length ? (
           <Card update={awaitingAcknowledgement[0]} parent={profile.id} childContext={`${child?.full_name || 'Your child'} • ${className}`} acknowledging={acknowledgingId === awaitingAcknowledgement[0].id} acknowledge={acknowledgeUpdate} />
         ) : (
-          <p className="attention-copy">No important updates need your attention right now.</p>
+          <p className="attention-copy">{t('parent.noImportant')}</p>
         )}
       </section>
       </div>
       <StudentOverview student={child} classLabel={child?.classes} role="parent" />
       <section className="right-now" aria-labelledby="right-now-heading">
-        <div className="section-heading"><p className="eyebrow">RIGHT NOW</p><h2 id="right-now-heading">At a glance</h2></div>
+        <div className="section-heading"><p className="eyebrow">{t('parent.rightNow')}</p><h2 id="right-now-heading">{t('parent.atAGlance')}</h2></div>
         <div className="right-now-grid">
-          <div><Icon name="attendance" /><span>Attendance<b>{attendance[0] ? nice(attendance[0].status) : 'Not marked'}</b></span></div>
-          <div><Icon name="important" /><span>Important<b>{awaitingAcknowledgement.length ? `${awaitingAcknowledgement.length} to read` : 'All caught up'}</b></span></div>
-          <div><Icon name="updates" /><span>Latest update<b>{updates[0] ? nice(updates[0].category) : 'No updates'}</b></span></div>
+          <div><Icon name="attendance" /><span>{t('parent.attendance')}<b>{attendance[0] ? localizedStatus(attendance[0].status, t) : t('parent.notMarked')}</b></span></div>
+          <div><Icon name="important" /><span>{t('importance.important')}<b>{awaitingAcknowledgement.length ? t('parent.pendingImportant', { count: awaitingAcknowledgement.length }) : t('parent.allCaughtUp')}</b></span></div>
+          <div><Icon name="updates" /><span>{t('parent.latestUpdate')}<b>{updates[0] ? localizedCategory(updates[0].category, t) : t('parent.noUpdates')}</b></span></div>
         </div>
       </section>
       <ParentHomework child={child} className={className} />
@@ -1462,13 +1561,14 @@ function Parent({ profile }: { profile: Profile }) {
         attendance={attendance}
         counts={counts}
         error={attendanceError}
+        loading={attendanceLoading}
       /></div>
       <div id="parent-notices"><Announcements profile={profile} parentView /></div>
       <section className="parent-updates" id="parent-updates" aria-labelledby="child-updates-heading">
         <div className="section-heading">
-          <p className="eyebrow">CHILD-SPECIFIC UPDATES</p>
-          <h2 id="child-updates-heading">Recent updates</h2>
-          <p className="hint">Recent communication from your child&apos;s teacher.</p>
+          <p className="eyebrow">{t('parent.childSpecific')}</p>
+          <h2 id="child-updates-heading">{t('parent.recentUpdates')}</h2>
+          <p className="hint">{t('parent.recentTeacherCommunication')}</p>
         </div>
         {acknowledgementNote && (
           <p className="success" role="status">
@@ -1480,7 +1580,7 @@ function Parent({ profile }: { profile: Profile }) {
             {acknowledgementError}
           </p>
         )}
-      {updates.map((update) => (
+      {updatesLoading ? <Skeleton label={t('parent.loadingUpdates')} rows={3} /> : updatesError ? <p className="error" role="alert">{updatesError}</p> : updates.map((update) => (
         <Card
           key={update.id}
           update={update}
@@ -1500,11 +1600,11 @@ function Parent({ profile }: { profile: Profile }) {
             setAcknowledgingId('');
             if (error)
               setAcknowledgementError(
-                'We couldn’t save your acknowledgement. Please try again.',
+                t('ack.failed'),
               );
             else {
               setAcknowledgementNote(
-                'Acknowledgement saved. Your child’s teacher can now see it.',
+                t('ack.saved'),
               );
               refresh();
             }
@@ -1512,8 +1612,8 @@ function Parent({ profile }: { profile: Profile }) {
         />
       ))}
       </section>
-      {childId && !updates.length && (
-        <p className="empty">You’re all caught up. No updates yet.</p>
+      {childId && !updatesLoading && !updatesError && !updates.length && (
+        <p className="empty">{t('parent.allCaughtNoUpdates')}</p>
       )}
     </section>
   );
@@ -1523,15 +1623,18 @@ function AttendanceSummary({
   attendance,
   counts,
   error,
+  loading,
 }: {
   attendance: Attendance[];
   counts: Record<Status, number>;
   error: string;
+  loading: boolean;
 }) {
+  const { language, t } = useI18n();
   if (error)
     return (
       <div className="card attendance-card">
-        <h2>Attendance</h2>
+        <h2>{t('parent.attendance')}</h2>
         <p className="error" role="alert">
           {error}
         </p>
@@ -1540,37 +1643,35 @@ function AttendanceSummary({
   if (!attendance.length)
     return (
       <div className="card attendance-card">
-        <h2>Attendance</h2>
-        <p className="empty">
-          No attendance has been marked for this child yet.
-        </p>
+        <h2>{t('parent.attendance')}</h2>
+        {loading ? <Skeleton label={t('parent.loadingAttendance')} rows={1} /> : <p className="empty">{t('parent.noAttendance')}</p>}
       </div>
     );
   return (
     <div className="card attendance-card">
-      <p className="eyebrow">ATTENDANCE</p>
-      <h2>Attendance</h2>
+      <p className="eyebrow">{t('parent.attendance')}</p>
+      <h2>{t('parent.attendanceHistory')}</h2>
       <div className={`attendance-latest ${attendance[0].status}`}>
         <span className="attendance-latest-icon" aria-hidden="true"><Icon name={attendance[0].status === 'present' ? 'check' : attendance[0].status === 'absent' ? 'important' : 'attendance'} /></span>
-        <div><span>Latest attendance</span><b>{nice(attendance[0].status)}</b><time dateTime={attendance[0].attendance_date}>{displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' })}</time></div>
+        <div><span>{t('parent.latestAttendance')}</span><b>{localizedStatus(attendance[0].status, t)}</b><time dateTime={attendance[0].attendance_date}>{displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language)}</time></div>
       </div>
-      <h3 className="attendance-recent-heading">Recent attendance</h3>
+      <h3 className="attendance-recent-heading">{t('parent.attendanceRecent')}</h3>
       <div className="attendance-counts">
         <span>
-          <b>{counts.present}</b>Present
+          <b>{counts.present}</b>{t('attendance.present')}
         </span>
         <span>
-          <b>{counts.absent}</b>Absent
+          <b>{counts.absent}</b>{t('attendance.absent')}
         </span>
         <span>
-          <b>{counts.late}</b>Late
+          <b>{counts.late}</b>{t('attendance.late')}
         </span>
       </div>
       <div className="history-list">
         {attendance.slice(0, 5).map((row) => (
           <div className={`attendance-history-row ${row.status}`} key={row.id}>
-            <time dateTime={row.attendance_date}>{displaySchoolDate(row.attendance_date)}</time>
-            <span><Icon name={row.status === 'present' ? 'check' : row.status === 'absent' ? 'important' : 'attendance'} />{nice(row.status)}</span>
+            <time dateTime={row.attendance_date}>{displaySchoolDate(row.attendance_date, {}, language)}</time>
+            <span><Icon name={row.status === 'present' ? 'check' : row.status === 'absent' ? 'important' : 'attendance'} />{localizedStatus(row.status, t)}</span>
           </div>
         ))}
       </div>
@@ -1579,6 +1680,8 @@ function AttendanceSummary({
 }
 
 function StudentOverview({ student, classLabel, role }: { student: any; classLabel?: any; role: Role }) {
+  const { language, t } = useI18n();
+  const text = (key: string, fallback: string) => role === 'parent' ? t(key) : fallback;
   const db = useMemo(() => createClient(), []);
   const requestRef = useRef(0);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
@@ -1621,20 +1724,20 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
       .subscribe(onChannelStatus);
     return () => { db.removeChannel(channel); };
   }, [db, role, student?.id, student?.class_id, onChannelStatus]);
-  if (!student) return <section className="card student-profile-empty" id={`${role}-profile`}><span className="section-icon"><Icon name="student" /></span><h2>Select a student to view their profile</h2><p>Choose an authorized student to see their current school context.</p></section>;
+  if (!student) return <section className="card student-profile-empty" id={`${role}-profile`}><span className="section-icon"><Icon name="student" /></span><h2>{role === 'parent' ? t('parent.noChildSelected') : 'Select a student to view their profile'}</h2><p>{role === 'parent' ? t('parent.chooseChild') : 'Choose an authorized student to see their current school context.'}</p></section>;
   const counts = attendance.reduce((total, row) => ({ ...total, [row.status]: total[row.status] + 1 }), { present: 0, absent: 0, late: 0 } as Record<Status, number>);
   const currentUpdates = effectiveUpdates(updates); const latest = currentUpdates[0];
   const awaiting = currentUpdates.filter((item) => item.importance === 'important' && !item.acknowledgements?.length).length;
   const upcoming = assignments.filter((item) => item.due_date >= today()); const next = upcoming[0];
-  const grade = classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : student.classes ? `Grade ${student.classes.grade}${student.classes.division}` : 'Class';
+  const grade = classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : student.classes ? `Grade ${student.classes.grade}${student.classes.division}` : text('parent.classFallback', 'Class');
   return <section className="student-profile" id={`${role}-profile`} aria-labelledby={`${role}-profile-heading`}>
-    <header className="student-profile-identity"><span className="student-avatar" aria-hidden="true">{initials(student.full_name)}</span><div><p className="eyebrow">STUDENT OVERVIEW</p><h1 id={`${role}-profile-heading`}>{student.full_name}</h1><p>{grade} · Roll {student.roll_number || '—'}</p><small>Schovera International School</small></div></header>
-    {loading ? <Skeleton label="Loading student profile" rows={4} /> : <>
-      <div className="student-profile-summary" aria-label="Student profile at a glance"><article><Icon name="attendance" /><span><small>Attendance</small><b>{attendance.length ? nice(attendance[0].status) : 'Not recorded'}</b></span></article><article><Icon name="updates" /><span><small>Communication</small><b>{awaiting ? `${awaiting} awaiting` : latest ? 'Up to date' : 'No updates'}</b></span></article><article><Icon name="homework" /><span><small>Homework</small><b>{upcoming.length ? `${upcoming.length} upcoming` : 'None upcoming'}</b></span></article></div>
+    <header className="student-profile-identity"><span className="student-avatar" aria-hidden="true">{initials(student.full_name)}</span><div><p className="eyebrow">{text('parent.profileOverview', 'STUDENT OVERVIEW')}</p><h1 id={`${role}-profile-heading`}>{student.full_name}</h1><p>{grade} · {text('parent.roll', `Roll number ${student.roll_number || '—'}`).replace('{number}', String(student.roll_number || '—'))}</p><small>Schovera International School</small></div></header>
+    {loading ? <Skeleton label={text('parent.loadingProfile', 'Loading student profile')} rows={4} /> : <>
+      <div className="student-profile-summary" aria-label={text('parent.profileAtGlance', 'Student profile at a glance')}><article><Icon name="attendance" /><span><small>{text('parent.attendance', 'Attendance')}</small><b>{attendance.length ? localizedStatus(attendance[0].status, t) : text('parent.attendanceNotRecorded', 'Not recorded')}</b></span></article><article><Icon name="updates" /><span><small>{text('parent.profileCommunication', 'Communication')}</small><b>{awaiting ? text('parent.communicationSummaryAwaiting', '{count} awaiting').replace('{count}', String(awaiting)) : latest ? text('parent.communicationUpToDate', 'Up to date') : text('parent.noUpdates', 'No updates')}</b></span></article><article><Icon name="homework" /><span><small>{text('parent.homework', 'Homework')}</small><b>{upcoming.length ? `${upcoming.length} upcoming` : text('parent.homeworkNoneUpcoming', 'None upcoming')}</b></span></article></div>
       <div className="student-profile-grid">
-        <section className="card profile-section"><p className="eyebrow">ATTENDANCE</p><h2>Recent attendance</h2>{errors.attendance ? <p className="error" role="alert">{errors.attendance}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>Present</span><span><b>{counts.absent}</b>Absent</span><span><b>{counts.late}</b>Late</span></div><p className="hint">Latest: <b className={`status ${attendance[0].status}`}>{nice(attendance[0].status)}</b> · {displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' })}</p></> : <p className="empty compact-empty">No attendance recorded yet.</p>}</section>
-        <section className="card profile-section"><p className="eyebrow">COMMUNICATION</p><h2>Teacher updates</h2>{errors.updates ? <p className="error" role="alert">{errors.updates}</p> : latest ? <><p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p><p className="hint">{nice(latest.category)} · {displayDate(latest.sent_at)}</p>{latest.importance === 'important' && <p className={awaiting ? 'status pending' : 'status present'}>{awaiting ? 'Awaiting acknowledgement' : 'Acknowledged'}</p>}</> : <p className="empty compact-empty">No teacher updates yet.</p>}</section>
-        <section className="card profile-section"><p className="eyebrow">HOMEWORK</p><h2>Upcoming homework</h2>{errors.homework ? <p className="error" role="alert">{errors.homework}</p> : next ? <><p className="profile-update-title"><span className="update-icon"><Icon name="homework" /></span><b>{next.title}</b></p><p className="hint">{next.subject} · {dueLabel(next.due_date)}</p><p className="hint">{upcoming.length} upcoming assignment{upcoming.length === 1 ? '' : 's'}</p></> : <p className="empty compact-empty">No upcoming homework.</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">{text('parent.attendance', 'ATTENDANCE')}</p><h2>{text('parent.profileAttendance', 'Recent attendance')}</h2>{errors.attendance ? <p className="error" role="alert">{text('parent.attendanceError', errors.attendance)}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>{text('attendance.present', 'Present')}</span><span><b>{counts.absent}</b>{text('attendance.absent', 'Absent')}</span><span><b>{counts.late}</b>{text('attendance.late', 'Late')}</span></div><p className="hint">{text('parent.attendanceLatest', 'Latest: {status} · {date}').replace('{status}', localizedStatus(attendance[0].status, t)).replace('{date}', displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language))}</p></> : <p className="empty compact-empty">{text('parent.noAttendanceRecorded', 'No attendance recorded yet.')}</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">{text('parent.profileCommunication', 'COMMUNICATION')}</p><h2>{text('parent.profileCommunication', 'Teacher updates')}</h2>{errors.updates ? <p className="error" role="alert">{text('parent.updatesError', errors.updates)}</p> : latest ? <><p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p><p className="hint">{localizedCategory(latest.category, t)} · {displayDate(latest.sent_at, language)}</p>{latest.importance === 'important' && <p className={awaiting ? 'status pending' : 'status present'}>{awaiting ? t('ack.awaiting') : t('ack.acknowledged')}</p>}</> : <p className="empty compact-empty">{text('parent.noRecentCommunication', 'No teacher updates yet.')}</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">{text('parent.homework', 'HOMEWORK')}</p><h2>{text('parent.profileHomework', 'Upcoming homework')}</h2>{errors.homework ? <p className="error" role="alert">{text('parent.homeworkError', errors.homework)}</p> : next ? <><p className="profile-update-title"><span className="update-icon"><Icon name="homework" /></span><b>{next.title}</b></p><p className="hint">{next.subject} · {dueLabel(next.due_date, role === 'parent' ? language : 'en')}</p><p className="hint">{upcoming.length} upcoming assignment{upcoming.length === 1 ? '' : 's'}</p></> : <p className="empty compact-empty">{text('parent.noUpcomingHomework', 'No upcoming homework.')}</p>}</section>
       </div>
     </>}
   </section>;
@@ -1972,6 +2075,7 @@ function Announcements({
   publish?: boolean;
   parentView?: boolean;
 }) {
+  const { language, t } = useI18n();
   const db = useMemo(() => createClient(), []);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1986,12 +2090,15 @@ function Announcements({
       .order('published_at', { ascending: false })
       .limit(6);
     setAnnouncements(data || []);
-    setNote(error ? 'Announcements could not be loaded.' : '');
+    setNote(error ? parentView ? t('parent.noticesError') : 'Announcements could not be loaded.' : '');
     setLoading(false);
   };
   useEffect(() => {
     load();
   }, [db, profile.id]);
+  const noteIsError = parentView
+    ? Boolean(note && note === t('parent.noticesError'))
+    : note.startsWith('Could') || note.includes('loaded');
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (publishing) return;
@@ -2030,14 +2137,13 @@ function Announcements({
       <div className="notice-section-heading">
         <span className="notice-section-icon" aria-hidden="true"><Icon name="notice" /></span>
         <div>
-          <p className="eyebrow">{publish ? 'CREATE NOTICE' : 'SCHOOL NOTICES'}</p>
-          <h2 id={publish ? 'notice-publish-heading' : 'school-notices-heading'}>{publish ? 'Publish a school notice' : 'Official updates from your school'}</h2>
+          <p className="eyebrow">{parentView ? t('parent.schoolNotices') : publish ? 'CREATE NOTICE' : 'SCHOOL NOTICES'}</p>
+          <h2 id={publish ? 'notice-publish-heading' : 'school-notices-heading'}>{parentView ? t('parent.schoolNotices') : publish ? 'Publish a school notice' : 'Official updates from your school'}</h2>
         </div>
       </div>
       {parentView && (
         <p className="hint">
-          These are school-wide notices. They are separate from updates about
-          your child.
+          {t('parent.noticeContext')}
         </p>
       )}
       {publish && (
@@ -2077,28 +2183,24 @@ function Announcements({
       )}
       {note && (
         <p
-          className={
-            note.startsWith('Could') || note.includes('loaded')
-              ? 'error notice-feedback'
-              : 'success notice-feedback'
-          }
-          role={note.startsWith('Could') || note.includes('loaded') ? 'alert' : 'status'}
+          className={noteIsError ? 'error notice-feedback' : 'success notice-feedback'}
+          role={noteIsError ? 'alert' : 'status'}
         >
-          {!note.startsWith('Could') && !note.includes('loaded') && <Icon name="check" />}
+          {!noteIsError && <Icon name="check" />}
           {note}
         </p>
       )}
       {publish && !loading && <div className="published-notices-heading"><span>RECENT SCHOOL NOTICES</span><p>Official messages already shared with your school community.</p></div>}
       {loading ? (
-        <NoticeSkeleton />
+        <NoticeSkeleton label={parentView ? t('parent.loadingNotices') : 'Loading school notices'} />
       ) : announcements.length ? (
         <div className="announcement-list">
           {announcements.map((announcement) => (
             <article className={`school-notice-card ${announcement.priority === 'important' ? 'important-notice' : ''}`} key={announcement.id}>
               <header>
                 <span className="notice-card-icon" aria-hidden="true"><Icon name="school" /></span>
-                <span className="notice-origin">School-wide notice</span>
-                {announcement.priority === 'important' && <span className="notice-important"><Icon name="important" /> Important</span>}
+                <span className="notice-origin">{parentView ? t('parent.schoolWideNotice') : 'School-wide notice'}</span>
+                {announcement.priority === 'important' && <span className="notice-important"><Icon name="important" /> {parentView ? t('importance.important') : 'Important'}</span>}
               </header>
               <h3>{announcement.title}</h3>
               <p>{announcement.body}</p>
@@ -2106,7 +2208,7 @@ function Announcements({
                 <Icon name="school" />
                 <span>Schovera International School</span>
                 <span aria-hidden="true">•</span>
-                <time dateTime={announcement.published_at}>Published {displayDate(announcement.published_at)}</time>
+                <time dateTime={announcement.published_at}>{parentView ? t('parent.published', { date: displayDate(announcement.published_at, language) }) : `Published ${displayDate(announcement.published_at)}`}</time>
               </footer>
             </article>
           ))}
@@ -2114,16 +2216,16 @@ function Announcements({
       ) : (
         <div className="notice-empty-state">
           <span className="notice-card-icon" aria-hidden="true"><Icon name="notice" /></span>
-          <div><h3>{publish ? 'No notices published yet' : 'No school notices yet'}</h3><p>{publish ? 'Publish the first school notice above.' : 'New school-wide announcements will appear here.'}</p></div>
+          <div><h3>{parentView ? t('parent.schoolNotices') : publish ? 'No notices published yet' : 'No school notices yet'}</h3><p>{parentView ? t('parent.noticesEmpty') : publish ? 'Publish the first school notice above.' : 'New school-wide announcements will appear here.'}</p></div>
         </div>
       )}
     </section>
   );
 }
 
-function NoticeSkeleton() {
+function NoticeSkeleton({ label = 'Loading school notices' }: { label?: string }) {
   return (
-    <div className="notice-skeleton" aria-label="Loading school notices" role="status">
+    <div className="notice-skeleton" aria-label={label} role="status">
       <span className="notice-skeleton-icon" />
       <div><span className="notice-skeleton-title" /><span className="notice-skeleton-line" /><span className="notice-skeleton-line short" /><span className="notice-skeleton-meta" /></div>
     </div>
@@ -2151,6 +2253,7 @@ function Card({
   acknowledging?: boolean;
   acknowledge?: (id: string) => void;
 }) {
+  const { language, t } = useI18n();
   const mine = update.acknowledgements?.find(
     (acknowledgement) => acknowledgement.parent_id === parent,
   );
@@ -2163,26 +2266,27 @@ function Card({
           : `update-card${teacher ? ' teacher-update-card' : ''}${parent ? ' parent-update-card' : ''}${parent && acknowledged ? ' acknowledged-update' : ''}`
       }
     >
-      <div className="card-topline"><span className="update-icon" aria-hidden="true"><Icon name={teacher || parent ? categoryIcon(update.category) : 'updates'} /></span><span className="badge">{nice(update.category)}</span>
-      {correctionOf && <span className="correction-badge">Correction</span>}
-      {corrected && <span className="corrected-badge">Corrected</span>}
+      <div className="card-topline"><span className="update-icon" aria-hidden="true"><Icon name={teacher || parent ? categoryIcon(update.category) : 'updates'} /></span><span className="badge">{parent ? localizedCategory(update.category, t) : nice(update.category)}</span>
+      {correctionOf && <span className="correction-badge">{parent ? t('correction.label') : 'Correction'}</span>}
+      {corrected && <span className="corrected-badge">{parent ? t('correction.corrected') : 'Corrected'}</span>}
       {update.importance === 'important' && (
-        <span className="important">Important</span>
+        <span className="important">{parent ? t('importance.important') : 'Important'}</span>
       )}</div>
       <h3>{update.title}</h3>
-      {correctionOf && <p className="correction-reference">Corrects: {correctionOf}</p>}
-      {corrected && <p className="correction-reference">This update was corrected by a newer communication.</p>}
-      {parent && childContext && <p className="parent-update-context"><Icon name="student" /> About {childContext}</p>}
+      {correctionOf && <p className="correction-reference">{parent ? t('correction.corrects', { title: correctionOf }) : `Corrects: ${correctionOf}`}</p>}
+      {corrected && <p className="correction-reference">{parent ? t('correction.replaced') : 'This update was corrected by a newer communication.'}</p>}
+      {parent && childContext && <p className="parent-update-context"><Icon name="student" /> {t('parent.aboutChild', { context: childContext })}</p>}
+      {parent && corrected && <p className="original-message-label">{t('ack.originalMessage')}</p>}
       <p>{update.message}</p>
       <small className={teacher ? 'teacher-update-meta' : undefined}>
         {update.profiles?.full_name && `${update.profiles.full_name} · `}
         {update.students?.full_name && `${update.students.full_name} · `}
-        {displayDate(update.sent_at)}
+        {displayDate(update.sent_at, language)}
       </small>
       {parent && (
         <footer className="parent-update-meta">
-          {update.profiles?.full_name && <span>From {update.profiles.full_name}</span>}
-          <time dateTime={update.sent_at}>{displayDate(update.sent_at)}</time>
+          {update.profiles?.full_name && <span>{t('parent.fromTeacher', { name: update.profiles.full_name })}</span>}
+          <time dateTime={update.sent_at}>{displayDate(update.sent_at, language)}</time>
         </footer>
       )}
       {teacher && onCorrect && (
@@ -2194,22 +2298,22 @@ function Card({
         <div className={`ack${teacher ? ' teacher-ack' : ''}`}>
           {acknowledged ? (
             parent ? (
-              <span className="parent-acknowledged" role="status"><Icon name="check" /><span><b>Acknowledged</b>{mine && <small>{displayDate(mine.acknowledged_at)}</small>}</span></span>
+              <span className="parent-acknowledged" role="status"><Icon name="check" /><span><b>{parent ? t('ack.acknowledged') : 'Acknowledged'}</b>{mine && <small>{displayDate(mine.acknowledged_at, language)}</small>}</span></span>
             ) : <b className="status present">{teacher && <Icon name="check" />}Acknowledged</b>
           ) : teacher && !corrected ? (
             <span className="status pending"><Icon name="important" /> Awaiting acknowledgement</span>
           ) : corrected ? (
-            <span className="status neutral">Replaced by a newer correction</span>
+            <span className="status neutral">{parent ? t('correction.replacedStatus') : 'Replaced by a newer correction'}</span>
           ) : (
             <>
-              <span className="ack-copy">Acknowledgement requested</span>
+              <span className="ack-copy">{parent ? t('ack.requested') : 'Acknowledgement requested'}</span>
               <button
                 disabled={acknowledging}
                 aria-busy={acknowledging}
-                aria-label={`Acknowledge update: ${update.title}`}
+                aria-label={parent ? t('ack.ctaLabel', { title: update.title }) : `Acknowledge update: ${update.title}`}
                 onClick={() => acknowledge?.(update.id)}
               >
-                {acknowledging ? 'Acknowledging…' : 'Acknowledge'}
+                {acknowledging ? (parent ? t('ack.busy') : 'Acknowledging…') : (parent ? t('ack.cta') : 'Acknowledge')}
               </button>
             </>
           )}

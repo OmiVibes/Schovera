@@ -9,7 +9,7 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const password = process.env.SCHOVERA_DEMO_PASSWORD || 'SchoveraDemo2026!';
-const baseUrl = process.env.SCHOVERA_TEST_URL || 'http://127.0.0.1:3000';
+const baseUrl = process.env.SCHOVERA_TEST_URL || 'http://localhost:3000';
 if (!url || !serviceKey || !publishableKey)
   throw new Error('Required Supabase environment configuration is missing.');
 
@@ -26,6 +26,13 @@ const observedSockets = new WeakMap();
 const suffix = randomUUID().slice(0, 8);
 const expect = (condition, message) => { if (!condition) throw new Error(message); };
 const must = async (result) => { const { data, error } = await result; if (error) throw error; return data; };
+const realtimeFrameText = (frame) => Buffer.isBuffer(frame.payload)
+  ? frame.payload.toString('utf8')
+  : String(frame.payload ?? '');
+const isSuccessfulRealtimeReply = (frame) => {
+  const content = realtimeFrameText(frame);
+  return content.includes('phx_reply') && /"status"\s*:\s*"ok"/.test(content);
+};
 
 async function signedIn(email) {
   const client = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -36,15 +43,35 @@ async function signedIn(email) {
 
 async function login(page, email, heading) {
   const sockets = [];
+  const realtimeDiagnostics = { frames: 0, replies: 0, successfulReplies: 0, payloadTypes: [], websocketPaths: [], requestPaths: [], failedRequests: [] };
+  page.on('request', (request) => {
+    try {
+      const parsed = new URL(request.url());
+      if (parsed.hostname.endsWith('.supabase.co')) realtimeDiagnostics.requestPaths.push(`${request.method()} ${parsed.pathname}`);
+    } catch { /* Ignore non-URL requests. */ }
+  });
+  page.on('requestfailed', (request) => {
+    try {
+      const parsed = new URL(request.url());
+      if (parsed.hostname.endsWith('.supabase.co')) realtimeDiagnostics.failedRequests.push(`${request.method()} ${parsed.pathname}: ${request.failure()?.errorText || 'failed'}`);
+    } catch { /* Ignore non-URL requests. */ }
+  });
   observedSockets.set(page, sockets);
   const realtimeReady = new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Realtime channel readiness was not observed for ${email}.`)), 20000);
+    const timer = setTimeout(() => reject(new Error(`Realtime channel readiness was not observed for ${email} (sockets=${sockets.length}, frames=${realtimeDiagnostics.frames}, replies=${realtimeDiagnostics.replies}, ok=${realtimeDiagnostics.successfulReplies}, payloadTypes=${realtimeDiagnostics.payloadTypes.join(',') || 'none'}, websocketPaths=${realtimeDiagnostics.websocketPaths.join(',') || 'none'}, supabaseRequests=${realtimeDiagnostics.requestPaths.join('|') || 'none'}, failed=${realtimeDiagnostics.failedRequests.join('|') || 'none'}).`)), 20000);
     page.on('websocket', (socket) => {
+      try { realtimeDiagnostics.websocketPaths.push(new URL(socket.url()).pathname); } catch { realtimeDiagnostics.websocketPaths.push('invalid-url'); }
       if (!socket.url().includes('/realtime/v1/websocket')) return;
       sockets.push(socket);
       socket.on('framereceived', (frame) => {
-        const content = typeof frame.payload === 'string' ? frame.payload : '';
-        if (content.includes('phx_reply') && content.includes('"status":"ok"')) {
+        realtimeDiagnostics.frames += 1;
+        const payload = frame.payload;
+        const type = Buffer.isBuffer(payload) ? 'Buffer' : payload?.constructor?.name || typeof payload;
+        if (!realtimeDiagnostics.payloadTypes.includes(type)) realtimeDiagnostics.payloadTypes.push(type);
+        const content = realtimeFrameText(frame);
+        if (content.includes('phx_reply')) realtimeDiagnostics.replies += 1;
+        if (isSuccessfulRealtimeReply(frame)) {
+          realtimeDiagnostics.successfulReplies += 1;
           clearTimeout(timer);
           resolve();
         }
@@ -78,10 +105,7 @@ async function waitForRealtimeSubscription(page, openProfile) {
   let timer;
   const readyListeners = [];
   let readyResolve;
-  const onFrame = (frame) => {
-    const content = typeof frame.payload === 'string' ? frame.payload : '';
-    if (content.includes('phx_reply') && content.includes('"status":"ok"')) readyResolve();
-  };
+  const onFrame = (frame) => { if (isSuccessfulRealtimeReply(frame)) readyResolve(); };
   const ready = new Promise((resolve, reject) => {
     readyResolve = resolve;
     timer = setTimeout(() => reject(new Error('Student Profile Realtime subscription did not become ready.')), 15000);
@@ -170,8 +194,10 @@ try {
   const parentProfile = profile('parent@schovera.demo');
   const principalProfile = profile('principal@schovera.demo');
   expect(teacherProfile && parentProfile && principalProfile, 'Demo role profiles are missing.');
-  const assignment = await must(admin.from('teacher_class_assignments').select('class_id').eq('teacher_id', teacherProfile.id).is('ended_at', null).single());
-  const student = await must(admin.from('students').select('id,full_name').eq('class_id', assignment.class_id).eq('full_name', 'Aarav Patil').single());
+  const student = await must(admin.from('students').select('id,full_name,class_id').eq('school_id', parentProfile.school_id).eq('full_name', 'Aarav Patil').maybeSingle());
+  expect(student, 'The linked Aarav Patil demo student is missing.');
+  const assignment = await must(admin.from('teacher_class_assignments').select('class_id').eq('teacher_id', teacherProfile.id).eq('class_id', student.class_id).is('ended_at', null).maybeSingle());
+  expect(assignment, 'The demo Teacher is not assigned to Aarav Patil’s class.');
   const temporarySibling = await must(admin.from('students').insert({ school_id: parentProfile.school_id, class_id: assignment.class_id, roll_number: `R${suffix}`, full_name: `Reconnect Sibling ${suffix}` }).select('id,full_name').single());
   temporaryStudentIds.push(temporarySibling.id);
   await must(admin.from('parent_student_links').insert({ parent_id: parentProfile.id, student_id: temporarySibling.id, relationship_label: 'Parent', status: 'active' }));
@@ -502,7 +528,7 @@ try {
   await parentPage.getByText(timetableSubject).first().waitFor({ state: 'visible', timeout: 20000 });
   console.log('Parent timetable recovery passed.');
 
-  await teacherPage.getByRole('link', { name: 'Schedule' }).click();
+  await teacherPage.getByRole('link', { name: 'Timetable' }).click();
   await teacherPage.locator('#teacher-timetable').waitFor({ state: 'visible', timeout: 15000 });
   await teacherPage.locator('#teacher-timetable').getByText('All school days').waitFor({ state: 'visible', timeout: 15000 });
   expect((await must(teacherClient.from('timetable_entries').select('id').eq('id', timetableId))).length === 1, 'Assigned Teacher cannot read the timetable row.');

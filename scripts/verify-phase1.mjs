@@ -158,7 +158,7 @@ try {
   const seedProfiles = await must(
     admin
       .from('profiles')
-      .select('id,role,email')
+      .select('id,role,email,school_id')
       .in('email', [
         'teacher@schovera.demo',
         'parent@schovera.demo',
@@ -174,22 +174,25 @@ try {
     teacherProfile && parentProfile && principalProfile,
     'Expected demo Teacher, Parent, and Principal profiles are missing.',
   );
+  const student = await must(
+    admin
+      .from('students')
+      .select('id,class_id')
+      .eq('school_id', parentProfile.school_id)
+      .eq('full_name', 'Aarav Patil')
+      .maybeSingle(),
+  );
+  expect(student, 'Aarav Patil demo student is missing.');
   const assignment = await must(
     admin
       .from('teacher_class_assignments')
       .select('class_id')
       .eq('teacher_id', teacherProfile.id)
+      .eq('class_id', student.class_id)
       .is('ended_at', null)
-      .single(),
+      .maybeSingle(),
   );
-  const student = await must(
-    admin
-      .from('students')
-      .select('id')
-      .eq('class_id', assignment.class_id)
-      .eq('full_name', 'Aarav Patil')
-      .single(),
-  );
+  expect(assignment, 'Demo Teacher is not assigned to Aarav Patil\'s class.');
 
   const teacher = await signIn(teacherProfile.email);
   const parent = await signIn(parentProfile.email);

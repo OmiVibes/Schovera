@@ -15,11 +15,14 @@ async function login(email) { const client = createClient(url, publishableKey, {
 const futureDate = (days) => shiftSchoolDate(schoolToday(), days);
 
 try {
-  const profiles = await must(admin.from('profiles').select('id,email').in('email', ['teacher@schovera.demo', 'parent@schovera.demo', 'principal@schovera.demo']));
+  const profiles = await must(admin.from('profiles').select('id,email,school_id').in('email', ['teacher@schovera.demo', 'parent@schovera.demo', 'principal@schovera.demo']));
   const profile = (email) => profiles.find((row) => row.email === email);
   const teacherProfile = profile('teacher@schovera.demo'), parentProfile = profile('parent@schovera.demo'), principalProfile = profile('principal@schovera.demo');
   expect(teacherProfile && parentProfile && principalProfile, 'Demo profiles are missing.');
-  const classRow = await must(admin.from('teacher_class_assignments').select('class_id').eq('teacher_id', teacherProfile.id).is('ended_at', null).single());
+  const aarav = await must(admin.from('students').select('class_id').eq('school_id', parentProfile.school_id).eq('full_name', 'Aarav Patil').maybeSingle());
+  expect(aarav, 'Aarav Patil demo student is missing.');
+  const classRow = await must(admin.from('teacher_class_assignments').select('class_id').eq('teacher_id', teacherProfile.id).eq('class_id', aarav.class_id).is('ended_at', null).maybeSingle());
+  expect(classRow, 'Demo Teacher is not assigned to Aarav Patil\'s class.');
   const teacher = await login(teacherProfile.email), parent = await login(parentProfile.email), principal = await login(principalProfile.email);
   const requestId = randomUUID();
   const payload = { p_class_id: classRow.class_id, p_subject: 'Science', p_title: `Microscope observation ${requestId.slice(0, 8)}`, p_description: 'Observe a leaf sample and write three careful observations in your notebook.', p_due_date: futureDate(2), p_client_request_id: requestId };

@@ -22,10 +22,10 @@ export function shiftSchoolDate(date, days) {
 }
 
 /** Format a database DATE as a calendar date without shifting it by timezone. */
-export function formatSchoolDate(date, options = {}) {
+export function formatSchoolDate(date, options = {}, locale = 'en-GB') {
   const [year, month, day] = date.split('-').map(Number);
   const calendarDate = new Date(Date.UTC(year, month - 1, day));
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(locale, {
     ...options,
     timeZone: 'UTC',
   }).format(calendarDate);

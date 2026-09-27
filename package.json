@@ -24,7 +24,8 @@
     "verify:student-profile": "node --env-file=.env.local scripts/verify-student-profile.mjs",
     "verify:timetable": "node --env-file=.env.local scripts/verify-timetable.mjs",
     "verify:reliability": "node --env-file=.env.local scripts/verify-reliability.mjs",
-    "verify:reconnect": "node --env-file=.env.local scripts/verify-reconnect.mjs"
+    "verify:reconnect": "node --env-file=.env.local scripts/verify-reconnect.mjs",
+    "verify:accessibility-i18n": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.local scripts/verify-accessibility-i18n.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

@@ -84,14 +84,16 @@ async function cleanup() {
 
 try {
   const school = await must(admin.from('schools').select('id').eq('code', 'SCHOVERA-DEMO').single());
-  const profiles = await must(admin.from('profiles').select('id,email,role').in('email', ['teacher@schovera.demo', 'parent@schovera.demo', 'principal@schovera.demo']));
+  const profiles = await must(admin.from('profiles').select('id,email,role,school_id').in('email', ['teacher@schovera.demo', 'parent@schovera.demo', 'principal@schovera.demo']));
   const profileFor = (email) => profiles.find((profile) => profile.email === email);
   const teacherProfile = profileFor('teacher@schovera.demo');
   const parentProfile = profileFor('parent@schovera.demo');
   const principalProfile = profileFor('principal@schovera.demo');
   expect(teacherProfile && parentProfile && principalProfile, 'Demo profiles are missing.');
-  const assignment = await must(admin.from('teacher_class_assignments').select('class_id').eq('teacher_id', teacherProfile.id).is('ended_at', null).single());
-  const student = await must(admin.from('students').select('id').eq('class_id', assignment.class_id).eq('full_name', 'Aarav Patil').single());
+  const student = await must(admin.from('students').select('id,class_id').eq('school_id', parentProfile.school_id).eq('full_name', 'Aarav Patil').maybeSingle());
+  expect(student, 'Aarav Patil demo student is missing.');
+  const assignment = await must(admin.from('teacher_class_assignments').select('class_id').eq('teacher_id', teacherProfile.id).eq('class_id', student.class_id).is('ended_at', null).maybeSingle());
+  expect(assignment, 'Demo Teacher is not assigned to Aarav Patil\'s class.');
   const teacher = await signIn(teacherProfile.email);
   const parent = await signIn(parentProfile.email);
   const principal = await signIn(principalProfile.email);

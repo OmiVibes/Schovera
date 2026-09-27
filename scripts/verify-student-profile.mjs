@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -24,12 +25,29 @@ const principalRead = await principal.from('students').select('id').eq('id', stu
 expect(!assigned.error && assigned.data.length === 1, 'Assigned teacher cannot read student.');
 expect(!parentRead.error && parentRead.data.length === 1, 'Linked parent cannot read child.');
 expect(!principalRead.error && principalRead.data.length === 1, 'Principal cannot read own-school student.');
-const unassigned = (await admin.from('students').select('id').eq('school_id', student.school_id).neq('class_id', student.class_id).limit(1)).data?.[0];
-if (unassigned) {
+const assignedClasses = (await admin.from('teacher_class_assignments').select('class_id').eq('teacher_id', teacherProfile.id).is('ended_at', null)).data || [];
+const assignedClassIds = new Set(assignedClasses.map((row) => row.class_id));
+let unassigned = (await admin.from('students').select('id,class_id').eq('school_id', student.school_id)).data?.find((row) => !assignedClassIds.has(row.class_id));
+let temporaryClassId;
+let temporaryStudentId;
+try {
+  if (!unassigned) {
+    const suffix = randomUUID().slice(0, 8);
+    const createdClass = await admin.from('classes').insert({ school_id: student.school_id, grade: '9', division: `P${suffix.slice(0, 2)}`, academic_year: `verify-profile-${suffix}` }).select('id').single();
+    if (createdClass.error) throw createdClass.error;
+    temporaryClassId = createdClass.data.id;
+    const createdStudent = await admin.from('students').insert({ school_id: student.school_id, class_id: temporaryClassId, roll_number: `P${suffix}`, full_name: `Profile Isolation ${suffix}` }).select('id,class_id').single();
+    if (createdStudent.error) throw createdStudent.error;
+    temporaryStudentId = createdStudent.data.id;
+    unassigned = createdStudent.data;
+  }
   const result = await teacher.from('students').select('id').eq('id', unassigned.id);
   expect(!result.error && result.data.length === 0, 'Teacher read an unassigned same-school student.');
   const parentResult = await parent.from('students').select('id').eq('id', unassigned.id);
   expect(!parentResult.error && parentResult.data.length === 0, 'Parent read an unlinked same-school student.');
+} finally {
+  if (temporaryStudentId) await admin.from('students').delete().eq('id', temporaryStudentId);
+  if (temporaryClassId) await admin.from('classes').delete().eq('id', temporaryClassId);
 }
 const other = (await admin.from('students').select('id').neq('school_id', student.school_id).limit(1)).data?.[0];
 if (other) {
