@@ -36,7 +36,7 @@ assert.equal(getLocale('mr'), 'mr-IN');
 const nearMidnightUtc = new Date('2026-09-26T18:45:00.000Z');
 assert.equal(schoolToday(nearMidnightUtc, 'Asia/Kolkata'), '2026-09-27');
 assert.equal(formatSchoolDate('2026-09-27', { year: 'numeric', month: '2-digit', day: '2-digit' }, 'hi-IN'), '27/09/2026');
-const appSource = await readFile(new URL('../src/app/page.tsx', import.meta.url), 'utf8');
+const appSource = await readFile(new URL('../src/components/schovera-app.tsx', import.meta.url), 'utf8');
 assert.match(appSource, /<p>\{update\.message\}<\/p>/, 'Teacher-authored message is not rendered as its original stored value.');
 assert.match(appSource, /onClick=\{\(\) => acknowledge\?\.\(update\.id\)\}/, 'Acknowledgement no longer targets the same persisted update ID.');
 assert.match(appSource, /db\.rpc\('acknowledge_update',\s*\{\s*p_update_id:\s*updateId\s*\}\)/, 'Language changes must not replace the secure acknowledgement RPC.');

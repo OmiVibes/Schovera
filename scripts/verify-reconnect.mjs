@@ -26,6 +26,13 @@ const observedSockets = new WeakMap();
 const suffix = randomUUID().slice(0, 8);
 const expect = (condition, message) => { if (!condition) throw new Error(message); };
 const must = async (result) => { const { data, error } = await result; if (error) throw error; return data; };
+async function expectedPrincipalMetrics(schoolId) {
+  const updates = await must(admin.from('student_updates').select('id,importance,corrects_update_id,acknowledgements(id)').eq('school_id', schoolId));
+  const correctedIds = new Set(updates.map((row) => row.corrects_update_id).filter(Boolean));
+  const important = updates.filter((row) => row.importance === 'important' && !correctedIds.has(row.id));
+  const acknowledged = important.filter((row) => row.acknowledgements?.length);
+  return [important.length, acknowledged.length, important.length - acknowledged.length];
+}
 const realtimeFrameText = (frame) => Buffer.isBuffer(frame.payload)
   ? frame.payload.toString('utf8')
   : String(frame.payload ?? '');
@@ -88,6 +95,35 @@ async function login(page, email, heading) {
     await page.locator('#parent-child-heading').waitFor({ state: 'visible', timeout: 15000 });
   else await page.getByText(heading).first().waitFor({ state: 'visible', timeout: 15000 });
   await realtimeReady;
+}
+
+async function openSection(page, role, section) {
+  const path = `/${role}/${section}`;
+  const email = { teacher: 'teacher@schovera.demo', parent: 'parent@schovera.demo', principal: 'principal@schovera.demo' }[role];
+  const heading = { teacher: 'Good morning', parent: 'Aarav', principal: 'Welcome' }[role];
+  if (await page.locator('input[type="email"]').isVisible().catch(() => false)) {
+    console.log(`${role} session expired during extended offline acceptance; reauthenticating before opening ${section}.`);
+    await login(page, email, heading);
+    return openSection(page, role, section);
+  }
+  await page.locator(`nav.app-section-nav a[href="${path}"]`).click();
+  await page.waitForURL((location) => location.pathname === path, { timeout: 15000 });
+  await page.waitForFunction((expectedPath) => {
+    const activeLink = document.querySelector('nav.app-section-nav a[aria-current="page"]');
+    return (activeLink instanceof HTMLAnchorElement && new URL(activeLink.href).pathname === expectedPath)
+      || Boolean(document.querySelector('input[type="email"]'));
+  }, path, { timeout: 15000 });
+  if (await page.locator('input[type="email"]').isVisible().catch(() => false)) {
+    console.log(`${role} session expired during extended offline acceptance; reauthenticating before opening ${section}.`);
+    await login(page, email, heading);
+    return openSection(page, role, section);
+  }
+  try {
+    await page.locator('nav.app-section-nav a[aria-current="page"]').waitFor({ state: 'visible', timeout: 15000 });
+  } catch (error) {
+    console.error(`Section navigation failed for ${path}; current URL=${page.url()}; visible text=${(await page.locator('body').innerText()).slice(0, 700)}`);
+    throw error;
+  }
 }
 
 async function restoreConnectivity(context, page) {
@@ -236,8 +272,20 @@ try {
     await expect((await childSelect.locator('option:checked').textContent())?.trim() === 'Aarav Patil', 'Parent did not select Aarav Patil.');
     await page.waitForFunction(() => document.querySelector('#parent-child-heading')?.textContent?.includes('Aarav Patil'), null, { timeout: 15000 });
   }
-  await teacherPage.getByRole('button', { name: 'Grade 7A' }).first().click();
-  await teacherPage.getByRole('button', { name: /Aarav Patil/ }).first().click();
+  await openSection(teacherPage, 'teacher', 'students');
+  const gradeSevenClass = teacherPage.locator('.teacher-class-panel .chips button').filter({ hasText: 'Grade 7A' }).first();
+  await gradeSevenClass.waitFor({ state: 'visible', timeout: 15000 });
+  if (!(await gradeSevenClass.getAttribute('class'))?.includes('active')) await gradeSevenClass.click();
+  await teacherPage.locator('.teacher-class-panel .chips button.active').getByText('Grade 7A', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+  await teacherPage.locator('#teacher-students').waitFor({ state: 'visible', timeout: 15000 });
+  const aaravRosterRow = teacherPage.locator('#teacher-students button.student').filter({ hasText: 'Aarav Patil' }).first();
+  try {
+    await aaravRosterRow.waitFor({ state: 'visible', timeout: 20000 });
+  } catch (error) {
+    console.error(`Teacher roster did not settle for Grade 7A; active class=${await teacherPage.locator('.teacher-class-panel .chips button.active').innerText().catch(() => 'none')}; rows=${JSON.stringify(await teacherPage.locator('#teacher-students button.student').allInnerTexts().catch(() => []))}.`);
+    throw error;
+  }
+  await aaravRosterRow.click();
   await teacherPage.getByText('Recent communication').first().waitFor({ state: 'visible', timeout: 15000 });
 
   // Parent misses an Important update, then the online event must reconcile
@@ -257,6 +305,7 @@ try {
   await parentUpdatesResync;
   await parentPage.getByText(parentTitle).first().waitFor({ state: 'visible', timeout: 20000 });
   await parentPage.locator('#parent-profile').getByText(parentTitle).waitFor({ state: 'visible', timeout: 20000 });
+  await openSection(parentPage, 'parent', 'updates');
   await parentPage.locator('#parent-updates .update-card').filter({ hasText: parentTitle }).waitFor({ state: 'visible', timeout: 20000 });
   await parentPage.locator('.attention-panel .update-card').filter({ hasText: parentTitle }).waitFor({ state: 'visible', timeout: 20000 });
   console.log('Parent missed-update recovery passed.');
@@ -335,18 +384,20 @@ try {
   const principalCard = principalPage.locator('.principal-communication-card').filter({ hasText: principalTitle }).first();
   await principalCard.getByText('Acknowledged').waitFor({ state: 'visible', timeout: 20000 });
   await principalPage.locator('.principal-awaiting-metric').click();
+  await principalPage.waitForURL((location) => location.pathname === '/principal/communication', { timeout: 15000 });
   await principalPage.locator('#principal-recent-communication h2').getByText('Awaiting acknowledgement').waitFor({ state: 'visible', timeout: 15000 });
   expect(await principalPage.locator('#principal-recent-communication .principal-communication-card').filter({ hasText: principalTitle }).count() === 0, 'Acknowledged offline update remained in Principal Awaiting list.');
   await principalPage.locator('.principal-communication-filter').getByRole('button', { name: 'All' }).click();
   console.log('Principal multi-event final-state recovery passed.');
 
+  const [importantBefore, acknowledgedBefore, awaitingBefore] = await expectedPrincipalMetrics(principalProfile.school_id);
+  await principalPage.waitForFunction((expected) => Array.from(document.querySelectorAll('.principal-metrics b')).map((element) => Number(element.textContent)).join(',') === expected.join(','), [importantBefore, acknowledgedBefore, awaitingBefore], { timeout: 20000 });
   await waitForRealtimeSubscription(principalPage, async () => {
+    await openSection(principalPage, 'principal', 'students');
     await principalPage.locator('#principal-students input[type="search"]').fill('Aarav Patil');
     await principalPage.getByRole('button', { name: /Aarav Patil/ }).first().click();
     await principalPage.locator('#principal-profile .student-profile-grid').waitFor({ state: 'visible', timeout: 15000 });
   });
-  const principalMetricValues = await principalPage.locator('.principal-metrics b').allTextContents();
-  const [importantBefore, acknowledgedBefore, awaitingBefore] = principalMetricValues.map(Number);
   const principalProfileTitle = `Reconnect principal profile ${suffix}`;
   await principalContext.setOffline(true);
   const principalProfileUpdateId = await sendUpdate(teacherClient, assignment.class_id, student.id, principalProfileTitle);
@@ -355,10 +406,9 @@ try {
   await restoreConnectivity(principalContext, principalPage);
   await principalPage.locator('#principal-profile').getByText(principalProfileTitle).waitFor({ state: 'visible', timeout: 20000 });
   await principalPage.locator('#principal-profile').getByText('Acknowledged').waitFor({ state: 'visible', timeout: 20000 });
-  await principalPage.waitForFunction(({ important, acknowledged, awaiting }) => {
-    const values = Array.from(document.querySelectorAll('.principal-metrics b')).map((element) => Number(element.textContent));
-    return values[0] === important + 1 && values[1] === acknowledged + 1 && values[2] === awaiting;
-  }, { important: importantBefore, acknowledged: acknowledgedBefore, awaiting: awaitingBefore }, { timeout: 20000 });
+  await openSection(principalPage, 'principal', 'communication');
+  const expectedProfileMetrics = await expectedPrincipalMetrics(principalProfile.school_id);
+  await principalPage.waitForFunction((expected) => Array.from(document.querySelectorAll('.principal-metrics b')).map((element) => Number(element.textContent)).join(',') === expected.join(','), expectedProfileMetrics, { timeout: 20000 });
   expect(await principalPage.locator('#principal-recent-communication .principal-communication-card').filter({ hasText: principalProfileTitle }).count() === 1, 'Principal profile recovery duplicated communication cards.');
   expect((await must(admin.from('acknowledgements').select('id').eq('update_id', principalProfileUpdateId))).length === 1, 'Principal profile recovery acknowledgement count is not one.');
   console.log('Principal Student Profile + effective metric recovery passed.');
@@ -368,6 +418,7 @@ try {
   await parentContext.setOffline(true);
   await sendUpdate(teacherClient, assignment.class_id, student.id, normalTitle, 'normal');
   await restoreConnectivity(parentContext, parentPage);
+  await openSection(parentPage, 'parent', 'updates');
   await parentPage.getByText(normalTitle).first().waitFor({ state: 'visible', timeout: 20000 });
   expect(await parentPage.getByText(normalTitle, { exact: false }).count() < 3, 'Reconnect duplicated the parent update UI.');
   console.log('Parent duplicate-refresh protection passed.');
@@ -376,8 +427,15 @@ try {
   // Open Aarav's loaded Teacher profile and confirm the profile's own scoped
   // channel rehydrates communication, acknowledgements, attendance and homework.
   await waitForRealtimeSubscription(teacherPage, async () => {
-    await teacherPage.getByRole('link', { name: 'Profile' }).click();
-    await teacherPage.getByRole('button', { name: /Aarav Patil/ }).first().click();
+    await openSection(teacherPage, 'teacher', 'profile');
+    const classButton = teacherPage.getByRole('button', { name: 'Grade 7A' }).first();
+    await classButton.waitFor({ state: 'visible', timeout: 15000 });
+    if (!(await classButton.getAttribute('class'))?.includes('active')) await classButton.click();
+    await teacherPage.locator('#teacher-students').waitFor({ state: 'visible', timeout: 15000 });
+    const studentButton = teacherPage.getByRole('button', { name: /Aarav Patil/ }).first();
+    await studentButton.waitFor({ state: 'visible', timeout: 15000 });
+    await studentButton.click();
+    await teacherPage.locator('#teacher-profile h1').filter({ hasText: 'Aarav Patil' }).waitFor({ state: 'visible', timeout: 15000 });
     await teacherPage.locator('#teacher-profile .student-profile-grid').waitFor({ state: 'visible', timeout: 15000 });
   });
 
@@ -503,6 +561,16 @@ try {
   if (homeworkError) throw homeworkError;
   assignmentIds.push(homeworkId);
   await restoreConnectivity(parentContext, parentPage);
+  if (await parentPage.locator('input[type="email"]').isVisible().catch(() => false)) {
+    console.log('Parent auth session expired during extended offline acceptance; signing in again for the persisted homework read.');
+    await login(parentPage, parentProfile.email, 'Aarav');
+    const childSelect = parentPage.locator('.child-switcher select');
+    await childSelect.waitFor({ state: 'visible', timeout: 15000 });
+    await childSelect.selectOption({ label: 'Aarav Patil' });
+  }
+  await openSection(parentPage, 'parent', 'homework');
+  await parentPage.locator('#parent-homework').waitFor({ state: 'visible', timeout: 15000 });
+  await parentPage.locator('#parent-homework-heading').filter({ hasText: 'Aarav' }).waitFor({ state: 'visible', timeout: 15000 });
   await parentPage.getByText(homeworkTitle).first().waitFor({ state: 'visible', timeout: 20000 });
   console.log('Parent homework recovery passed.');
 
@@ -523,12 +591,16 @@ try {
   if (timetableError) throw timetableError;
   timetableIds.push(timetableId);
   await restoreConnectivity(parentContext, parentPage);
+  await openSection(parentPage, 'parent', 'timetable');
   const parentTimetable = await must(parentClient.from('timetable_entries').select('id,subject').eq('id', timetableId));
   expect(parentTimetable.length === 1, 'Parent cannot read the persisted timetable record after reconnect.');
   await parentPage.getByText(timetableSubject).first().waitFor({ state: 'visible', timeout: 20000 });
   console.log('Parent timetable recovery passed.');
 
-  await teacherPage.getByRole('link', { name: 'Timetable' }).click();
+  await openSection(teacherPage, 'teacher', 'timetable');
+  const timetableClassButton = teacherPage.getByRole('button', { name: 'Grade 7A' }).first();
+  await timetableClassButton.waitFor({ state: 'visible', timeout: 15000 });
+  if (!(await timetableClassButton.getAttribute('class'))?.includes('active')) await timetableClassButton.click();
   await teacherPage.locator('#teacher-timetable').waitFor({ state: 'visible', timeout: 15000 });
   await teacherPage.locator('#teacher-timetable').getByText('All school days').waitFor({ state: 'visible', timeout: 15000 });
   expect((await must(teacherClient.from('timetable_entries').select('id').eq('id', timetableId))).length === 1, 'Assigned Teacher cannot read the timetable row.');
@@ -548,7 +620,7 @@ try {
   await teacherPage.getByText(teacherTimetableSubject).first().waitFor({ state: 'visible', timeout: 20000 });
   console.log('Teacher timetable recovery passed.');
 
-  await principalPage.getByRole('link', { name: 'Timetable' }).click();
+  await openSection(principalPage, 'principal', 'timetable');
   await principalPage.getByText(teacherProfile.full_name).first().waitFor({ state: 'visible', timeout: 15000 });
   console.log('Principal teacher-name timetable view passed.');
 

@@ -30,7 +30,7 @@ body {
   margin: 0;
   background: var(--canvas);
   color: var(--ink);
-  font-family: Arial, sans-serif;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
   line-height: 1.5;
   overflow-x: clip;
 }
@@ -589,6 +589,11 @@ article p {
   max-width: 780px;
   margin: 2.25rem auto 0;
 }
+.parent-dashboard-home { grid-template-columns:minmax(0, 1fr); grid-template-areas:"top" "summary" "latest"; max-width:980px; margin-inline:auto; }
+.parent-dashboard-home > .parent-latest-update { grid-area:latest; min-width:0; margin:0; padding:1rem; border:1px solid #e5e9f0; border-radius:16px; background:#fff; }
+.parent-latest-heading { display:flex; align-items:center; justify-content:space-between; gap:.8rem; margin-bottom:.75rem; }.parent-latest-heading .eyebrow { margin:0 0 .2rem; }.parent-latest-heading h2 { margin:0; color:#172033; font-size:1.05rem; }.parent-latest-heading>a { color:#8b4707; font-size:.78rem; font-weight:800; text-decoration:none; }.parent-latest-heading>a:hover { text-decoration:underline; }.parent-latest-heading>a:focus-visible { outline:3px solid #efbf72; outline-offset:3px; border-radius:4px; }
+.parent-latest-update-content { display:flex; align-items:flex-start; gap:.7rem; padding:.85rem; border:1px solid #e8ecf1; border-radius:13px; background:#fbfcfe; }.parent-latest-update-content>.update-icon { flex:0 0 auto; }.parent-latest-copy { min-width:0; flex:1; }.parent-latest-meta { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; color:#667085; font-size:.72rem; font-weight:750; }.parent-important-label,.parent-correction-label { border-radius:999px; padding:.2rem .48rem; background:#fff3d7; color:#8a4b06; }.parent-correction-label { background:#eef2f6; color:#526174; }.parent-latest-copy h3 { margin:.35rem 0; color:#172033; font-size:.95rem; }.parent-latest-copy>p:not(.parent-latest-status) { margin:0; color:#475467; font-size:.82rem; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }.parent-latest-copy footer { display:flex; flex-wrap:wrap; gap:.4rem .8rem; margin-top:.65rem; color:#667085; font-size:.7rem; }.parent-latest-status { width:fit-content; margin:.55rem 0 0; border-radius:999px; padding:.24rem .55rem; font-size:.69rem; font-weight:800; }.parent-latest-status.acknowledged { background:#e9f8f0; color:#087a55; }.parent-latest-status.awaiting { background:#fff7e3; color:#8a5608; }
+.app-section-nav { scroll-padding-inline:1rem; }
 .parent-welcome {
   padding: 0.35rem 0 0.1rem;
 }
@@ -827,6 +832,7 @@ article p {
     padding-left: 0.85rem;
     padding-right: 0.85rem;
   }
+  .application-shell { margin-left: -0.85rem; margin-right: -0.85rem; }
   .login h1,
   .dashboard-hero h1 {
     font-size: 2.1rem;
@@ -930,6 +936,43 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
   box-shadow: inset 0 -2px 0 var(--brand);
 }
 .app-section-nav .icon { width: 1rem; height: 1rem; }
+.workspace-page-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.5rem 0 1rem;
+  padding: 1.15rem 1.35rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 17%, white);
+  border-radius: 18px;
+  background: linear-gradient(110deg, var(--brand-soft), #fff 76%);
+}
+.workspace-page-heading .eyebrow { margin: 0 0 .2rem; }
+.workspace-page-heading h1 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.035em; }
+.workspace-page-heading p:last-child { margin: 0; color: var(--muted); font-size: .88rem; }
+.workspace-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.workspace-shortcuts a,
+.teacher-home-actions a {
+  display: flex; align-items: center; gap: .75rem; min-width: 0; min-height: 68px;
+  border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--ink);
+  padding: .8rem; text-decoration: none; transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.workspace-shortcuts a:hover,
+.teacher-home-actions a:hover { border-color: color-mix(in srgb, var(--brand) 42%, white); box-shadow: 0 5px 16px rgb(16 24 40 / .07); transform: translateY(-1px); }
+.workspace-shortcuts .icon,
+.teacher-home-actions .icon { flex: 0 0 auto; width: 2.25rem; height: 2.25rem; padding: .52rem; border-radius: 11px; background: var(--brand-soft); color: var(--brand-dark); }
+.workspace-shortcuts span,
+.teacher-home-actions span { display: grid; min-width: 0; }
+.workspace-shortcuts small,
+.teacher-home-actions small { color: var(--muted); font-size: .76rem; }
+.teacher-home-dashboard { display: grid; gap: 1rem; padding: clamp(1rem, 2vw, 1.5rem); }
+.teacher-home-heading { display: flex; align-items: center; gap: .85rem; padding-bottom: .8rem; border-bottom: 1px solid var(--line); }
+.teacher-home-heading .section-icon { display: grid; place-items: center; width: 2.9rem; height: 2.9rem; flex: 0 0 auto; border-radius: 14px; background: var(--brand-soft); color: var(--brand-dark); }
+.teacher-home-heading h2 { margin: 0; color: var(--ink); }
+.teacher-home-heading p:last-child { margin: .15rem 0 0; color: var(--muted); }
+.teacher-home-dashboard h3 { margin: 0; font-size: 1rem; }
+.teacher-home-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.teacher-home-actions a > span:nth-last-child(1) { margin-left: auto; color: var(--brand); font-size: 1.2rem; }
 .nav-label-short { display: none; }
 .dashboard-hero { padding: 2.3rem 0 1.55rem; }
 .dashboard-hero h1 { font-size: clamp(2rem, 4vw, 2.85rem); }
@@ -1215,7 +1258,15 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
   .teacher-class-status { grid-template-columns: 1fr; }
   .teacher-mode-updates .student-list { max-height: 430px; }
 }
+@media (max-width: 1100px) {
+  /* The weekly timetable has several day columns; give it the full workspace
+     width before those columns begin forcing the Teacher grid wider. */
+  .teacher-mode-timetable { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 820px) {
+  .parent-dashboard-home { grid-template-areas:"top" "summary" "latest"; grid-template-columns:minmax(0,1fr); }
+  .parent-latest-update-content { padding:.7rem; }
+  .parent-latest-copy footer { display:grid; gap:.22rem; }
   .role-teacher.app { width: min(1200px, 100%); }
   .teacher-mode-updates, .teacher-mode-attendance, .teacher-mode-notices { grid-template-columns: 1fr; }
   .teacher-mode-updates .teacher-class-panel { grid-row: auto; }
@@ -1284,8 +1335,8 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
 .attendance-choice.absent.selected { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
 .attendance-choice.late.selected { background: var(--warning-bg); border-color: var(--warning); color: var(--warning); }
 .skeleton { display: grid; gap: .55rem; padding: .3rem 0; }
-.skeleton span { height: 54px; border-radius: 12px; background: linear-gradient(90deg,#f1f4f8 25%,#f8fafc 45%,#f1f4f8 65%); background-size: 280% 100%; animation: skeleton 1.5s ease-in-out infinite; }
-@keyframes skeleton { to { background-position: -180% 0; } }
+.skeleton span { height: 54px; border-radius: 12px; background: #f0f3f8; animation: skeleton 1.35s ease-in-out infinite alternate; }
+@keyframes skeleton { from { opacity: .62; } to { opacity: 1; } }
 .principal-dashboard > .announcements { background: #fdfdff; }
 .principal-dashboard > .card:last-child .update-card { margin: 0; padding: .75rem 0 .75rem .75rem; border-left: 3px solid #4f46e5; }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
@@ -1299,6 +1350,7 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
 .empty { border: 0; background: #f8fafc; box-shadow: inset 0 0 0 1px var(--line); }
 .empty::before { content: '•'; display: block; width: 28px; height: 28px; margin: 0 auto .4rem; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: 1.3rem; line-height: 23px; }
 @media (max-width: 760px) { .right-now-grid { grid-template-columns: 1fr; } .student-snapshot { grid-template-columns: repeat(2, 1fr); } .roster-row { flex-direction: column; } .attendance-segments { width: 100%; justify-content: stretch; } .attendance-choice { flex: 1; } .application-shell { position: sticky; top: 0; z-index: 20; margin: 0 -1rem; box-shadow: 0 6px 16px rgb(16 24 40 / .08); } .role-header { position: static; min-height: 72px; margin: 0; padding: .72rem 1rem; } .app-section-nav { position: static; min-height: 52px; gap: .25rem; padding: .38rem .65rem; border-radius: 0; } .app-section-nav a { min-height: 44px; gap: .36rem; border-radius: 10px; padding: .42rem .62rem; font-size: .72rem; } .app-section-nav a.active { box-shadow: inset 0 -2px 0 var(--brand); } .nav-label-long { display: none; } .nav-label-short { display: inline; } [id] { scroll-margin-top: 136px; } }
+@media (max-width: 430px) { .application-shell { margin-left: -.85rem; margin-right: -.85rem; } }
 .attention-panel .update-card { border: 0; border-left: 3px solid #b45309; margin: .75rem 0 0; padding: .85rem 0 .15rem .85rem; }
 .attention-panel .ack { flex-wrap: wrap; }
 .parent-updates .timeline { gap: .65rem; }
@@ -1417,6 +1469,15 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
   align-items: start;
   gap: 1rem 1.15rem;
 }
+/* Detail destinations have one primary workspace, so use the laptop width instead
+   of leaving attendance/notices grid areas stranded in a second column. */
+.parent-dashboard:not(.parent-dashboard-home) {
+  width: 100%;
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: none;
+}
+.parent-dashboard:not(.parent-dashboard-home) > * { grid-area: auto; }
 .parent-top-grid { grid-area: top; display: grid; grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); align-items: start; gap: 1rem; }
 .parent-top-grid .child-identity-card, .parent-top-grid .attention-panel { min-width: 0; margin: 0; }
 .parent-top-grid .child-identity-card { min-height: 100%; border-top: 3px solid #d99542; background: #fffaf1; }
@@ -1447,6 +1508,22 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
   .parent-dashboard { display: grid; grid-template-columns: 1fr; grid-template-areas: "top" "summary" "updates" "attendance" "notices"; max-width: 820px; }
   .parent-top-grid { grid-template-columns: 1fr; }
   .parent-top-grid .child-identity-card { min-height: auto; }
+}
+@media (min-width: 821px) {
+  .parent-top-grid .child-identity-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+  .parent-top-grid .child-identity-copy { min-width: 0; }
+  .parent-top-grid .child-switcher { grid-column: 1 / -1; width: 100%; max-width: none; }
+}
+@media (min-width: 821px) {
+  .app { width: min(1480px, calc(100% - 3rem)); }
+  .principal-main-grid:not(:has(.principal-support-column)) { grid-template-columns: minmax(0, 1fr); }
+  .parent-dashboard.parent-dashboard-home { width: 100%; max-width: none; margin-inline: 0; }
+}
+@media (min-width: 1100px) {
+  .parent-dashboard.parent-dashboard-home { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "top top" "summary latest"; gap: 1.25rem; }
+  .parent-dashboard.parent-dashboard-home > .parent-top-grid { width: 100%; }
+  .parent-dashboard.parent-dashboard-home > .right-now { grid-area: summary; align-self: start; }
+  .parent-dashboard.parent-dashboard-home > .parent-latest-update { grid-area: latest; align-self: start; }
 }
 @media (max-width: 820px) {
   .notice-composer { grid-template-columns: 1fr; }
@@ -1623,6 +1700,13 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
   .principal-primary-column, .principal-support-column { gap: 1rem; }
 }
 @media (max-width: 760px) {
+  .workspace-page-heading { align-items: start; flex-direction: column; gap: .2rem; margin: 1rem 0 .75rem; padding: .9rem 1rem; }
+  .workspace-shortcuts, .teacher-home-actions { grid-template-columns: 1fr; }
+  .teacher-home-heading { align-items: flex-start; }
+  .role-header { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+  .role-school-lockup { min-width: 0; }
+  .role-school-lockup span { display: none; }
+  .account-actions { display: flex; justify-content: flex-end; width: 100%; min-width: 0; }
   .principal-dashboard { gap: 1rem; }
   .principal-communication-overview { border-radius: 16px; padding: .9rem; }
   .principal-overview-heading { margin-bottom: .75rem; }
@@ -1789,8 +1873,7 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
 .principal-communication-skeleton div > span {
   display: block;
   border-radius: 999px;
-  background: linear-gradient(90deg,#eef1f6 25%,#f8fafc 45%,#eef1f6 65%);
-  background-size: 280% 100%;
+  background: #eef1f6;
   animation: skeleton 1.5s ease-in-out infinite;
 }
 .principal-skeleton-avatar { width: 34px; height: 34px; }
@@ -1823,4 +1906,49 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
   .principal-update-message { font-size: .78rem; }
   .principal-communication-card footer { align-items: flex-start; font-size: .67rem; }
   .principal-timetable-grid { grid-template-columns:1fr; }.timetable-days { grid-template-columns:1fr; overflow:visible; }.timetable-day { min-width:0; }.timetable-manage-list>div { grid-template-columns:1fr auto auto; }.timetable-manage-list>div b,.timetable-manage-list>div small { grid-column:1 / -1; }.timetable-period { grid-template-columns:auto minmax(0,1fr); }.timetable-period>small { grid-column:2; text-align:left; max-width:none; }.timetable-form-grid { grid-template-columns:1fr; }
+}
+
+/* Teacher-only planning and local spreadsheet workspace */
+.teacher-ai-workspace { width:min(100%, 1180px); margin:0 auto 2rem; display:grid; gap:1rem; min-width:0; }
+.teacher-ai-intro { display:flex; align-items:flex-start; gap:.9rem; padding:1rem 1.1rem; border:1px solid #cfe7db; border-radius:18px; background:linear-gradient(120deg,#edf8f2,#fff 72%); }
+.teacher-ai-mark { display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px; border-radius:14px; background:#0f5d46; color:white; font-size:1.35rem; }
+.teacher-ai-intro h2 { margin:.1rem 0 .28rem; color:#172033; font-size:1.25rem; }.teacher-ai-intro p:last-child { margin:0; color:#667085; font-size:.88rem; line-height:1.5; }
+.teacher-ai-grid { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr); gap:1rem; align-items:start; }
+.teacher-ai-panel,.teacher-sheet-panel { display:grid; gap:.72rem; min-width:0; padding:1.1rem; border:1px solid #e3e9f0; border-radius:16px; background:#fff; box-shadow:0 5px 18px #17203308; }
+.teacher-ai-panel h3,.teacher-sheet-panel h3 { margin:0; color:#172033; font-size:1.03rem; }.teacher-ai-panel>p:not(.eyebrow),.teacher-sheet-panel>p:not(.eyebrow) { margin:0; color:#58677b; font-size:.8rem; line-height:1.55; }
+.teacher-ai-disclaimer { padding:.65rem .72rem; border-left:3px solid #d69a29; border-radius:8px; background:#fff8e9; color:#664b1e!important; }
+.teacher-ai-form { display:grid; gap:.68rem; }.teacher-ai-form label { display:grid; gap:.3rem; color:#344054; font-size:.75rem; font-weight:750; }.teacher-ai-form input,.teacher-ai-form select,.teacher-ai-form textarea,.teacher-ai-output textarea { width:100%; min-width:0; border:1px solid #d8e0ea; border-radius:10px; padding:.62rem .68rem; background:#fff; color:#172033; font:inherit; font-size:.82rem; }.teacher-ai-form textarea,.teacher-ai-output textarea { resize:vertical; line-height:1.55; }.teacher-ai-form input:focus-visible,.teacher-ai-form select:focus-visible,.teacher-ai-form textarea:focus-visible,.teacher-ai-output textarea:focus-visible,.teacher-sheet-scroll input:focus-visible { outline:3px solid #b8c4ff; outline-offset:1px; }
+.teacher-ai-form-row { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }.teacher-ai-form button,.teacher-sheet-toolbar button { min-height:44px; }.teacher-ai-provider-note,.teacher-ai-output>p { color:#667085!important; font-size:.69rem!important; }
+.teacher-ai-output { display:grid; gap:.55rem; padding-top:.8rem; border-top:1px solid #e9edf2; }.teacher-ai-output-heading,.teacher-sheet-toolbar { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; }.teacher-ai-output-heading h4 { margin:0; color:#172033; }.teacher-ai-output-heading button { min-height:38px; }.teacher-ai-output textarea { min-height:280px; font-family:inherit; }
+.teacher-sheet-upload { display:grid; gap:.4rem; padding:.82rem; border:1px dashed #aab7c6; border-radius:12px; color:#1d4538; background:#f6fbf8; font-size:.78rem; font-weight:750; cursor:pointer; }.teacher-sheet-upload input { width:100%; color:#475467; font:inherit; font-size:.72rem; }.teacher-sheet-limit { color:#667085!important; font-size:.69rem!important; }
+.teacher-sheet-toolbar { padding:.55rem 0; border-top:1px solid #e8edf2; color:#344054; font-size:.73rem; }.teacher-sheet-toolbar span { color:#667085; }.teacher-sheet-scroll { max-width:100%; max-height:460px; overflow:auto; border:1px solid #e2e8f0; border-radius:10px; }.teacher-sheet-scroll table { width:max-content; min-width:100%; border-collapse:separate; border-spacing:0; }.teacher-sheet-scroll td { min-width:125px; max-width:240px; padding:0; border-right:1px solid #edf0f4; border-bottom:1px solid #edf0f4; }.teacher-sheet-scroll tr:first-child td { background:#f5f8fc; }.teacher-sheet-scroll input { width:100%; min-height:38px; padding:.4rem .48rem; border:0; color:#344054; background:transparent; font:inherit; font-size:.72rem; }.teacher-sheet-scroll input:focus { background:#f0f5ff; }
+.teacher-ai-workspace button:focus-visible,.teacher-ai-workspace input[type=file]:focus-visible { outline:3px solid #b8c4ff; outline-offset:2px; }
+@media (max-width:900px) { .teacher-ai-grid { grid-template-columns:1fr; } }
+@media (max-width:520px) { .teacher-ai-intro { padding:.82rem; border-radius:14px; }.teacher-ai-intro h2 { font-size:1.05rem; }.teacher-ai-panel,.teacher-sheet-panel { padding:.85rem; }.teacher-ai-form-row { grid-template-columns:1fr; }.teacher-sheet-toolbar { align-items:flex-start; flex-direction:column; }.teacher-sheet-toolbar button { width:100%; } }
+
+/* Keep the Parent landing view deliberately summary-first on every breakpoint. */
+.parent-dashboard.parent-dashboard-home { grid-template-columns:minmax(0,1fr); grid-template-areas:"top" "summary" "latest"; }
+@media (max-width:820px) { .parent-dashboard.parent-dashboard-home { grid-template-columns:minmax(0,1fr); grid-template-areas:"top" "summary" "latest"; } }
+
+/* Readability and spacious, single-purpose desktop detail pages. */
+.app { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.dashboard-content > *, .parent-dashboard > *, .teacher-workspace > * { min-width: 0; }
+.parent-dashboard:not(.parent-dashboard-home) {
+  width: 100%;
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: none;
+}
+.parent-dashboard:not(.parent-dashboard-home) > .parent-updates,
+.parent-dashboard:not(.parent-dashboard-home) > #parent-notices,
+.parent-dashboard:not(.parent-dashboard-home) > #parent-attendance,
+.parent-dashboard:not(.parent-dashboard-home) > .parent-homework,
+.parent-dashboard:not(.parent-dashboard-home) > .timetable-workspace { grid-area: auto; width: 100%; }
+.parent-dashboard:not(.parent-dashboard-home) > .parent-top-grid { grid-template-columns: minmax(0, 1fr); }
+.workspace-page-title { display: grid; gap: .12rem; min-width: 0; }
+.workspace-page-title .eyebrow { margin: 0; }
+.workspace-page-title h1 { margin: 0; }
+.ai-loading-state { min-height: 180px; display: grid; place-items: center; color: #526176; }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span, .principal-skeleton-avatar, .principal-communication-skeleton div > span { animation: none; }
 }
