@@ -11,6 +11,16 @@ async function signIn(page, email) {
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button', { name: 'Sign in securely' }).click();
+    await page.waitForFunction(() =>
+      Boolean(document.querySelector('nav.app-section-nav') || document.querySelector('[role="alert"]')),
+      null,
+      { timeout: 30000 },
+    );
+    if (!(await page.locator('nav.app-section-nav').isVisible().catch(() => false))) {
+      const message = await page.locator('[role="alert"]').innerText().catch(() => '');
+      const pageText = (await page.locator('body').innerText()).slice(0, 500);
+      throw new Error(`Could not open the signed-in workspace. Alert: ${message || '(empty)'}. Page: ${pageText || '(empty)'}`);
+    }
   }
   await page.locator('nav.app-section-nav').waitFor({ state: 'visible' });
 }

@@ -219,37 +219,79 @@ export function SchoveraApp() {
     [email, setEmail] = useState(''),
     [password, setPassword] = useState(''),
     [showPassword, setShowPassword] = useState(false),
-    [signingIn, setSigningIn] = useState(false);
+    [signingIn, setSigningIn] = useState(false),
+    [canRetryProfileLoad, setCanRetryProfileLoad] = useState(false);
   const load = async () => {
     const version = ++authLoadVersionRef.current;
     // Keep an already-rendered workspace on screen during auth resyncs (such
     // as token refresh); only block for the initial check.
     setBusy((isBusy) => isBusy || !profileRef.current);
-    const {
-      data: { user },
-    } = await db.auth.getUser();
-    if (version !== authLoadVersionRef.current) return;
-    if (!user) {
+    try {
+      const { data: authData, error: authError } = await db.auth.getUser();
+      if (version !== authLoadVersionRef.current) return;
+      // A first visit has no Supabase session. auth.getUser() reports that
+      // expected state as AuthSessionMissingError; it is not a profile-fetch
+      // failure and should leave the sign-in form calm and ready to use.
+      if (authError?.name === 'AuthSessionMissingError') {
+        profileRef.current = null;
+        setProfile(null);
+        setError('');
+        setCanRetryProfileLoad(false);
+        return;
+      }
+      if (authError) throw authError;
+      const user = authData.user;
+      if (!user) {
+        profileRef.current = null;
+        setProfile(null);
+        setError('');
+        setCanRetryProfileLoad(false);
+        return;
+      }
+      const { data, error: profileError } = await db
+        .from('profiles')
+        .select('id,school_id,role,full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (version !== authLoadVersionRef.current) return;
+      if (profileError) throw profileError;
+      if (!data) {
+        profileRef.current = null;
+        setProfile(null);
+        setError('This account is not linked to a Schovera school profile. Ask your school administrator to check the account.');
+        setCanRetryProfileLoad(false);
+        return;
+      }
+      profileRef.current = data as Profile;
+      setProfile(profileRef.current);
+      setError('');
+      setCanRetryProfileLoad(false);
+    } catch {
+      if (version !== authLoadVersionRef.current) return;
       profileRef.current = null;
       setProfile(null);
-      setBusy(false);
-      return;
+      setError('We couldn’t load your school profile. Check your connection and try again. If this keeps happening, ask your school administrator to check your account.');
+      setCanRetryProfileLoad(true);
+    } finally {
+      if (version === authLoadVersionRef.current) setBusy(false);
     }
-    const { data, error: profileError } = await db
-      .from('profiles')
-      .select('id,school_id,role,full_name')
-      .eq('id', user.id)
-      .single();
-    if (version !== authLoadVersionRef.current) return;
-    profileRef.current = profileError ? null : (data as Profile);
-    setProfile(profileRef.current);
-    if (profileError) setError('Your profile could not be loaded.');
-    setBusy(false);
   };
   useEffect(() => {
-    load();
-    const { data } = db.auth.onAuthStateChange(load);
-    return () => data.subscription.unsubscribe();
+    void load();
+    let authSyncTimer: ReturnType<typeof setTimeout> | undefined;
+    const { data } = db.auth.onAuthStateChange(() => {
+      // Supabase auth callbacks run while its auth lock is held. Defer profile
+      // reads until after the callback returns to avoid a lock/race on switches.
+      if (authSyncTimer) clearTimeout(authSyncTimer);
+      authSyncTimer = setTimeout(() => {
+        authSyncTimer = undefined;
+        void load();
+      }, 0);
+    });
+    return () => {
+      if (authSyncTimer) clearTimeout(authSyncTimer);
+      data.subscription.unsubscribe();
+    };
   }, [db]);
   useEffect(() => {
     const revealActiveLink = () => {
@@ -301,6 +343,7 @@ export function SchoveraApp() {
           onSubmit={async (e) => {
             e.preventDefault();
             setError('');
+            setCanRetryProfileLoad(false);
             setSigningIn(true);
             const { error: signInError } = await db.auth.signInWithPassword({
               email,
@@ -344,6 +387,18 @@ export function SchoveraApp() {
             <p className="error" role="alert">
               {error}
             </p>
+          )}
+          {canRetryProfileLoad && (
+            <button
+              type="button"
+              className="auth-retry"
+              onClick={() => {
+                setError('');
+                void load();
+              }}
+            >
+              Retry account check
+            </button>
           )}
           <button disabled={signingIn}>
             {signingIn ? 'Signing in…' : 'Sign in securely'}

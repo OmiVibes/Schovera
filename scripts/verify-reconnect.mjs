@@ -290,6 +290,10 @@ try {
 
   // Parent misses an Important update, then the online event must reconcile
   // persisted truth without a page reload.
+  // Keep the Student Overview mounted so this specifically exercises its
+  // attendance/update/homework Realtime resynchronization path.
+  await openSection(parentPage, 'parent', 'profile');
+  await parentPage.locator('#parent-profile .student-profile-grid').waitFor({ state: 'visible', timeout: 15000 });
   const parentTitle = `Reconnect parent important ${suffix}`;
   await parentContext.setOffline(true);
   const parentUpdateId = await sendUpdate(teacherClient, assignment.class_id, student.id, parentTitle);
@@ -301,7 +305,7 @@ try {
     { timeout: 20000 },
   );
   await restoreConnectivity(parentContext, parentPage);
-  console.log(`Parent returned online=${await parentPage.evaluate(() => navigator.onLine)}; selected=${await parentPage.locator('#parent-child-heading').innerText()}.`);
+  console.log(`Parent returned online=${await parentPage.evaluate(() => navigator.onLine)}; profile=${await parentPage.locator('#parent-profile-heading').innerText()}.`);
   await parentUpdatesResync;
   await parentPage.getByText(parentTitle).first().waitFor({ state: 'visible', timeout: 20000 });
   await parentPage.locator('#parent-profile').getByText(parentTitle).waitFor({ state: 'visible', timeout: 20000 });
@@ -409,7 +413,9 @@ try {
   await openSection(principalPage, 'principal', 'communication');
   const expectedProfileMetrics = await expectedPrincipalMetrics(principalProfile.school_id);
   await principalPage.waitForFunction((expected) => Array.from(document.querySelectorAll('.principal-metrics b')).map((element) => Number(element.textContent)).join(',') === expected.join(','), expectedProfileMetrics, { timeout: 20000 });
-  expect(await principalPage.locator('#principal-recent-communication .principal-communication-card').filter({ hasText: principalProfileTitle }).count() === 1, 'Principal profile recovery duplicated communication cards.');
+  const recoveredPrincipalCard = principalPage.locator('#principal-recent-communication .principal-communication-card').filter({ hasText: principalProfileTitle });
+  await recoveredPrincipalCard.first().waitFor({ state: 'visible', timeout: 20000 });
+  expect(await recoveredPrincipalCard.count() === 1, 'Principal profile recovery duplicated communication cards.');
   expect((await must(admin.from('acknowledgements').select('id').eq('update_id', principalProfileUpdateId))).length === 1, 'Principal profile recovery acknowledgement count is not one.');
   console.log('Principal Student Profile + effective metric recovery passed.');
 
@@ -633,6 +639,7 @@ try {
   await restoredChildSelect.waitFor({ state: 'visible', timeout: 15000 });
   await restoredChildSelect.selectOption({ label: 'Aarav Patil' });
   await restoredParentPage.waitForFunction(() => document.querySelector('#parent-child-heading')?.textContent?.includes('Aarav Patil'), null, { timeout: 15000 });
+  await openSection(restoredParentPage, 'parent', 'profile');
   await restoredParentPage.locator('#parent-profile .student-profile-grid').waitFor({ state: 'visible', timeout: 15000 });
   await restoredParentPage.locator('#parent-profile').getByText(profileUpdateTitle).waitFor({ state: 'visible', timeout: 15000 });
   console.log('Profile unmount during offline/reconnect and persisted remount passed.');
