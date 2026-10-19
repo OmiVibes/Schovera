@@ -36,6 +36,6 @@ Passed checks so far:
 - `npm run verify:reconnect`: passed Parent/Teacher/Principal online recovery, multi-child/context isolation, profile, attendance, homework, timetable and duplicate-refresh checks.
 - `npm run typecheck`, `npm run lint`, and `git diff --check`: passed.
 
-The isolated production build remains to be run before final completion.
+`npm run build:isolated`: passed from the clean committed worktree. The temporary snapshot contained only `.env.production` with approved local loopback Supabase values; Next reported no `.env.local`. All expected app/API routes and TypeScript compilation passed, synthetic private-environment sentinels were absent from build output, and the only observed build egress was the allowlisted Google Fonts hosts. The isolated snapshot was cleaned after success. This validates local compilation only; it is not hosted deployment verification and does not resolve the recorded Next.js security advisory.
 
 All API/browser integration uses only the loopback local Supabase environment and temporary synthetic data. No hosted project or Vercel endpoint is used. Polling does not make scans instant, guarantee notification delivery, or establish presence/safety/attendance. Classroom `attendance_records` are unchanged. No physical reader was tested.
