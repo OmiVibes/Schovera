@@ -1268,6 +1268,7 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
   .parent-latest-update-content { padding:.7rem; }
   .parent-latest-copy footer { display:grid; gap:.22rem; }
   .role-teacher.app { width: min(1200px, 100%); }
+  .teacher-mode-home { grid-template-columns: minmax(0, 1fr); }
   .teacher-mode-updates, .teacher-mode-attendance, .teacher-mode-notices { grid-template-columns: 1fr; }
   .teacher-mode-updates .teacher-class-panel { grid-row: auto; }
   .teacher-mode-attendance .teacher-class-panel, .teacher-mode-notices .teacher-class-panel { display: grid; grid-template-columns: 1fr; position: static; }
@@ -1951,6 +1952,62 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
 .workspace-page-title .eyebrow { margin: 0; }
 .workspace-page-title h1 { margin: 0; }
 .ai-loading-state { min-height: 180px; display: grid; place-items: center; color: #526176; }
+.teacher-home-stack { display: grid; align-content: start; gap: 1rem; min-width: 0; }
+.school-entry-panel { display: grid; gap: .9rem; min-width: 0; padding: clamp(.9rem, 2vw, 1.25rem); border: 1px solid #dfe7e5; border-radius: 18px; background: linear-gradient(145deg, #fff 45%, #f6faf8); box-shadow: 0 8px 24px rgb(16 40 34 / .045); }
+.school-entry-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.school-entry-header h2 { margin: .1rem 0 .3rem; color: #172033; font-size: clamp(1.12rem, 1.8vw, 1.42rem); letter-spacing: -.025em; }
+.school-entry-header p:last-child { margin: 0; color: #657386; font-size: .82rem; line-height: 1.5; }
+.school-entry-note { margin: 0; padding: .62rem .75rem; border-left: 3px solid #78998c; border-radius: 8px; background: #f2f7f4; color: #435b51; font-size: .74rem; line-height: 1.45; }
+.school-entry-connection { margin: 0; padding: .55rem .7rem; border-radius: 9px; background: #fff8e8; color: #754d10; font-size: .76rem; }
+.school-entry-filters { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)) auto; align-items: end; gap: .65rem; }
+.school-entry-control { display: grid; gap: .32rem; min-width: 0; color: #49586a; font-size: .72rem; font-weight: 750; }
+.school-entry-control select, .school-entry-control input { min-width: 0; width: 100%; min-height: 42px; padding: .5rem .62rem; border: 1px solid #d7e0e7; border-radius: 10px; background: #fff; color: #202c3b; font: inherit; font-weight: 500; }
+.school-entry-control :focus-visible, .school-entry-panel button:focus-visible { outline: 3px solid #a7c9ba; outline-offset: 2px; }
+.school-entry-panel button { min-height: 42px; }
+.school-entry-totals { display: flex; align-items: stretch; gap: .65rem; flex-wrap: wrap; }
+.school-entry-totals > div { display: grid; gap: .2rem; min-width: 130px; padding: .7rem .8rem; border: 1px solid #e4ebe8; border-radius: 12px; background: #fff; }
+.school-entry-totals span { color: #637266; font-size: .7rem; }
+.school-entry-totals b { color: #1f4838; font-size: 1.25rem; }
+.school-entry-totals small { align-self: center; color: #6d7886; font-size: .69rem; }
+.school-entry-count { margin: 0; color: #687688; font-size: .72rem; }
+.school-entry-list { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+.school-entry-event { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: .72rem; align-items: start; min-width: 0; padding: .78rem; border: 1px solid #e3e9e6; border-radius: 13px; background: #fff; }
+.school-entry-event.check_in { border-left: 3px solid #4a9272; }
+.school-entry-event.check_out { border-left: 3px solid #7892b2; }
+.school-entry-event-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: #edf6f1; color: #257251; font-size: 1.15rem; font-weight: 800; }
+.school-entry-event.check_out .school-entry-event-mark { background: #eff3f8; color: #4d6687; }
+.school-entry-event-main { min-width: 0; }
+.school-entry-event-title { display: flex; align-items: center; gap: .45rem .6rem; flex-wrap: wrap; }
+.school-entry-event-title strong { color: #1c2935; font-size: .86rem; }
+.school-entry-event-title > span:not(.school-entry-event-type) { color: #677588; font-size: .7rem; }
+.school-entry-event-type { padding: .22rem .45rem; border-radius: 999px; background: #edf6f1; color: #276c4e; font-size: .65rem; font-weight: 800; }
+.school-entry-event-type.check_out { background: #eef2f7; color: #4b617e; }
+.school-entry-event-main > p { margin: .25rem 0 .45rem; color: #718092; font-size: .7rem; }
+.school-entry-times { display: flex; align-items: center; gap: .35rem .7rem; flex-wrap: wrap; color: #344456; font-size: .7rem; }
+.school-entry-times time { font-variant-numeric: tabular-nums; }
+.school-entry-times small { flex-basis: 100%; color: #788493; font-size: .66rem; }
+.school-entry-delayed { padding: .18rem .4rem; border-radius: 6px; background: #fff4df; color: #815c1c; font-size: .64rem; font-weight: 750; }
+.school-entry-empty, .school-entry-loading { display: grid; justify-items: center; gap: .35rem; padding: 1.5rem .8rem; border: 1px dashed #d6e1dc; border-radius: 13px; background: #fbfdfc; text-align: center; }
+.school-entry-empty > span { color: #56836c; font-size: 1.4rem; }
+.school-entry-empty b { color: #263a30; font-size: .87rem; }
+.school-entry-empty p { margin: 0; color: #718092; font-size: .74rem; }
+.school-entry-loading { color: #667689; font-size: .78rem; }
+.school-entry-more { justify-self: center; }
+@media (max-width: 700px) {
+  .school-entry-header { flex-direction: column; }
+  .school-entry-refresh { width: 100%; }
+  .school-entry-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .school-entry-filters button { grid-column: 1 / -1; }
+  .school-entry-totals small { flex-basis: 100%; }
+}
+@media (max-width: 390px) {
+  .school-entry-panel { padding: .78rem; border-radius: 14px; }
+  .school-entry-filters { grid-template-columns: minmax(0, 1fr); }
+  .school-entry-filters button { grid-column: auto; }
+  .school-entry-event { grid-template-columns: 30px minmax(0, 1fr); gap: .55rem; padding: .65rem; }
+  .school-entry-event-mark { width: 30px; height: 30px; }
+  .school-entry-totals > div { min-width: 0; flex: 1; }
+}
 @media (prefers-reduced-motion: reduce) {
   .skeleton span, .principal-skeleton-avatar, .principal-communication-skeleton div > span { animation: none; }
 }

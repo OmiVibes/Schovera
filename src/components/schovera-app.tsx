@@ -9,6 +9,7 @@ import { useRealtimeResync } from '@/lib/use-realtime-resync';
 import { formatSchoolDate, schoolToday } from '@/lib/school-date.mjs';
 import { getLocale, translate, type Language, type TranslationKey } from '@/lib/i18n';
 import { I18nProvider, LanguageSelector, useI18n } from '@/lib/i18n-provider';
+import { SchoolEntryPanel } from '@/components/school-entry-panel';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
 // Principals never need to download the Teacher-only workspace.
@@ -1033,7 +1034,13 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
         {mode === 'home' && <div className="teacher-sidebar-notices"><Announcements profile={profile} /></div>}
       </aside>
       {mode === 'home' ? (
-        <TeacherHome classId={classId} classLabel={classes.find((row) => row.id === classId)} studentCount={students.length} />
+        <div className="teacher-home-stack">
+          <TeacherHome classId={classId} classLabel={classes.find((row) => row.id === classId)} studentCount={students.length} />
+          <SchoolEntryPanel role="teacher" profileId={profile.id} schoolId={profile.school_id} classes={classes} classId={classId} onClassChange={(nextClassId) => {
+            activeClassIdRef.current = nextClassId;
+            setClassId(nextClassId);
+          }} />
+        </div>
       ) : mode === 'updates' ? (
         <div className="card teacher-task-panel">
           {pendingSend && !pendingForSelectedStudent && !correctionTarget && (
@@ -1676,6 +1683,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
           <div><Icon name="updates" /><span>{t('parent.latestUpdate')}<b>{updatesLoading ? t('parent.loadingUpdates') : updates[0] ? localizedCategory(updates[0].category, t) : t('parent.noUpdates')}</b></span></div>
         </div>
       </section>}
+      {page === 'home' && <SchoolEntryPanel key={`parent-entry-${child?.id || 'none'}`} role="parent" profileId={profile.id} schoolId={profile.school_id} child={child ? { id: child.id, full_name: child.full_name } : null} />}
       {page === 'home' && <section className="card parent-latest-update" aria-labelledby="parent-latest-update-heading">
         <div className="parent-latest-heading"><div><p className="eyebrow">{t('parent.childSpecific')}</p><h2 id="parent-latest-update-heading">{t('parent.latestUpdate')}</h2></div><Link href="/parent/updates">{t('parent.viewAllUpdates')}</Link></div>
         {updatesLoading ? <Skeleton label={t('parent.loadingUpdates')} rows={1} /> : updatesError ? <p className="error" role="alert">{updatesError}</p> : latestEffectiveUpdate ? <article className="parent-latest-update-content">
@@ -2055,6 +2063,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
         <Link href="/principal/attendance"><Icon name="attendance" /><span><b>Attendance</b><small>See today&apos;s register status</small></span></Link>
         <Link href="/principal/notices"><Icon name="notice" /><span><b>School notices</b><small>Publish official information</small></span></Link>
       </nav>}
+      {page === 'home' && <SchoolEntryPanel role="principal" profileId={profile.id} schoolId={profile.school_id} />}
       {page === 'students' && <PrincipalStudentOverview profile={profile} />}
       {page === 'homework' && <PrincipalHomework profile={profile} />}
       {page === 'timetable' && <PrincipalTimetable profile={profile} />}

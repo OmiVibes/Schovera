@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
+import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import { canonicalEvent } from './rfid-simulator/core.ts';
 
@@ -36,7 +37,7 @@ async function createUser(role, schoolId) {
   const client = createClient(supabaseUrl, publishableKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const login = await client.auth.signInWithPassword({ email, password });
   if (login.error) throw login.error;
-  return { id: data.user.id, client };
+  return { id: data.user.id, email, client };
 }
 async function createClass(schoolId, division) {
   const row = await must(admin.from('classes').insert({ school_id: schoolId, grade: '9', division, academic_year: 'RFID-TEST' }).select('id').single());
@@ -116,6 +117,142 @@ async function runSimulatorAgainstLocalApi(device, credentialRef) {
   }
 }
 
+async function verifyDashboardViews(accounts, expectedStudentName, device, credentialRef) {
+  const browser = await chromium.launch({ headless: true });
+  const screenshotDirectory = await mkdtemp(join(tmpdir(), 'schovera-task32c-'));
+  const contexts = [];
+  const externalRequests = [];
+  const openPages = [];
+  async function signIn(role, email) {
+    const roleContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    contexts.push(roleContext);
+    await roleContext.route('**/*', async (route) => {
+      const requestUrl = new URL(route.request().url());
+      if (!['127.0.0.1', 'localhost', '[::1]'].includes(requestUrl.hostname.toLowerCase())) {
+        externalRequests.push(`${route.request().method()} ${requestUrl.origin}${requestUrl.pathname}`);
+        await route.abort();
+        return;
+      }
+      await route.continue();
+    });
+    const page = await roleContext.newPage();
+    const entryResponses = [];
+    page.on('response', async (response) => {
+      if (response.url().includes('/rest/v1/school_entry_events')) {
+        const parsed = new URL(response.url());
+        entryResponses.push({ status: response.status(), eventType: parsed.searchParams.get('event_type'), range: parsed.searchParams.get('received_at'), select: parsed.searchParams.get('select') });
+      }
+    });
+    await page.goto(parsedTestUrl.toString(), { waitUntil: 'networkidle' });
+    if (role === 'Parent') await page.evaluate(([key, id]) => sessionStorage.setItem(key, id), [`schovera:selected-child:${accounts.parentId}`, accounts.childId]);
+    await page.locator('input[type="email"]').fill(email);
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole('button', { name: 'Sign in securely' }).click();
+    const panel = page.locator('[data-testid="school-entry-panel"]');
+    await panel.waitFor({ state: 'visible', timeout: 20000 });
+    try { await page.locator('[data-testid="school-entry-panel"][data-loaded="true"]').waitFor({ timeout: 20000 }); }
+    catch { throw new Error(`${role} dashboard did not finish loading: ${(await panel.innerText()).replace(/\s+/g, ' ').slice(-1200)}`); }
+    const scriptUrls = await page.locator('script[src]').evaluateAll((nodes) => nodes.map((node) => node.src));
+    const bundleBodies = await Promise.all(scriptUrls.map(async (scriptUrl) => {
+      const response = await fetch(scriptUrl);
+      return response.ok ? response.text() : '';
+    }));
+    expect(!bundleBodies.some((body) => body.includes(serviceKey)), `${role} browser bundle exposed a service-role credential.`);
+    await page.screenshot({ path: join(screenshotDirectory, `${role.toLowerCase()}-signedin.png`), fullPage: true });
+    expect(await panel.locator('.school-entry-event.check_in').count() > 0, `${role} dashboard did not render the persisted check-in record (${JSON.stringify(entryResponses)}; UI ${(await panel.innerText()).replace(/\s+/g, ' ').slice(-500)})`);
+    return page;
+  }
+  try {
+    const parent = await signIn('Parent', accounts.parent);
+    openPages.push(parent);
+    expect(await parent.locator('.school-entry-event-title').getByText(expectedStudentName).count() === 0, 'Parent entry event exposed an unnecessary child name instead of its selected-child context.');
+    await parent.locator('[data-testid="school-entry-panel"]').getByText('School entry updates').waitFor();
+    await parent.screenshot({ path: join(screenshotDirectory, 'parent-desktop.png'), fullPage: true });
+    await parent.locator('.child-switcher select').selectOption({ label: accounts.siblingName });
+    await parent.locator('[data-testid="school-entry-panel"][data-loaded="true"]').waitFor({ timeout: 10000 });
+    await parent.locator('[data-testid="school-entry-panel"]').getByText('No entry record available').waitFor({ timeout: 10000 });
+    expect(!(await parent.locator('[data-testid="school-entry-panel"] .school-entry-event.check_in').count()), 'Parent child switching retained the previous child event.');
+    await parent.locator('.child-switcher select').selectOption({ label: expectedStudentName });
+    await parent.locator('[data-testid="school-entry-panel"][data-loaded="true"]').waitFor({ timeout: 10000 });
+    await parent.locator('[data-testid="school-entry-panel"] .school-entry-event.check_in').first().waitFor({ timeout: 10000 });
+    await parent.setViewportSize({ width: 390, height: 844 });
+    await parent.waitForTimeout(250);
+    await parent.screenshot({ path: join(screenshotDirectory, 'parent-mobile.png'), fullPage: true });
+    expect(await parent.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'Parent school-entry view overflows at 390px.');
+    const language = parent.locator('.language-selector select');
+    await language.selectOption('hi');
+    await parent.locator('[data-testid="school-entry-panel"]').getByText('स्कूल प्रवेश अपडेट').waitFor();
+    await language.selectOption('mr');
+    await parent.locator('[data-testid="school-entry-panel"]').getByText('शाळा प्रवेश अपडेट').waitFor();
+
+    for (const [role, email] of [['Teacher', accounts.teacher], ['Principal', accounts.principal]]) {
+      const page = await signIn(role, email);
+      openPages.push(page);
+      const panel = page.locator('[data-testid="school-entry-panel"]');
+      await panel.getByText(expectedStudentName).first().waitFor();
+      expect(await panel.locator('.school-entry-event.check_in').count() > 0, `${role} does not show the persisted check-in.`);
+      await page.screenshot({ path: join(screenshotDirectory, `${role.toLowerCase()}-desktop.png`), fullPage: true });
+      if (role === 'Principal') {
+        expect(await panel.locator('.school-entry-delayed').count() > 0, 'Principal dashboard omitted the delayed/uncertain timestamp indicator.');
+        const fromInput = panel.locator('.school-entry-filters input[type="date"]').nth(0);
+        const toInput = panel.locator('.school-entry-filters input[type="date"]').nth(1);
+        const endDate = await toInput.inputValue();
+        await fromInput.fill(endDate);
+        await panel.getByRole('button', { name: 'Apply dates' }).click();
+        await page.locator('[data-testid="school-entry-panel"][data-loaded="true"]').waitFor({ timeout: 10000 });
+        const eventFilter = panel.locator('.school-entry-filters select');
+        await eventFilter.selectOption('check_out');
+        await page.waitForFunction(() => {
+          const root = document.querySelector('[data-testid="school-entry-panel"]');
+          return root?.getAttribute('data-loaded') === 'true' && root.querySelectorAll('.school-entry-event').length > 0;
+        }, null, { timeout: 10000 });
+        expect(await panel.locator('.school-entry-event.check_out').count() > 0, 'Principal event-type filter returned no check-outs.');
+        expect(await panel.locator('.school-entry-event.check_in').count() === 0, 'Principal event-type filter retained check-ins.');
+        await eventFilter.selectOption('all');
+        await page.waitForFunction(() => document.querySelector('[data-testid="school-entry-panel"]')?.getAttribute('data-loaded') === 'true', null, { timeout: 10000 });
+      }
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(250);
+      await page.screenshot({ path: join(screenshotDirectory, `${role.toLowerCase()}-mobile.png`), fullPage: true });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${role} school-entry view overflows at 390px.`);
+    }
+
+    await parent.locator('.language-selector select').selectOption('en');
+    const previousCheckIns = await Promise.all(openPages.map((page) => page.locator('[data-testid="school-entry-panel"] .school-entry-event.check_in').count()));
+    const liveCheckIn = makeEvent(device.id, credentialRef, 5, { event_type: 'check_in' });
+    const liveResponse = await send(liveCheckIn, device.privateKey);
+    const liveReceipt = await json(liveResponse);
+    expect(liveResponse.status === 202 && liveReceipt.outcome === 'accepted', 'controlled dashboard-refresh check-in was not persisted.');
+    const retryResponse = await send(liveCheckIn, device.privateKey);
+    const retryReceipt = await json(retryResponse);
+    expect(retryResponse.status === 200 && retryReceipt.duplicate === true && retryReceipt.receipt_id === liveReceipt.receipt_id, 'retry did not return the original dashboard-refresh receipt.');
+    expect(await count(admin.from('school_entry_events').select('id', { count: 'exact', head: true }).eq('device_id', device.id).eq('device_event_id', liveCheckIn.event_id)) === 1, 'dashboard-refresh check-in was persisted more than once.');
+    for (let index = 0; index < openPages.length; index += 1) {
+      const page = openPages[index];
+      const panel = page.locator('[data-testid="school-entry-panel"]');
+      await panel.locator('.school-entry-refresh').click();
+      await page.waitForFunction((previous) => {
+        const root = document.querySelector('[data-testid="school-entry-panel"]');
+        return root?.getAttribute('data-loaded') === 'true' && root.querySelectorAll('.school-entry-event.check_in').length > previous;
+      }, previousCheckIns[index], { timeout: 10000 });
+      expect(await panel.locator('.school-entry-event.check_in').count() === previousCheckIns[index] + 1, 'retry rendered a duplicate school-entry event.');
+    }
+
+    await parent.context().setOffline(true);
+    await parent.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await parent.locator('[data-testid="school-entry-panel"][data-connection-state="offline"]').waitFor({ timeout: 10000 });
+    await parent.context().setOffline(false);
+    await parent.evaluate(() => window.dispatchEvent(new Event('online')));
+    await parent.locator('[data-testid="school-entry-panel"][data-connection-state="online"]').waitFor({ timeout: 10000 });
+    expect(externalRequests.length === 0, `Dashboard test contacted a non-loopback endpoint: ${externalRequests.join(', ')}`);
+    console.log(`PASS local Parent/Teacher/Principal dashboard reads, child-switch isolation, Hindi/Marathi labels, changed persisted event visible after explicit refresh in all roles, retry rendered once, offline recovery and 390px overflow check. Synthetic UI screenshots: ${screenshotDirectory}`);
+  } finally {
+    await Promise.all(contexts.map((roleContext) => roleContext.close()));
+    await browser.close();
+  }
+}
+
 async function cleanup() {
   if (created.devices.length) await must(admin.from('device_event_receipts').delete().in('device_id', created.devices));
   if (created.devices.length) await must(admin.from('school_entry_events').delete().in('device_id', created.devices));
@@ -150,10 +287,12 @@ try {
   const classB = await createClass(schoolB, 'A');
   const studentLinked = await createStudent(schoolA, classA, `L-${suffix}`);
   const studentUnlinked = await createStudent(schoolA, classA, `U-${suffix}`);
+  const studentSibling = await createStudent(schoolA, classA, `S-${suffix}`);
   const studentUnassigned = await createStudent(schoolA, classUnassigned, `X-${suffix}`);
   const studentOtherSchool = await createStudent(schoolB, classB, `Z-${suffix}`);
   await must(admin.from('teacher_class_assignments').insert({ teacher_id: teacherA.id, class_id: classA }));
   await must(admin.from('parent_student_links').insert({ parent_id: parentA.id, student_id: studentLinked, status: 'active' }));
+  await must(admin.from('parent_student_links').insert({ parent_id: parentA.id, student_id: studentSibling, status: 'active' }));
   const deviceA = await provision(principalA, `Local synthetic gate ${suffix}`);
   const refLinked = `synth-linked-${suffix}`;
   const refUnlinked = `synth-unlinked-${suffix}`;
@@ -190,8 +329,9 @@ try {
   const second = makeEvent(deviceA.id, refLinked, 4, { event_type: 'check_out' });
   const secondResponse = await send(second, deviceA.privateKey);
   expect(secondResponse.status === 202 && (await json(secondResponse)).outcome === 'accepted', 'synthetic check-out was not accepted');
+  await verifyDashboardViews({ parent: parentA.email, parentId: parentA.id, childId: studentLinked, siblingName: `Synthetic RFID S-${suffix}`, teacher: teacherA.email, principal: principalA.email }, `Synthetic RFID L-${suffix}`, deviceA, refLinked);
   const nonce = randomUUID();
-  const replayBase = makeEvent(deviceA.id, refLinked, 5);
+  const replayBase = makeEvent(deviceA.id, refLinked, 6);
   const replayFirst = await send(replayBase, deviceA.privateKey, { nonce });
   expect(replayFirst.status === 202, 'fresh request nonce was unexpectedly rejected');
   const replaySecond = await send(makeEvent(deviceA.id, refLinked, 6), deviceA.privateKey, { nonce });
