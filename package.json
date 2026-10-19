@@ -28,7 +28,9 @@
     "verify:accessibility-i18n": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.local scripts/verify-accessibility-i18n.mjs",
     "verify:role-navigation": "node --env-file=.env.local scripts/verify-role-navigation.mjs",
     "verify:role-visuals": "node --env-file=.env.local scripts/verify-role-visuals.mjs",
-    "verify:teacher-ai": "node --env-file=.env.local scripts/verify-teacher-ai.mjs"
+    "verify:teacher-ai": "node --env-file=.env.local scripts/verify-teacher-ai.mjs",
+    "simulate:rfid": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-simulator/cli.mjs",
+    "test:rfid": "vitest run scripts/rfid-simulator/core.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

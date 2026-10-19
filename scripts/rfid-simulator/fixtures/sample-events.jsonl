@@ -1,0 +1,2 @@
+{"schema_version":1,"event_id":"10000000-0000-4000-8000-000000000001","device_id":"device-synth-gate-a","credential_ref":"cred-synth-001","event_type":"check_in","observed_at":"2026-10-19T08:00:00+05:30","device_sequence":1}
+{"schema_version":1,"event_id":"10000000-0000-4000-8000-000000000002","device_id":"device-synth-gate-a","credential_ref":"cred-synth-001","event_type":"check_out","observed_at":"2026-10-19T14:00:00+05:30","device_sequence":2}
