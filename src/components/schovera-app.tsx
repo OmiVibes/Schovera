@@ -1667,7 +1667,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
         )}
       </section>}
       </div>}
-      {page === 'profile' && <StudentOverview student={child} classLabel={child?.classes} role="parent" />}
+      {page === 'profile' && <StudentOverview student={child} classLabel={child?.classes} role="parent" parentId={profile.id} />}
       {page === 'home' && <section className="right-now" aria-labelledby="right-now-heading">
         <div className="section-heading"><p className="eyebrow">{t('parent.rightNow')}</p><h2 id="right-now-heading">{t('parent.atAGlance')}</h2></div>
         <div className="right-now-grid">
@@ -1811,7 +1811,7 @@ function AttendanceSummary({
   );
 }
 
-function StudentOverview({ student, classLabel, role }: { student: any; classLabel?: any; role: Role }) {
+function StudentOverview({ student, classLabel, role, parentId }: { student: any; classLabel?: any; role: Role; parentId?: string }) {
   const { language, t } = useI18n();
   const text = (key: string, fallback: string) => role === 'parent' ? t(key) : fallback;
   const db = useMemo(() => createClient(), []);
@@ -1859,7 +1859,10 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
   if (!student) return <section className="card student-profile-empty" id={`${role}-profile`}><span className="section-icon"><Icon name="student" /></span><h2>{role === 'parent' ? t('parent.noChildSelected') : 'Select a student to view their profile'}</h2><p>{role === 'parent' ? t('parent.chooseChild') : 'Choose an authorized student to see their current school context.'}</p></section>;
   const counts = attendance.reduce((total, row) => ({ ...total, [row.status]: total[row.status] + 1 }), { present: 0, absent: 0, late: 0 } as Record<Status, number>);
   const currentUpdates = effectiveUpdates(updates); const latest = currentUpdates[0];
-  const awaiting = currentUpdates.filter((item) => item.importance === 'important' && !item.acknowledgements?.length).length;
+  const isAcknowledged = (item: Update) => role === 'parent'
+    ? Boolean(parentId && item.acknowledgements?.some((acknowledgement) => acknowledgement.parent_id === parentId))
+    : Boolean(item.acknowledgements?.length);
+  const awaiting = currentUpdates.filter((item) => item.importance === 'important' && !isAcknowledged(item)).length;
   const upcoming = assignments.filter((item) => item.due_date >= today()); const next = upcoming[0];
   const grade = classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : student.classes ? `Grade ${student.classes.grade}${student.classes.division}` : text('parent.classFallback', 'Class');
   return <section className="student-profile" id={`${role}-profile`} aria-labelledby={`${role}-profile-heading`}>
@@ -1868,7 +1871,7 @@ function StudentOverview({ student, classLabel, role }: { student: any; classLab
       <div className="student-profile-summary" aria-label={text('parent.profileAtGlance', 'Student profile at a glance')}><article><Icon name="attendance" /><span><small>{text('parent.attendance', 'Attendance')}</small><b>{attendance.length ? localizedStatus(attendance[0].status, t) : text('parent.attendanceNotRecorded', 'Not recorded')}</b></span></article><article><Icon name="updates" /><span><small>{text('parent.profileCommunication', 'Communication')}</small><b>{awaiting ? text('parent.communicationSummaryAwaiting', '{count} awaiting').replace('{count}', String(awaiting)) : latest ? text('parent.communicationUpToDate', 'Up to date') : text('parent.noUpdates', 'No updates')}</b></span></article><article><Icon name="homework" /><span><small>{text('parent.homework', 'Homework')}</small><b>{upcoming.length ? `${upcoming.length} upcoming` : text('parent.homeworkNoneUpcoming', 'None upcoming')}</b></span></article></div>
       <div className="student-profile-grid">
         <section className="card profile-section"><p className="eyebrow">{text('parent.attendance', 'ATTENDANCE')}</p><h2>{text('parent.profileAttendance', 'Recent attendance')}</h2>{errors.attendance ? <p className="error" role="alert">{text('parent.attendanceError', errors.attendance)}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>{text('attendance.present', 'Present')}</span><span><b>{counts.absent}</b>{text('attendance.absent', 'Absent')}</span><span><b>{counts.late}</b>{text('attendance.late', 'Late')}</span></div><p className="hint">{role === 'parent' ? t('parent.attendanceLatest', { status: localizedStatus(attendance[0].status, t), date: displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language) }) : `Latest: ${localizedStatus(attendance[0].status, t)} · ${displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language)}`}</p></> : <p className="empty compact-empty">{text('parent.noAttendanceRecorded', 'No attendance recorded yet.')}</p>}</section>
-        <section className="card profile-section"><p className="eyebrow">{text('parent.profileCommunication', 'COMMUNICATION')}</p><h2>{text('parent.profileCommunication', 'Teacher updates')}</h2>{errors.updates ? <p className="error" role="alert">{text('parent.updatesError', errors.updates)}</p> : latest ? <><p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p><p className="hint">{localizedCategory(latest.category, t)} · {displayDate(latest.sent_at, language)}</p>{latest.importance === 'important' && <p className={awaiting ? 'status pending' : 'status present'}>{awaiting ? t('ack.awaiting') : t('ack.acknowledged')}</p>}</> : <p className="empty compact-empty">{text('parent.noRecentCommunication', 'No teacher updates yet.')}</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">{text('parent.profileCommunication', 'COMMUNICATION')}</p><h2>{text('parent.profileCommunication', 'Teacher updates')}</h2>{errors.updates ? <p className="error" role="alert">{text('parent.updatesError', errors.updates)}</p> : latest ? <><p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p><p className="hint">{localizedCategory(latest.category, t)} · {displayDate(latest.sent_at, language)}</p>{latest.importance === 'important' && <p className={isAcknowledged(latest) ? 'status present' : 'status pending'}>{isAcknowledged(latest) ? t('ack.acknowledged') : t('ack.awaiting')}</p>}</> : <p className="empty compact-empty">{text('parent.noRecentCommunication', 'No teacher updates yet.')}</p>}</section>
         <section className="card profile-section"><p className="eyebrow">{text('parent.homework', 'HOMEWORK')}</p><h2>{text('parent.profileHomework', 'Upcoming homework')}</h2>{errors.homework ? <p className="error" role="alert">{text('parent.homeworkError', errors.homework)}</p> : next ? <><p className="profile-update-title"><span className="update-icon"><Icon name="homework" /></span><b>{next.title}</b></p><p className="hint">{next.subject} · {dueLabel(next.due_date, role === 'parent' ? language : 'en')}</p><p className="hint">{upcoming.length} upcoming assignment{upcoming.length === 1 ? '' : 's'}</p></> : <p className="empty compact-empty">{text('parent.noUpcomingHomework', 'No upcoming homework.')}</p>}</section>
       </div>
     </>}

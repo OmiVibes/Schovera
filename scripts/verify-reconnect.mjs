@@ -53,22 +53,24 @@ async function signedIn(email) {
 
 async function login(page, email, heading) {
   const sockets = [];
-  const realtimeDiagnostics = { frames: 0, replies: 0, successfulReplies: 0, payloadTypes: [], websocketPaths: [], requestPaths: [], failedRequests: [] };
+  const realtimeDiagnostics = { frames: 0, replies: 0, successfulReplies: 0, payloadTypes: [], websocketPaths: [], requestPaths: [], failedRequests: [], consoleErrors: [], pageErrors: [] };
   page.on('request', (request) => {
     try {
       const parsed = new URL(request.url());
-      if (parsed.hostname.endsWith('.supabase.co')) realtimeDiagnostics.requestPaths.push(`${request.method()} ${parsed.pathname}`);
+      if (parsed.hostname.endsWith('.supabase.co') || ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)) realtimeDiagnostics.requestPaths.push(`${request.method()} ${parsed.host}${parsed.pathname}`);
     } catch { /* Ignore non-URL requests. */ }
   });
   page.on('requestfailed', (request) => {
     try {
       const parsed = new URL(request.url());
-      if (parsed.hostname.endsWith('.supabase.co')) realtimeDiagnostics.failedRequests.push(`${request.method()} ${parsed.pathname}: ${request.failure()?.errorText || 'failed'}`);
+      if (parsed.hostname.endsWith('.supabase.co') || ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)) realtimeDiagnostics.failedRequests.push(`${request.method()} ${parsed.host}${parsed.pathname}: ${request.failure()?.errorText || 'failed'}`);
     } catch { /* Ignore non-URL requests. */ }
   });
+  page.on('console', (message) => { if (message.type() === 'error') realtimeDiagnostics.consoleErrors.push(message.text().slice(0, 240)); });
+  page.on('pageerror', (error) => realtimeDiagnostics.pageErrors.push(error.message.slice(0, 240)));
   observedSockets.set(page, sockets);
   const realtimeReady = new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Realtime channel readiness was not observed for ${email} (sockets=${sockets.length}, frames=${realtimeDiagnostics.frames}, replies=${realtimeDiagnostics.replies}, ok=${realtimeDiagnostics.successfulReplies}, payloadTypes=${realtimeDiagnostics.payloadTypes.join(',') || 'none'}, websocketPaths=${realtimeDiagnostics.websocketPaths.join(',') || 'none'}, supabaseRequests=${realtimeDiagnostics.requestPaths.join('|') || 'none'}, failed=${realtimeDiagnostics.failedRequests.join('|') || 'none'}).`)), 20000);
+    const timer = setTimeout(() => reject(new Error(`Realtime channel readiness was not observed for ${email} (sockets=${sockets.length}, frames=${realtimeDiagnostics.frames}, replies=${realtimeDiagnostics.replies}, ok=${realtimeDiagnostics.successfulReplies}, payloadTypes=${realtimeDiagnostics.payloadTypes.join(',') || 'none'}, websocketPaths=${realtimeDiagnostics.websocketPaths.join(',') || 'none'}, supabaseRequests=${realtimeDiagnostics.requestPaths.join('|') || 'none'}, failed=${realtimeDiagnostics.failedRequests.join('|') || 'none'}, consoleErrors=${realtimeDiagnostics.consoleErrors.join('|') || 'none'}, pageErrors=${realtimeDiagnostics.pageErrors.join('|') || 'none'}).`)), 20000);
     page.on('websocket', (socket) => {
       try { realtimeDiagnostics.websocketPaths.push(new URL(socket.url()).pathname); } catch { realtimeDiagnostics.websocketPaths.push('invalid-url'); }
       if (!socket.url().includes('/realtime/v1/websocket')) return;
@@ -410,9 +412,61 @@ try {
   const principalProfileUpdateId = await sendUpdate(teacherClient, assignment.class_id, student.id, principalProfileTitle);
   const { error: principalProfileAckError } = await parentClient.rpc('acknowledge_update', { p_update_id: principalProfileUpdateId });
   if (principalProfileAckError) throw principalProfileAckError;
+  const [persistedProfileAcknowledgements, principalAuthorizedProfileState, otherImportantUpdates] = await Promise.all([
+    must(admin.from('acknowledgements').select('id').eq('update_id', principalProfileUpdateId)),
+    must(principalClient.from('student_updates').select('id,acknowledgements(id,parent_id)').eq('id', principalProfileUpdateId)),
+    must(admin.from('student_updates').select('id,acknowledgements(id)').eq('student_id', student.id).eq('importance', 'important').neq('id', principalProfileUpdateId)),
+  ]);
+  expect(persistedProfileAcknowledgements.length === 1, 'Principal Profile scenario did not persist exactly one Parent acknowledgement.');
+  expect(principalAuthorizedProfileState.length === 1 && principalAuthorizedProfileState[0].acknowledgements?.length === 1, 'Principal RLS query did not read the committed acknowledgement.');
+  const unrelatedAwaitingImportant = otherImportantUpdates.filter((update) => !update.acknowledgements?.length).length;
+  console.log(`Principal Profile acknowledgement preflight passed: persisted=1, principalRls=1, otherImportantAwaiting=${unrelatedAwaitingImportant}.`);
   await restoreConnectivity(principalContext, principalPage);
-  await principalPage.locator('#principal-profile').getByText(principalProfileTitle).waitFor({ state: 'visible', timeout: 20000 });
-  await principalPage.locator('#principal-profile').getByText('Acknowledged').waitFor({ state: 'visible', timeout: 20000 });
+  const principalProfileText = principalPage.locator('#principal-profile');
+  const principalProfileCommunication = principalProfileText.locator('.profile-section').filter({ hasText: principalProfileTitle });
+  const principalProfileFetchStatuses = [];
+  const observePrincipalProfileFetch = (response) => {
+    const responseUrl = new URL(response.url());
+    if (responseUrl.pathname === '/rest/v1/student_updates' && responseUrl.searchParams.get('student_id') === `eq.${student.id}`) {
+      principalProfileFetchStatuses.push(response.status());
+    }
+  };
+  principalPage.on('response', observePrincipalProfileFetch);
+  try {
+    await principalProfileText.getByText(principalProfileTitle).waitFor({ state: 'visible', timeout: 20000 });
+    await principalProfileCommunication.getByText('Acknowledged', { exact: true }).waitFor({ state: 'visible', timeout: 20000 });
+  } catch (error) {
+    const rlsStateAtFailure = await principalClient.from('student_updates').select('id,acknowledgements(id,parent_id)').eq('id', principalProfileUpdateId);
+    const sourceUpdateAtFailure = await admin.from('student_updates').select('id,title,importance,corrects_update_id,sent_at,acknowledgements(id,parent_id)').eq('id', principalProfileUpdateId);
+    console.error(JSON.stringify({
+      diagnosis: 'Principal Student Profile acknowledgement did not render before the assertion deadline.',
+      persistedAcknowledgementRows: persistedProfileAcknowledgements.length,
+      principalRlsAcknowledgementRowsAtFailure: rlsStateAtFailure.data?.[0]?.acknowledgements?.length ?? null,
+      principalRlsQueryError: rlsStateAtFailure.error?.message ?? null,
+      unrelatedAwaitingImportant,
+      profileTitleVisible: await principalProfileText.getByText(principalProfileTitle).isVisible().catch(() => false),
+      profileAcknowledgedVisible: await principalProfileCommunication.getByText('Acknowledged', { exact: true }).isVisible().catch(() => false),
+      profileAwaitingVisible: await principalProfileCommunication.getByText('Awaiting acknowledgement', { exact: true }).isVisible().catch(() => false),
+      profileCommunicationText: await principalProfileCommunication.innerText().catch(() => ''),
+      sourceUpdate: sourceUpdateAtFailure.data?.[0] ? {
+        importance: sourceUpdateAtFailure.data[0].importance,
+        sentAt: sourceUpdateAtFailure.data[0].sent_at,
+        correction: Boolean(sourceUpdateAtFailure.data[0].corrects_update_id),
+        acknowledgementRows: sourceUpdateAtFailure.data[0].acknowledgements?.length ?? null,
+      } : null,
+      sourceUpdateQueryError: sourceUpdateAtFailure.error?.message ?? null,
+      profileUpdateFetchStatuses: principalProfileFetchStatuses,
+      currentUrl: principalPage.url(),
+      principalProfileMatches: await principalPage.locator('#principal-profile').count(),
+      profileSectionCount: await principalProfileText.locator('.profile-section').count(),
+      teacherUpdatesHeadingCount: await principalProfileText.getByRole('heading', { name: 'Teacher updates' }).count(),
+      principalCommunicationCardText: await principalProfileCommunication.first().innerText().catch(() => ''),
+      studentProfileGridCount: await principalProfileText.locator('.student-profile-grid').count(),
+    }));
+    throw error;
+  } finally {
+    principalPage.off('response', observePrincipalProfileFetch);
+  }
   await openSection(principalPage, 'principal', 'communication');
   const expectedProfileMetrics = await expectedPrincipalMetrics(principalProfile.school_id);
   await principalPage.waitForFunction((expected) => Array.from(document.querySelectorAll('.principal-metrics b')).map((element) => Number(element.textContent)).join(',') === expected.join(','), expectedProfileMetrics, { timeout: 20000 });
@@ -459,14 +513,17 @@ try {
   console.log('Teacher Student Profile update + acknowledgement recovery passed.');
 
   const classStudents = await must(admin.from('students').select('id,full_name').eq('class_id', assignment.class_id).eq('active', true));
-  const recentRecords = await must(admin.from('attendance_records').select('attendance_date').in('student_id', classStudents.map((row) => row.id)).gte('attendance_date', shiftSchoolDate(schoolToday(), -90)));
+  const recentRecords = await must(admin.from('attendance_records').select('student_id,attendance_date').in('student_id', classStudents.map((row) => row.id)).gte('attendance_date', shiftSchoolDate(schoolToday(), -90)));
   const occupiedDates = new Set(recentRecords.map((row) => row.attendance_date));
+  const studentRecentDates = recentRecords.filter((row) => row.student_id === student.id).map((row) => row.attendance_date).sort((a, b) => b.localeCompare(a));
+  const oldestVisibleProfileDate = studentRecentDates.length >= 10 ? studentRecentDates[9] : null;
   let profileAttendanceDate = '';
   for (let offset = 0; offset < 90; offset++) {
     const candidate = shiftSchoolDate(schoolToday(), -offset);
-    if (!occupiedDates.has(candidate)) { profileAttendanceDate = candidate; break; }
+    if (!occupiedDates.has(candidate) && (!oldestVisibleProfileDate || candidate >= oldestVisibleProfileDate)) { profileAttendanceDate = candidate; break; }
   }
-  expect(profileAttendanceDate, 'Could not find an unused attendance date for isolated profile recovery.');
+  expect(profileAttendanceDate, 'Could not find an unused attendance date within the Teacher profile recent-attendance window.');
+  const absentCountBeforeProfileAttendance = Number(await teacherPage.locator('#teacher-profile .attendance-counts span').nth(1).locator('b').innerText());
   attendanceStudentIds.push(...classStudents.map((row) => row.id));
   attendanceDates.push(profileAttendanceDate);
   const profileAttendanceRecords = classStudents.map((row) => ({ student_id: row.id, status: row.id === student.id ? 'absent' : 'present' }));
@@ -480,7 +537,10 @@ try {
   const savedAttendanceAudit = await must(admin.from('audit_events').select('id').eq('event_type', 'attendance_saved').eq('actor_id', teacherProfile.id).eq('school_id', teacherProfile.school_id).contains('metadata', { class_id: assignment.class_id, attendance_date: profileAttendanceDate }));
   attendanceAuditIds.push(...savedAttendanceAudit.map((row) => row.id));
   await restoreConnectivity(teacherContext, teacherPage);
-  await teacherPage.locator('#teacher-profile').getByText(new RegExp(`Latest: Absent`)).waitFor({ state: 'visible', timeout: 20000 });
+  await teacherPage.waitForFunction((previousAbsentCount) => {
+    const count = document.querySelector('#teacher-profile .attendance-counts span:nth-child(2) b')?.textContent || '0';
+    return Number(count) > previousAbsentCount;
+  }, absentCountBeforeProfileAttendance, { timeout: 20000 });
   console.log('Teacher Student Profile attendance recovery passed.');
 
   const profileHomeworkTitle = `Reconnect profile homework ${suffix}`;
@@ -611,11 +671,14 @@ try {
   await timetableClassButton.waitFor({ state: 'visible', timeout: 15000 });
   if (!(await timetableClassButton.getAttribute('class'))?.includes('active')) await timetableClassButton.click();
   await teacherPage.locator('#teacher-timetable').waitFor({ state: 'visible', timeout: 15000 });
-  await teacherPage.locator('#teacher-timetable').getByText('All school days').waitFor({ state: 'visible', timeout: 15000 });
+  await teacherPage.locator('#teacher-timetable .timetable-week').getByRole('heading', { name: 'All school days' }).waitFor({ state: 'visible', timeout: 15000 });
   expect((await must(teacherClient.from('timetable_entries').select('id').eq('id', timetableId))).length === 1, 'Assigned Teacher cannot read the timetable row.');
-  await teacherPage.getByText(timetableSubject).first().waitFor({ state: 'visible', timeout: 15000 });
+  // The entry appears in both the Today panel and weekly grid when scheduled
+  // for the current weekday, so intentionally wait on the first visible match.
+  await teacherPage.locator('#teacher-timetable').getByText(timetableSubject, { exact: true }).first().waitFor({ state: 'visible', timeout: 20000 });
+  await teacherPage.locator('#teacher-timetable .timetable-week').getByRole('heading', { name: 'All school days' }).waitFor({ state: 'visible', timeout: 15000 });
   const teacherTimetableBefore = await teacherPage.locator('#teacher-timetable').innerText();
-  expect(teacherTimetableBefore.includes('All school days') && teacherTimetableBefore.includes('Today'), 'Teacher today/weekly timetable did not load.');
+  expect(teacherTimetableBefore.includes('All school days') && teacherTimetableBefore.includes('Today'), `Teacher today/weekly timetable did not load. Rendered profile: ${teacherTimetableBefore}`);
   const teacherTimetableSubject = `Reconnect teacher timetable ${suffix}`;
   await teacherContext.setOffline(true);
   const { data: teacherTimetableId, error: teacherTimetableError } = await principalClient.rpc('save_timetable_entry', {
