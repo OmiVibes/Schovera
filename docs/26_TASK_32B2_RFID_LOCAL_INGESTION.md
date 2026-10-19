@@ -1,5 +1,7 @@
 # Task 32B-2 — Secure local RFID event ingestion
 
+> Historical v1 design. Task 32G now retires `POST /api/device/v1/events` with local-only `410 Gone`; use the assignment-bound v2 route and verifier documented in [Task 32G](31_TASK_32G_RFID_EVENT_V2_IMPLEMENTATION.md). Existing v1 tables, RPC and event history remain for compatibility, but delayed events must not use the old active-reference resolver.
+
 **Status:** Local-only backend and simulator integration. No RFID dashboard, physical reader, hosted Supabase change, or Vercel deployment is included. Every demo event is synthetic; a recorded reader event does not prove a student is physically safe.
 
 ## Data model and migrations

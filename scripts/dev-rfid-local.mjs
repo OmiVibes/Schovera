@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
@@ -13,6 +13,12 @@ function parseEnv(text) {
 }
 
 const root = new URL('../', import.meta.url);
+try {
+  await access(new URL('.env.local', root));
+  throw new Error('RFID local server refuses to start while .env.local exists because Next.js may load it. Use a disposable clean checkout without private environment files.');
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error;
+}
 let testValues;
 let developmentValues;
 try {
@@ -39,6 +45,24 @@ process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = publishableKey;
 process.env.SUPABASE_SERVICE_ROLE_KEY = testEnv.SUPABASE_SERVICE_ROLE_KEY;
 process.env.SCHOVERA_TEST_MODE = 'local';
 process.env.SCHOVERA_RFID_API_MODE = 'local';
+// Never inherit an arbitrary issuer key from the developer shell. V2 is enabled
+// only by the explicit, ignored local keypair created by the local key command.
+delete process.env.SCHOVERA_RFID_CAPABILITY_PRIVATE_KEY;
+delete process.env.SCHOVERA_RFID_CAPABILITY_KEY_ID;
+try {
+  const keyDirectory = new URL('../.local/schovera-rfid-gateway/', import.meta.url);
+  const [privateKey, keyId] = await Promise.all([
+    readFile(new URL('capability-issuer.private.pem', keyDirectory), 'utf8'),
+    readFile(new URL('capability-issuer.key-id', keyDirectory), 'utf8'),
+  ]);
+  const cleanKeyId = keyId.trim();
+  if (!cleanKeyId || !/^[A-Za-z0-9._:-]{1,128}$/.test(cleanKeyId)) throw new Error('invalid local capability key id');
+  process.env.SCHOVERA_RFID_CAPABILITY_PRIVATE_KEY = privateKey;
+  process.env.SCHOVERA_RFID_CAPABILITY_KEY_ID = cleanKeyId;
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw new Error('Local capability issuer keypair is invalid; refusing to start the RFID server.');
+  console.log('Local RFID v2 capability issuer is disabled; run `npm run rfid:capability-key:init` to create a local synthetic keypair.');
+}
 const nextCli = fileURLToPath(new URL('../node_modules/next/dist/bin/next', import.meta.url));
 const child = spawn(process.execPath, [nextCli, 'dev', '--hostname', '127.0.0.1', ...process.argv.slice(2)], {
   cwd: fileURLToPath(root), env: process.env, stdio: 'inherit',

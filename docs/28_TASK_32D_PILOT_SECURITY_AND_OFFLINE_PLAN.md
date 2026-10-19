@@ -2,6 +2,8 @@
 
 **Status:** design and readiness review only. This document does not authorize a real-student pilot, implement hardware/gateway code, change the database, publish Realtime, or deploy the ingestion route.
 
+**Task 32G update:** the local v1 HTTP route described below has since been retired with `410 Gone`. Assignment-bound event v2 and its local-only capability issuer are implemented in [Task 32G](31_TASK_32G_RFID_EVENT_V2_IMPLEMENTATION.md). This does not change the Task 32D recommendation: no real-student offline pilot is authorized or ready, and the durable gateway is still not connected.
+
 **Repository inspected:** `feat/task32c-school-entry-dashboards` at `c48a98066d28e75b32d0ba83aa88921f7224b7c`. The Task 32B-2 schema, local-only route, Task 32A simulator and Task 32C dashboards were inspected. All Task 32D tests remained local and synthetic. No physical reader is available, so electrical compatibility, RF range, reader behavior and outage behavior have not been hardware-tested.
 
 ## Executive recommendation

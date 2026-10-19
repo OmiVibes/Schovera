@@ -146,3 +146,7 @@ Run the synthetic policy test with `npm run test:credential-attribution`; also r
 Task 32G remains **blocked** until the team approves the event-v2 capability issuer/key custody, active-only auto-attribution and unresolved-after-revocation policy, credential non-reuse workflow, and retention/review process. The safe isolated build route is now implemented and verified separately. Then implement migrations/RPC only on local Supabase and add integration cases for actual concurrent revoke/sync, all role RLS, changed capability replay, server key rotation/revocation, cleanup and no attendance mutation. Do not use hosted Supabase, Vercel, real students, or physical cards for that acceptance.
 
 No decision here authorizes a student pilot, hosted ingestion, production migrations, event Realtime, dashboard changes, or deployment.
+
+### Task 32G implementation status
+
+The local-only v2 design described above is implemented in [Task 32G](31_TASK_32G_RFID_EVENT_V2_IMPLEMENTATION.md): authenticated same-school Principal capability issuance, school-scoped key revocation, exact assignment locking, private unresolved receipts, and explicit v1 route retirement. The integration test validates the local database race behavior and RLS. This closes the local event-v2 implementation gate only; it does not authorize Task 32H gateway sync, a pilot, or production use.

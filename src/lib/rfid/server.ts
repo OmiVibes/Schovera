@@ -3,7 +3,7 @@ import { isIP } from 'node:net';
 import { validateEvent, type DeviceEvent } from '../../../scripts/rfid-simulator/core';
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
-const EVENT_PATH = '/api/device/v1/events';
+const DEFAULT_EVENT_PATH = '/api/device/v1/events';
 
 export function isLoopbackHttpUrl(value: string | undefined): boolean {
   if (!value) return false;
@@ -26,9 +26,9 @@ export function isLoopbackHostHeader(value: string | null): boolean {
     && (hostname === 'localhost' || loopbackIp);
 }
 
-export function canonicalSignedMessage(method: string, timestamp: string, nonce: string, body: string): Buffer {
+export function canonicalSignedMessage(method: string, timestamp: string, nonce: string, body: string, path = DEFAULT_EVENT_PATH): Buffer {
   const bodyHash = createHash('sha256').update(body, 'utf8').digest('hex');
-  return Buffer.from(`${method.toUpperCase()}\n${EVENT_PATH}\n${timestamp}\n${nonce}\n${bodyHash}`, 'utf8');
+  return Buffer.from(`${method.toUpperCase()}\n${path}\n${timestamp}\n${nonce}\n${bodyHash}`, 'utf8');
 }
 
 export function verifyDeviceSignature(
@@ -38,11 +38,12 @@ export function verifyDeviceSignature(
   timestamp: string,
   nonce: string,
   body: string,
+  path = DEFAULT_EVENT_PATH,
 ): boolean {
   try {
     const signature = Buffer.from(signatureBase64, 'base64');
     if (signature.length !== 64 || signature.toString('base64') !== signatureBase64) return false;
-    return verify(null, canonicalSignedMessage(method, timestamp, nonce, body), publicKeyPem, signature);
+    return verify(null, canonicalSignedMessage(method, timestamp, nonce, body, path), publicKeyPem, signature);
   } catch {
     return false;
   }

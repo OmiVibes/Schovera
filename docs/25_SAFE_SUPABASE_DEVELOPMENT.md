@@ -141,8 +141,19 @@ Next's existing `next/font/google` imports need Google Fonts assets during a pro
 
 This verifies a local build with synthetic settings, not production deployment configuration or hosted runtime behavior. It does not certify Vercel secrets, network policy, production Supabase security, or resolve any Next.js security advisory. Do not deploy solely because this local build passes.
 
-The new `npm run test:rfid:integration` uses only temporary synthetic schools/users/children/keys; it exercises the actual Task 32A simulator → local Next endpoint → local database flow, authenticated role RLS, dedupe/conflict/concurrency, timestamp/nonce/signature checks, credential reassignment/revocation, device revocation and cleanup. It does not change classroom attendance. It passed with post-cleanup checks confirming temporary event/receipt/school records were removed. The tests do not use hosted Supabase/Vercel and do not prove physical hardware behavior.
+Task 32G supersedes the old v1 integration harness. `POST /api/device/v1/events` now returns local-only `410 Gone`: it has no immutable assignment proof and cannot safely attribute delayed offline records. `npm run test:rfid:integration` now runs the v2 local Supabase integration test using temporary synthetic schools/users/children/devices/keys. It invokes the actual key-registration, capability-issuance, and event-v2 route handlers directly, verifies their loopback gates and role RLS, tests reassignment/revocation races, exact retries/conflicts, and cleanup. It does not connect the durable gateway or change classroom attendance. No Next development server is started, avoiding Next environment discovery of the developer `.env.local` during this integration.
 
-To run the safe local flow, keep the local Supabase stack running, apply pending migrations only after verifying loopback endpoints, start `npm run dev:rfid-local`, then run `npm run test:rfid:integration` in another terminal. Do not paste raw output from `npx supabase status`; it includes local keys. Do not run remote `link`, `db push`, reset, or production migrations.
+The `npm run dev:rfid-local` launcher also refuses to start if `.env.local` exists, because Next may discover it even when the launcher explicitly supplies local Supabase values. Use a disposable clean checkout without private environment files for HTTP/UI server testing; do not move, rename, or edit the developer `.env.local` as a workaround.
+
+Before the test, keep local Supabase running, confirm loopback-only status, apply only local pending migrations, and create a local synthetic issuer keypair once:
+
+```powershell
+npx supabase status # do not share output; it contains local keys
+npx supabase migration up --local
+npm run rfid:capability-key:init
+npm run test:rfid:integration
+```
+
+The initializer writes its private key under the ignored `.local/schovera-rfid-gateway/` directory and prints only the public key. The integration test requires `.env.test.local`, the local keypair, and the local loopback Supabase instance. It registers the key using a synthetic authenticated Principal and cleans up its controlled database rows. Do not paste raw output from `npx supabase status`; do not run remote `link`, `db push`, reset, or production migrations. See [Task 32G](31_TASK_32G_RFID_EVENT_V2_IMPLEMENTATION.md) for scope and current verification limits.
 
 Task 32C may proceed only after reviewing the local implementation and deciding the privacy-preserving dashboard projection. Event Realtime remains unpublished until a minimized signal strategy and the authorized refetch behavior are approved and tested. The local API is intentionally not hardened for public/multi-instance traffic: its rate limiter is in-memory, local transport is plain HTTP loopback, and real device onboarding/key rotation workflows remain out of scope. Keep `.env.local` unchanged and do not expose/tunnel this server.

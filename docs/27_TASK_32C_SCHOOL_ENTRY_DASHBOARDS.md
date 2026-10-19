@@ -2,6 +2,8 @@
 
 **Status:** Implemented and verified against local Supabase with temporary synthetic records only. No physical RFID reader, hosted ingestion, Vercel deployment, or production database change is involved.
 
+**Task 32G compatibility update:** the dashboard's resolved-event table shape and RLS read path remain unchanged. Only event v2 can create new named rows; unresolved v2 receipts are private and do not render under a child's name. The earlier browser refresh screenshots/checks below are historical Task 32C evidence. The current `npm run test:rfid:integration` is the v2 API/RLS verifier and does not rerun the Playwright dashboard visual interaction suite; see [Task 32G](31_TASK_32G_RFID_EVENT_V2_IMPLEMENTATION.md).
+
 ## What was built
 
 The existing Parent, Teacher, and Principal home workspaces now include a responsive School Entry Records panel backed by the Task 32B-2 event table. Reads use the authenticated browser Supabase client and remain subject to the existing `school_entry_events` SELECT RLS policy. There is no privileged dashboard reader, new RPC, RLS policy, migration, dependency, or Realtime publication.

@@ -2,6 +2,8 @@
 
 **Status:** Task 31 design and groundwork. This document proposes future interfaces; it does not claim the RFID, offline gateway, voice, translation, or SMS/IVR features exist.
 
+**RFID contract update:** Task 32G implements a local-only assignment-bound `POST /api/device/v2/events`; the illustrative v1 route below is historical and returns `410 Gone` locally. No gateway sync or hosted device endpoint is enabled. See [Task 32G](31_TASK_32G_RFID_EVENT_V2_IMPLEMENTATION.md).
+
 **Repository baseline inspected:** `3b7ab555ad5e27b7b35c3334403c4d9c943d807c` on `main`; the reported Task 30 commit `267ae6f138b3e1e6ff2aef6009a86974e7b52cbf` is an ancestor, not HEAD. Task 31 work is isolated on `feat/task31-integration-readiness`.
 
 ## 1. Current product and architecture

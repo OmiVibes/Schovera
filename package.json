@@ -39,8 +39,10 @@
     "gateway:sync": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-gateway/cli.mjs sync",
     "gateway:revoke-reader": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-gateway/cli.mjs revoke-reader",
     "test:gateway": "vitest run scripts/rfid-gateway/gateway.test.mjs",
-    "test:rfid:integration": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/verify-rfid-integration.mjs",
-    "test:rfid": "vitest run scripts/rfid-simulator/core.test.ts scripts/lib/local-test-env.test.ts src/lib/rfid/server.test.ts",
+    "test:rfid:integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-rfid-v2.integration.test.ts",
+    "test:rfid:v2-integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-rfid-v2.integration.test.ts",
+    "test:rfid": "vitest run scripts/rfid-simulator/core.test.ts scripts/rfid-simulator/event-v2.test.ts scripts/lib/local-test-env.test.ts src/lib/rfid/server.test.ts",
+    "rfid:capability-key:init": "node scripts/init-rfid-capability-key.mjs",
     "test:credential-attribution": "vitest run scripts/rfid-attribution/attribution.test.mjs",
     "verify:local-i18n-reconnect": "node --env-file=.env.test.local scripts/verify-production-i18n.mjs"
   },
@@ -53,6 +55,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.66.0",
+    "server-only": "^0.0.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.1.12"
   },
