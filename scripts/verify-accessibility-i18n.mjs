@@ -102,6 +102,16 @@ try {
     return Boolean(heading && heading !== 'Your child');
   }, undefined, { timeout: 30000 });
   const languageSelect = page.locator('.language-selector select');
+  const realSpeechCapability = await page.evaluate(() => ({
+    synthesis: typeof window.speechSynthesis !== 'undefined',
+    utterance: typeof window.SpeechSynthesisUtterance !== 'undefined',
+    availableVoiceLocales: typeof window.speechSynthesis === 'undefined'
+      ? []
+      : window.speechSynthesis.getVoices().map((voice) => voice.lang),
+  }));
+  assert.equal(typeof realSpeechCapability.synthesis, 'boolean');
+  assert.equal(typeof realSpeechCapability.utterance, 'boolean');
+  // This is a browser capability inventory, not a claim that audible playback occurred.
   const originalChild = await page.locator('#parent-child-heading').textContent();
   assert.equal(await page.locator('main').count(), 1, 'Authenticated workspace should expose one main landmark.');
   assert.ok(await page.locator('.app-section-nav').getAttribute('aria-label'), 'Workspace navigation is unnamed.');
@@ -117,6 +127,17 @@ try {
     await languageSelect.selectOption(language);
     await page.waitForFunction((code) => document.documentElement.lang === code, language);
     await page.getByRole('heading', { name: translate(language, 'parent.atAGlance') }).waitFor();
+    const speechControls = page.locator('.parent-speech-controls');
+    if (await speechControls.count()) {
+      const listenButton = speechControls.first().getByRole('button', { name: translate(language, 'speech.listen') });
+      assert.ok(await listenButton.count(), `Missing localized notice speech action in ${language}.`);
+      const languageChoice = speechControls.first().getByRole('combobox', { name: translate(language, 'speech.language') });
+      assert.ok(await languageChoice.count(), `Missing accessible language choice in ${language}.`);
+      await listenButton.focus();
+      assert.equal(await listenButton.evaluate((node) => node === document.activeElement), true, 'Listen action is not keyboard reachable.');
+      await page.setViewportSize({ width: 390, height: 844 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `Speech controls overflow at 390px in ${language}.`);
+    }
     assert.equal(await page.locator('#parent-child-heading').textContent(), originalChild, 'Language change altered the selected child.');
     assert.equal(await page.evaluate((key) => localStorage.getItem(key), languageStorageKey), language, 'Language was not persisted locally.');
     for (const width of widths) {
