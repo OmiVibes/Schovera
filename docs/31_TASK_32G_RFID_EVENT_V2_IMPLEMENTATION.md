@@ -85,6 +85,6 @@ The Student Profile and reconnect browser verifiers require the local app to be 
 
 These are local software tests. They do not test physical taps, reader/gateway authentication, the durable gateway, network outage recovery, real school consent, UI visual quality, or production.
 
-## Task 32H gate
+## Task 32H local completion
 
-Task 32H must separately define and test the gateway-to-v2 sync client, queue behavior on expired/revoked capabilities, receipt confirmation and crash windows, renewal/rotation/revocation while offline, and whether a gateway can securely obtain enrollment snapshots. It must remain synthetic/local with loopback guards. Do not connect the existing durable gateway until those decisions and tests pass. A production path additionally needs independent security review, production key custody, hosted HTTPS, distributed rate limits, monitoring, approved retention/privacy operations, and closure of the recorded Next.js advisory.
+The local synthetic gateway-to-v2 sync, durable receipt handling, offline/reopen behavior, credential-revocation/unresolved result, retry/idempotency and Parent/Teacher/Principal RLS/browser checks are implemented and documented in [Task 32H](32_TASK_32H_OFFLINE_LOCAL_SYNC.md). The Parent fixture diagnosis and three consecutive full integration passes are recorded in [Task 32H-DIAG-3](32_TASK_32H_DIAG3_SYNTHETIC_FIXTURE.md). This closes the local software gate only. It does not authorize hosted sync, real-student data, a pilot or physical hardware. Any production path still requires independent security review, production key custody, hosted HTTPS, distributed rate limits, monitoring, approved retention/privacy operations, and closure of the recorded Next.js advisory.

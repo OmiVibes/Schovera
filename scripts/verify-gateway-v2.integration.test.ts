@@ -209,7 +209,7 @@ function eventV2(sequence: number, assignment: string, capability: string, crede
     assignment_capability: capability, event_type: 'check_in', observed_at: new Date().toISOString(), device_sequence: sequence };
 }
 
-async function loginAndCheck(account: Account, expectedTexts: string[], forbiddenTexts: string[] = []) {
+async function loginAndCheck(account: Account, expectedTexts: string[], forbiddenTexts: string[] = [], afterInitialLoad?: (page: import('playwright').Page, panel: import('playwright').Locator) => Promise<void>, keepOpen = false, controlClock = false): Promise<import('playwright').Page | null> {
   const context = await browser.newContext({ locale: 'en-US' });
   const diagnostics: string[] = [];
   let actualParentQuery = '';
@@ -222,6 +222,7 @@ async function loginAndCheck(account: Account, expectedTexts: string[], forbidde
     observedExternal.add(`${requestUrl.protocol}//${requestUrl.host}`); return route.abort();
   });
   const page = await context.newPage();
+  if (controlClock) await page.clock.install();
   page.on('pageerror', (error) => diagnostics.push(`pageerror ${error.message.slice(0, 160)}`));
   page.on('console', (message) => { if (message.type() === 'error') diagnostics.push(`console ${message.text().slice(0, 160)}`); });
   page.on('request', (request) => {
@@ -265,6 +266,9 @@ async function loginAndCheck(account: Account, expectedTexts: string[], forbidde
     }
   });
   await page.goto(new URL('/', appUrl).href, { waitUntil: 'networkidle' });
+  if (account.role === 'parent' && account.id === parentA?.id && studentA) {
+    await page.evaluate(([key, value]) => sessionStorage.setItem(key, value), [`schovera:selected-child:${account.id}`, studentA.id]);
+  }
   if (await page.locator('input[type="email"]').count()) {
     await page.locator('input[type="email"]').fill(account.email);
     await page.locator('input[type="password"]').fill(browserPassword);
@@ -324,6 +328,7 @@ async function loginAndCheck(account: Account, expectedTexts: string[], forbidde
   if (await panel.getByRole('alert').count()) throw new Error(`entry panel load error: ${await panel.getByRole('alert').first().innerText()}, network=${diagnostics.join('; ')}`);
   for (const text of expectedTexts) await panel.locator('.school-entry-event').filter({ hasText: text }).first().waitFor({ state: 'visible', timeout: 12_000 });
   for (const text of forbiddenTexts) await expect.poll(() => panel.getByText(text, { exact: false }).count()).toBe(0);
+  if (afterInitialLoad) await afterInitialLoad(page, panel);
   if (account.role === 'parent') {
     // Playwright's response event handler is async and is not awaited by the
     // browser. Wait until it has parsed the body and captured the matching
@@ -333,7 +338,8 @@ async function loginAndCheck(account: Account, expectedTexts: string[], forbidde
     }).toBe(true);
     await firstParentResponseSnapshot;
   }
-  await context.close();
+  if (!keepOpen) await context.close();
+  return keepOpen ? page : null;
 }
 
 async function checkpointParentLink(point: string) {
@@ -498,11 +504,67 @@ describe('Task 32H gateway to loopback local Supabase', () => {
     const persistedParentLink = await must(admin.from('parent_student_links').select('status,student_id').eq('parent_id', parentA.id).eq('student_id', studentA.id).single());
     expect(persistedParentLink.status).toBe('active');
 
-    await loginAndCheck(parentA, ['Check-in recorded'], [studentB.name]);
+    const parentAssignment = await must(principalA.client.rpc('issue_student_credential', {
+      p_student_id: studentA.id, p_credential_ref: `gateway-parent-${suffix}`, p_credential_version: 1,
+    }));
+    created.credentials.push(parentAssignment);
+    const parentCapability = await issueCapability(principalA, parentAssignment);
+    await must(admin.from('parent_student_links').insert({ parent_id: parentA.id, student_id: studentB.id, status: 'active' }));
+    const parentTransport = new LocalSupabaseV2Transport({ target: appUrl, devicePrivateKey });
+    const parentPage = await loginAndCheck(parentA, ['Check-in recorded'], [], async (page, panel) => {
+      expect(await panel.getAttribute('data-poll-interval-ms')).toBe('20000');
+      expect(await panel.innerText()).toContain(studentA.name);
+      const childSelector = page.locator('.child-switcher select');
+      await expect.poll(() => childSelector.count()).toBe(1);
+      await childSelector.selectOption(studentB.id);
+      await page.waitForFunction(() => document.querySelector('[data-testid="school-entry-panel"]')?.getAttribute('data-loaded') === 'true');
+      expect(await panel.locator('.school-entry-event').count()).toBe(1);
+      expect(await panel.innerText()).toContain(studentB.name);
+      await childSelector.selectOption(studentA.id);
+      await page.waitForFunction(() => document.querySelector('[data-testid="school-entry-panel"]')?.getAttribute('data-loaded') === 'true');
+      expect(await panel.locator('.school-entry-event').count()).toBe(1);
+    }, true, true);
+    await must(admin.from('teacher_class_assignments').insert({ teacher_id: teacherA.id, class_id: classB }));
+    const teacherPage = await loginAndCheck(teacherA, [studentA.name], [studentB.name], async (page, panel) => {
+      const classSelector = panel.locator('.school-entry-control select').first();
+      await classSelector.selectOption(classB);
+      await page.waitForFunction(() => document.querySelector('[data-testid="school-entry-panel"]')?.getAttribute('data-loaded') === 'true');
+      expect(await panel.locator('.school-entry-event').count()).toBe(1);
+      expect(await panel.innerText()).toContain(studentB.name);
+      await classSelector.selectOption(classA);
+      await page.waitForFunction(() => document.querySelector('[data-testid="school-entry-panel"]')?.getAttribute('data-loaded') === 'true');
+      expect(await panel.locator('.school-entry-event').count()).toBe(1);
+      expect(await panel.innerText()).toContain(studentA.name);
+    }, true, true);
+    const principalPage = await loginAndCheck(principalA, [studentA.name, studentB.name], [], undefined, true, true);
+    expect(parentPage && teacherPage && principalPage, 'role dashboards remain mounted for the live polling check').toBeTruthy();
+    const pages = [parentPage!, teacherPage!, principalPage!];
+    const previousByRole = await Promise.all(pages.map((page) => page.locator('[data-testid="school-entry-panel"] .school-entry-event').count()));
+    const automaticEvent = eventV2(4, parentAssignment, parentCapability, `gateway-parent-${suffix}`);
+    expect((await parentTransport.send(automaticEvent)).outcome).toBe('accepted');
+    await Promise.all(pages.map((page) => page.clock.runFor(20_000)));
+    await Promise.all(pages.map((page, index) => page.waitForFunction((previous) => {
+      const root = document.querySelector('[data-testid="school-entry-panel"]');
+      return root?.getAttribute('data-loaded') === 'true' && root.querySelectorAll('.school-entry-event').length > previous;
+    }, previousByRole[index], { timeout: 35_000 })));
+    for (const [index, page] of pages.entries()) {
+      expect(await page.locator('[data-testid="school-entry-panel"] .school-entry-event').count()).toBe(previousByRole[index] + 1);
+      expect(await page.locator('.school-entry-last-updated').count()).toBe(1);
+    }
+    const beforeManualUpdate = await parentPage!.locator('[data-testid="school-entry-panel"] .school-entry-event').count();
+    const manualEvent = { ...eventV2(5, parentAssignment, parentCapability, `gateway-parent-${suffix}`), event_type: 'check_out' as const };
+    expect((await parentTransport.send(manualEvent)).outcome).toBe('accepted');
+    await parentPage!.locator('.school-entry-refresh').click();
+    await parentPage!.waitForFunction((previous) => document.querySelector('[data-testid="school-entry-panel"]')?.querySelectorAll('.school-entry-event').length === previous + 1,
+      beforeManualUpdate, { timeout: 10_000 });
+    expect(await parentPage!.locator('[data-testid="school-entry-panel"] .school-entry-event').count()).toBe(beforeManualUpdate + 1);
+    expect((await parentTransport.send(automaticEvent)).duplicate).toBe(true);
+    expect(await parentPage!.locator('[data-testid="school-entry-panel"] .school-entry-event').count()).toBe(beforeManualUpdate + 1);
+    await Promise.all(pages.map((page) => page.context().close()));
     const linkedParentBrowserSnapshot = fixtureSnapshots.find((item) => item.checkpoint === 'first-browser-parent-query-result' && item.parentScenario === 'linked-parent');
     expectCompleteParentFixture(linkedParentBrowserSnapshot, 'linked Parent browser response');
     const linkedBrowserRls = linkedParentBrowserSnapshot?.rls as { actual_browser_token?: { links?: { rows?: number }; nestedLinks?: { rows?: number }; students?: { rows?: number }; classes?: { rows?: number } } } | undefined;
-    expect(linkedBrowserRls?.actual_browser_token).toMatchObject({ links: { rows: 1 }, nestedLinks: { rows: 1 }, students: { rows: 1 }, classes: { rows: 1 } });
+    expect(linkedBrowserRls?.actual_browser_token).toMatchObject({ links: { rows: 2 }, nestedLinks: { rows: 2 }, students: { rows: 1 }, classes: { rows: 1 } });
     await snapshotFixture('after-parent-dashboard-assertions', parentA.token);
     await loginAndCheck(teacherA, [studentA.name], [studentB.name]);
     await loginAndCheck(principalA, [studentA.name, studentB.name]);

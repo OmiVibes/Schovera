@@ -6,6 +6,7 @@ import { useRealtimeResync } from '@/lib/use-realtime-resync';
 import { getLocale, type Language } from '@/lib/i18n';
 import { useI18n } from '@/lib/i18n-provider';
 import { schoolToday, shiftSchoolDate } from '@/lib/school-date.mjs';
+import { createBoundedPoller, SCHOOL_ENTRY_POLL_INTERVAL_MS } from '@/lib/bounded-polling';
 
 type Role = 'parent' | 'teacher' | 'principal';
 type EntryEvent = {
@@ -28,6 +29,17 @@ type ClassOption = { id: string; grade: string; division: string };
 const PAGE_SIZE = 40;
 const MAX_ROWS = 200;
 const DEFAULT_TIME_ZONE = 'Asia/Kolkata';
+
+function invalidateEntryRequest(
+  requestId: { current: number },
+  activeRequest: { current: AbortController | null },
+  inFlight: { current: boolean },
+) {
+  requestId.current += 1;
+  activeRequest.current?.abort();
+  activeRequest.current = null;
+  inFlight.current = false;
+}
 
 function schoolDayStartIso(day: string, timeZone: string) {
   const [year, month, date] = day.split('-').map(Number);
@@ -79,15 +91,22 @@ export function SchoolEntryPanel({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [backgroundRefreshFailed, setBackgroundRefreshFailed] = useState(false);
   const [total, setTotal] = useState(0);
   const [checkIns, setCheckIns] = useState(0);
   const [checkOuts, setCheckOuts] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState('');
+  const [lastUpdatedContext, setLastUpdatedContext] = useState('');
   const requestId = useRef(0);
   const inFlight = useRef(false);
+  const activeRequest = useRef<AbortController | null>(null);
   const loadedCount = useRef(0);
+  const loadedContextRef = useRef('');
   const filtersTouched = useRef(false);
   const [loadedContext, setLoadedContext] = useState('');
-  const currentContext = role === 'parent' ? child?.id || '' : role === 'teacher' ? classId : schoolId;
+  const childId = child?.id;
+  const currentContext = role === 'parent' ? childId || '' : role === 'teacher' ? classId : schoolId;
   const contextKey = `${role}:${profileId}:${currentContext}:${range.from}:${range.to}:${eventType}`;
 
   useEffect(() => {
@@ -110,72 +129,145 @@ export function SchoolEntryPanel({
     return () => { active = false; };
   }, [db, schoolId]);
 
-  const fetchPage = useCallback(async (append: boolean) => {
-    if (append && inFlight.current) return;
-    if ((role === 'parent' && !child?.id) || (role === 'teacher' && !classId)) {
-      setEvents([]); setTotal(0); setCheckIns(0); setCheckOuts(0); setLoading(false); return;
+  const fetchPage = useCallback(async (append: boolean, source: 'initial' | 'manual' | 'poll' | 'recovery' = 'manual'): Promise<boolean | undefined> => {
+    if (inFlight.current) return undefined;
+    if ((role === 'parent' && !childId) || (role === 'teacher' && !classId)) {
+      setEvents([]); setTotal(0); setCheckIns(0); setCheckOuts(0); setLoading(false); setRefreshing(false); loadedCount.current = 0; loadedContextRef.current = contextKey; return true;
     }
     const id = ++requestId.current;
+    const controller = new AbortController();
+    activeRequest.current = controller;
+    inFlight.current = true;
     const offset = append ? loadedCount.current : 0;
-    if (offset >= MAX_ROWS) return;
-    if (append) inFlight.current = true;
-    if (append) setLoadingMore(true); else { setLoading(true); setError(''); }
-    let studentIds: string[] = [];
-    if (role === 'teacher') {
-      const roster = await db.from('students').select('id').eq('class_id', classId).eq('active', true);
-      if (id !== requestId.current) { if (append) inFlight.current = false; return; }
-      if (roster.error) { setError(t('entry.loadError')); setLoading(false); if (append) inFlight.current = false; return; }
-      studentIds = (roster.data || []).map((row: { id: string }) => row.id);
-      if (!studentIds.length) { setEvents([]); setTotal(0); setLoading(false); loadedCount.current = 0; if (append) inFlight.current = false; return; }
+    if (!append && source !== 'poll' && source !== 'recovery') { setError(''); setBackgroundRefreshFailed(false); }
+    if (append) setLoadingMore(true);
+    else {
+      setRefreshing(true);
+      if (source !== 'poll' && source !== 'recovery' || loadedContextRef.current !== contextKey) setLoading(true);
     }
-    let query = db.from('school_entry_events')
-      .select('id,event_type,observed_at,received_at,sequence_state,timestamp_quality,students!school_entry_events_student_id_fkey!inner(full_name,roll_number,class_id,classes(grade,division))', { count: 'exact' })
-      .gte('received_at', schoolDayStartIso(range.from, timeZone))
-      .lt('received_at', schoolDayStartIso(shiftSchoolDate(range.to, 1), timeZone))
-      .order('received_at', { ascending: false })
-      .range(offset, Math.min(offset + PAGE_SIZE - 1, MAX_ROWS - 1));
-    if (role === 'parent') query = query.eq('student_id', child!.id);
-    if (role === 'teacher') query = query.in('student_id', studentIds);
-    if (role === 'principal') query = query.eq('school_id', schoolId);
-    if (eventType !== 'all') query = query.eq('event_type', eventType);
-    const countType = (type: 'check_in' | 'check_out') => {
-      let countQuery = db.from('school_entry_events').select('id', { count: 'exact', head: true })
+    if (offset >= MAX_ROWS) {
+      inFlight.current = false; activeRequest.current = null; setLoadingMore(false); setRefreshing(false); setLoading(false); return true;
+    }
+    let succeeded = false;
+    try {
+      let studentIds: string[] = [];
+      if (role === 'teacher') {
+        const roster = await db.from('students').select('id').eq('class_id', classId).eq('active', true).abortSignal(controller.signal);
+        if (id !== requestId.current) return undefined;
+        if (roster.error) throw roster.error;
+        studentIds = (roster.data || []).map((row: { id: string }) => row.id);
+        if (!studentIds.length) {
+          setEvents([]); setTotal(0); setCheckIns(0); setCheckOuts(0); setLoading(false); loadedCount.current = 0; loadedContextRef.current = contextKey;
+          setLastUpdatedAt(new Date().toISOString()); setLastUpdatedContext(contextKey); succeeded = true; return true;
+        }
+      }
+      let query = db.from('school_entry_events')
+        .select('id,event_type,observed_at,received_at,sequence_state,timestamp_quality,students!school_entry_events_student_id_fkey!inner(full_name,roll_number,class_id,classes(grade,division))', { count: 'exact' })
         .gte('received_at', schoolDayStartIso(range.from, timeZone))
         .lt('received_at', schoolDayStartIso(shiftSchoolDate(range.to, 1), timeZone))
-        .eq('event_type', type);
-      if (role === 'teacher') countQuery = countQuery.in('student_id', studentIds);
-      if (role === 'principal') countQuery = countQuery.eq('school_id', schoolId);
-      return countQuery;
-    };
-    const [result, inResult, outResult] = await Promise.all([
-      query,
-      role === 'parent' ? Promise.resolve({ count: null, error: null }) : countType('check_in'),
-      role === 'parent' ? Promise.resolve({ count: null, error: null }) : countType('check_out'),
-    ]);
-    if (id === requestId.current) {
-      if (result.error) setError(t('entry.loadError'));
-      else {
-        const nextEvents = (result.data || []) as EntryEvent[];
+        .order('received_at', { ascending: false })
+        .range(offset, Math.min(offset + PAGE_SIZE - 1, MAX_ROWS - 1))
+        .abortSignal(controller.signal);
+      if (role === 'parent') query = query.eq('student_id', childId!);
+      if (role === 'teacher') query = query.in('student_id', studentIds);
+      if (role === 'principal') query = query.eq('school_id', schoolId);
+      if (eventType !== 'all') query = query.eq('event_type', eventType);
+      const countType = (type: 'check_in' | 'check_out') => {
+        let countQuery = db.from('school_entry_events').select('id', { count: 'exact', head: true })
+        .gte('received_at', schoolDayStartIso(range.from, timeZone))
+        .lt('received_at', schoolDayStartIso(shiftSchoolDate(range.to, 1), timeZone))
+          .eq('event_type', type).abortSignal(controller.signal);
+        if (role === 'teacher') countQuery = countQuery.in('student_id', studentIds);
+        if (role === 'principal') countQuery = countQuery.eq('school_id', schoolId);
+        return countQuery;
+      }
+      const [result, inResult, outResult] = await Promise.all([
+        query,
+        role === 'parent' ? Promise.resolve({ count: null, error: null }) : countType('check_in'),
+        role === 'parent' ? Promise.resolve({ count: null, error: null }) : countType('check_out'),
+      ]);
+      if (id !== requestId.current) return undefined;
+      if (result.error) throw result.error;
+      if (inResult.error || outResult.error) throw inResult.error ?? outResult.error;
+      const nextEvents = (result.data || []) as EntryEvent[];
+      if (source === 'poll' && !append && loadedContextRef.current === contextKey) {
+        setEvents((previous) => {
+          const merged = new Map(nextEvents.map((item) => [item.id, item]));
+          previous.forEach((item) => { if (!merged.has(item.id)) merged.set(item.id, item); });
+          const bounded = [...merged.values()].sort((left, right) => Date.parse(right.received_at) - Date.parse(left.received_at)).slice(0, MAX_ROWS);
+          loadedCount.current = bounded.length;
+          return bounded;
+        });
+      } else {
         setEvents((previous) => append ? [...previous, ...nextEvents] : nextEvents);
         loadedCount.current = offset + nextEvents.length;
-        setLoadedContext(contextKey);
-        setTotal(result.count || 0);
-        if (role !== 'parent') { setCheckIns(inResult.count || 0); setCheckOuts(outResult.count || 0); }
-        setError('');
       }
-      setLoading(false); setLoadingMore(false);
+      setLoadedContext(contextKey); loadedContextRef.current = contextKey;
+      setTotal(result.count || 0);
+      if (role !== 'parent') { setCheckIns(inResult.count || 0); setCheckOuts(outResult.count || 0); }
+      setError('');
+      setBackgroundRefreshFailed(false);
+      setLastUpdatedAt(new Date().toISOString()); setLastUpdatedContext(contextKey);
+      succeeded = true;
+    } catch {
+      if (id === requestId.current && !controller.signal.aborted) {
+        const hasLoadedData = loadedContextRef.current === contextKey;
+        const backgroundFailure = source !== 'initial' && hasLoadedData;
+        setBackgroundRefreshFailed(backgroundFailure);
+        setError(t(backgroundFailure ? 'entry.refreshError' : 'entry.loadError'));
+      }
+    } finally {
+      if (activeRequest.current === controller) {
+        activeRequest.current = null;
+        inFlight.current = false;
+      }
+      if (id === requestId.current) {
+        setLoading(false); setLoadingMore(false); setRefreshing(false);
+      }
     }
-    if (append) inFlight.current = false;
-  }, [db, role, child, classId, schoolId, range.from, range.to, eventType, t, contextKey, timeZone]);
+    return succeeded;
+  }, [db, role, childId, classId, schoolId, range.from, range.to, eventType, t, contextKey, timeZone]);
+  const fetchPageRef = useRef(fetchPage);
+  useEffect(() => { fetchPageRef.current = fetchPage; }, [fetchPage]);
 
-  const refresh = useCallback(() => fetchPage(false), [fetchPage]);
+  const refresh = useCallback(async () => {
+    if (typeof document !== 'undefined' && (document.visibilityState !== 'visible' || !navigator.onLine)) return;
+    await fetchPage(false, 'recovery');
+  }, [fetchPage]);
   const { connectionState } = useRealtimeResync(refresh);
   useEffect(() => {
     requestId.current++;
+    activeRequest.current?.abort(); activeRequest.current = null; inFlight.current = false;
     loadedCount.current = 0;
-    const timer = window.setTimeout(() => { void fetchPage(false); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [contextKey, fetchPage]);
+    loadedContextRef.current = '';
+    const timer = window.setTimeout(() => {
+      setRefreshing(false);
+      setLoading(Boolean(currentContext));
+      void fetchPageRef.current(false, 'initial');
+    }, 0);
+    return () => { window.clearTimeout(timer); invalidateEntryRequest(requestId, activeRequest, inFlight); };
+  }, [contextKey, currentContext]);
+
+  useEffect(() => {
+    const isActive = () => document.visibilityState === 'visible' && navigator.onLine;
+    const poller = createBoundedPoller({
+      poll: () => fetchPage(false, 'poll'), isActive,
+    });
+    poller.start();
+    const pause = () => { if (!isActive()) poller.pause(); };
+    const resume = () => { if (isActive()) poller.wake(); else poller.pause(); };
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('online', resume);
+    window.addEventListener('offline', pause);
+    window.addEventListener('focus', resume);
+    return () => {
+      poller.stop();
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('online', resume);
+      window.removeEventListener('offline', pause);
+      window.removeEventListener('focus', resume);
+    };
+  }, [fetchPage]);
   const submitFilters = (event: React.FormEvent) => {
     event.preventDefault();
     if (!rangeDraft.from || !rangeDraft.to || rangeDraft.from > rangeDraft.to) { setError(t('entry.invalidDates')); return; }
@@ -189,14 +281,18 @@ export function SchoolEntryPanel({
   const hasMore = events.length < Math.min(total, MAX_ROWS);
   const visibleEvents = useMemo(() => loadedContext === contextKey ? events : [], [events, loadedContext, contextKey]);
 
+  const initialLoading = loading && loadedContext !== contextKey;
+  const lastUpdated = lastUpdatedContext === contextKey && lastUpdatedAt ? formatDateTime(lastUpdatedAt, language, timeZone) : '';
+
   return (
-    <section className="school-entry-panel" aria-labelledby="school-entry-heading" data-testid="school-entry-panel" data-connection-state={connectionState} data-loaded={loadedContext === contextKey && !loading}>
+    <section className="school-entry-panel" aria-labelledby="school-entry-heading" data-testid="school-entry-panel" data-connection-state={connectionState} data-loaded={loadedContext === contextKey && !loading} data-refreshing={refreshing} data-poll-interval-ms={SCHOOL_ENTRY_POLL_INTERVAL_MS}>
       <header className="school-entry-header">
         <div><p className="eyebrow">{t('entry.eyebrow')}</p><h2 id="school-entry-heading">{title}</h2><p>{description}</p></div>
-        <button type="button" className="secondary school-entry-refresh" onClick={() => void fetchPage(false)} disabled={loading}>
-          {loading ? t('entry.refreshing') : t('entry.refresh')}
+        <button type="button" className="secondary school-entry-refresh" onClick={() => void fetchPage(false, 'manual')} disabled={refreshing || initialLoading}>
+          {refreshing || initialLoading ? t('entry.refreshing') : t('entry.refresh')}
         </button>
       </header>
+      {lastUpdated && <p className="school-entry-last-updated" role="status" aria-live="polite">{t('entry.lastUpdated', { time: lastUpdated })}</p>}
       <p className="school-entry-note">{t('entry.disclaimer')}</p>
       {connectionState !== 'online' && <p className="school-entry-connection" role="status">{t('entry.offline')}</p>}
       {role === 'teacher' && <label className="school-entry-control">{t('entry.class')}
@@ -213,11 +309,11 @@ export function SchoolEntryPanel({
         <button type="submit" className="primary">{t('entry.apply')}</button>
       </form>
       {role !== 'parent' && <div className="school-entry-totals" aria-label={t('entry.totalsLabel')}>
-        <div><span>{t('entry.checkIns')}</span><b>{loading ? '—' : checkIns}</b></div><div><span>{t('entry.checkOuts')}</span><b>{loading ? '—' : checkOuts}</b></div>
+        <div><span>{t('entry.checkIns')}</span><b>{initialLoading ? '—' : checkIns}</b></div><div><span>{t('entry.checkOuts')}</span><b>{initialLoading ? '—' : checkOuts}</b></div>
         <small>{t('entry.periodLabel', { from: range.from, to: range.to })}</small>
       </div>}
-      {error && <p className="error" role="alert">{error}</p>}
-      {!error && (loading ? <div className="school-entry-loading" role="status">{t('entry.loading')}</div> : !currentContext ? <p className="empty compact-empty">{role === 'parent' ? t('entry.noChild') : role === 'teacher' ? t('entry.noClass') : t('entry.noEvents')}</p> : visibleEvents.length === 0 ? <div className="school-entry-empty"><span aria-hidden="true">⌁</span><b>{t('entry.emptyTitle')}</b><p>{t('entry.emptyBody')}</p></div> : (
+      {error && <p className="error" role={backgroundRefreshFailed ? 'status' : 'alert'}>{error}</p>}
+      {(!error || backgroundRefreshFailed) && (initialLoading ? <div className="school-entry-loading" role="status">{t('entry.loading')}</div> : !currentContext ? <p className="empty compact-empty">{role === 'parent' ? t('entry.noChild') : role === 'teacher' ? t('entry.noClass') : t('entry.noEvents')}</p> : visibleEvents.length === 0 ? <div className="school-entry-empty"><span aria-hidden="true">⌁</span><b>{t('entry.emptyTitle')}</b><p>{t('entry.emptyBody')}</p></div> : (
         <>
           <p className="school-entry-count" aria-live="polite">{t('entry.showing', { shown: visibleEvents.length, total })}</p>
           <ol className="school-entry-list">
