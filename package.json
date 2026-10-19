@@ -41,6 +41,7 @@
     "gateway:revoke-reader": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-gateway/cli.mjs revoke-reader",
     "test:gateway": "vitest run scripts/rfid-gateway/gateway.test.mjs scripts/rfid-gateway/local-v2-transport.test.mjs",
     "test:gateway:local-integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-gateway-v2.integration.test.ts",
+    "test:diagnose-parent-postgrest": "node --env-file=.env.test.local scripts/diagnose-parent-postgrest.mjs",
     "test:rfid:integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-rfid-v2.integration.test.ts",
     "test:rfid:v2-integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-rfid-v2.integration.test.ts",
     "test:rfid": "vitest run scripts/rfid-simulator/core.test.ts scripts/rfid-simulator/event-v2.test.ts scripts/lib/local-test-env.test.ts src/lib/rfid/server.test.ts",
