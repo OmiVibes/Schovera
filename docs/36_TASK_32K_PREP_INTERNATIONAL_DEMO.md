@@ -137,6 +137,19 @@ Automated tests use fake voices. Do this on the laptop/browser that will be used
 
 The repository already contains verified local tests for these paths. This Task 32K-PREP documentation does not add schema, routes, data, dependencies or hardware. Run the sequence above on the current branch before a live demonstration; record results from that run rather than reusing historical evidence as if it were new.
 
+### Task 32K-PREP run (2026-10-20)
+
+- Baseline `baa18ceedb1847c374af4f809094b8fb2f922d04`; branch `feat/task32k-prep-demo-readiness`. Final runbook commit is recorded in Git history.
+- Node `22.18.0`, Docker Engine `27.4.0`, Supabase CLI `2.121.0`. Local API and database were available on loopback; all migrations listed by `migration list --local` were applied. Optional imgproxy, edge-runtime and pooler services were stopped; they were not needed by the checks.
+- RFID unit/security tests: passed, 22 tests. Gateway tests: passed, 43 tests. Credential-attribution tests: passed, 20 tests. Polling scheduler tests: passed, 4 tests. Parent voice unit tests: passed, 13 tests. TypeScript and lint passed.
+- `npm test` first encountered a transient Realtime subscription preflight timeout. Its independent rerun passed persistence, Important-update acknowledgement, acknowledgement delivery, role/tenant checks and cleanup.
+- `npm run test:rfid:integration`: passed with temporary synthetic records and cleanup. `npm run test:gateway:local-integration`: passed the complete offline/reopen/local-sync/revocation/idempotency/RLS/browser-polling sequence; it reported no external browser targets and verified cleanup.
+- Student Profile, reconnect, accessibility/i18n, role navigation and role visuals passed. The role visual audit covered 22 destinations at 1440, 1024, 768 and 390 pixels.
+- Parent voice browser controls passed at 390 pixels using a mock engine. Headless Chromium exposed the speech APIs but reported **zero installed voice locales**; audible English/Hindi/Marathi playback was not verified.
+- `npm run build:isolated`: passed on code-equivalent commit `5d3846e846bc8741f0eae7369abaec9a96e7cf02`, before this verification-record-only documentation edit. It reported only generated `.env.production`, verified expected application/API routes and TypeScript, found no synthetic private-variable sentinels in output, allowed only Google Fonts egress through its loopback proxy, and cleaned its isolated snapshot. This is local compilation evidence, not hosted deployment/security evidence.
+- Browser/database verification ran from a disposable detached worktree with generated loopback-only env files and a synthetic issuer key. The server was stopped and the exact temporary worktree removed. Test-owned synthetic DB records were cleaned. Existing shared local demo fixtures, local Supabase data, pre-existing gateway queue and `.env.local` were preserved; `.env.local` was not opened, loaded, copied or modified. No Supabase production or Vercel request was made.
+- Generated visual screenshots remain under the operating-system temporary directory, outside the repository. No package, schema, route, or production files changed.
+
 The safe isolated build (`npm run build:isolated`) compiles a committed tracked-file snapshot with synthetic local settings, checks routes and secret sentinels, and removes its generated temporary directory. It is local compilation evidence only, not hosted deployment review. The dependency audit history still records an unresolved development-only `braces@3.0.3` advisory; review [Task 32J-SEC](35_TASK_32JSEC_DEPENDENCY_SECURITY.md) and re-audit before release. This preparation does not claim the app is production-secure or competition-validated.
 
 ### Manual tasks still required
