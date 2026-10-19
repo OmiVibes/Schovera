@@ -1,15 +1,17 @@
-/* Controlled production acceptance for the Marathi Parent acknowledgement + reconnect path. */
+/* Local-only acceptance for the Marathi Parent acknowledgement + reconnect path. */
 import { randomUUID } from 'node:crypto';
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
+import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+
+assertLocalTestEnvironment();
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const password = process.env.SCHOVERA_DEMO_PASSWORD || 'SchoveraDemo2026!';
-const baseUrl = process.env.SCHOVERA_TEST_URL || 'https://schovera.vercel.app';
+const baseUrl = process.env.SCHOVERA_TEST_URL || 'http://localhost:3000';
 if (!url || !serviceKey || !publishableKey) throw new Error('Required Supabase environment configuration is missing.');
-if (!baseUrl.startsWith('https://')) throw new Error('Production verification requires an HTTPS target.');
 
 const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 const suffix = randomUUID();
@@ -36,7 +38,7 @@ function waitForRealtimeJoin(page, email) {
   const sockets = [];
   const readiness = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
   const timer = setTimeout(() => {
-    if (!settled) { settled = true; rejectReady(new Error(`No confirmed production Realtime subscription for ${email}.`)); }
+    if (!settled) { settled = true; rejectReady(new Error(`No confirmed local Realtime subscription for ${email}.`)); }
   }, 25000);
   page.on('websocket', (socket) => {
     if (!socket.url().includes('/realtime/v1/websocket')) return;
@@ -91,7 +93,7 @@ async function cleanup() {
     if (!leftovers.updates.length && !leftovers.acknowledgements.length && !leftovers.audits.length) break;
     if (attempt === 0) console.warn(`Cleanup verification found ${leftovers.updates.length} update, ${leftovers.acknowledgements.length} acknowledgement, and ${leftovers.audits.length} audit row(s); retrying exact temporary IDs once.`);
   }
-  expect(leftovers && !leftovers.updates.length && !leftovers.acknowledgements.length && !leftovers.audits.length, 'Temporary production update, acknowledgement, or audit rows remain after bounded cleanup.');
+  expect(leftovers && !leftovers.updates.length && !leftovers.acknowledgements.length && !leftovers.audits.length, 'Temporary local update, acknowledgement, or audit rows remain after bounded cleanup.');
   if (priorUpdateIds.length) {
     const current = await must(admin.from('student_updates').select('id').in('id', priorUpdateIds));
     expect(current.length === priorUpdateIds.length, 'Natural Aarav demo updates changed during cleanup.');
@@ -121,14 +123,14 @@ try {
     login(parentPage, parentProfile.email),
     login(principalPage, principalProfile.email),
   ]);
-  expect(teacherReady.sockets.length > 0 && parentReady.sockets.length > 0 && principalReady.sockets.length > 0, 'One or more production role sessions did not establish Realtime sockets.');
+  expect(teacherReady.sockets.length > 0 && parentReady.sockets.length > 0 && principalReady.sockets.length > 0, 'One or more local role sessions did not establish Realtime sockets.');
 
   const parentLanguage = parentPage.locator('.language-selector select');
   await parentLanguage.selectOption('hi');
   await parentPage.waitForFunction(() => document.documentElement.lang === 'hi');
   await parentPage.reload({ waitUntil: 'networkidle' });
   const hindiLanguage = parentPage.locator('.language-selector select');
-  await expect(await hindiLanguage.inputValue() === 'hi', 'Hindi preference did not persist after production refresh.');
+  await expect(await hindiLanguage.inputValue() === 'hi', 'Hindi preference did not persist after local refresh.');
   await parentPage.locator('#parent-child-heading').waitFor({ state: 'visible', timeout: 20000 });
   const hindiChildSelector = parentPage.locator('.child-switcher select');
   if (await hindiChildSelector.count()) await hindiChildSelector.selectOption({ label: 'Aarav Patil' });
@@ -140,7 +142,7 @@ try {
   await parentPage.waitForFunction(() => document.documentElement.lang === 'mr');
   await parentPage.reload({ waitUntil: 'networkidle' });
   const reloadedLanguage = parentPage.locator('.language-selector select');
-  await expect(await reloadedLanguage.inputValue() === 'mr', 'Marathi preference did not persist after production refresh.');
+  await expect(await reloadedLanguage.inputValue() === 'mr', 'Marathi preference did not persist after local refresh.');
   await parentPage.locator('#parent-child-heading').waitFor({ state: 'visible', timeout: 20000 });
   const childSelector = parentPage.locator('.child-switcher select');
   if (await childSelector.count()) await childSelector.selectOption({ label: 'Aarav Patil' });
@@ -228,7 +230,7 @@ try {
       for (const page of pages) {
         await page.reload({ waitUntil: 'networkidle' });
         await page.locator('nav.app-section-nav').waitFor({ state: 'visible', timeout: 20000 });
-        expect(await page.getByText(title, { exact: false }).count() === 0, 'A controlled acceptance update remained visible after production cleanup and refresh.');
+        expect(await page.getByText(title, { exact: false }).count() === 0, 'A controlled acceptance update remained visible after local cleanup and refresh.');
       }
       expect(await pages[1].locator('.language-selector select').inputValue() === 'en', 'Production Parent final smoke check did not return to English.');
       console.log('Production post-cleanup smoke passed for Teacher, Parent, and Principal; controlled UI data absent.');

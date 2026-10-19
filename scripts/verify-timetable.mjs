@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+
+assertLocalTestEnvironment();
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL, serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY, key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, password = process.env.SCHOVERA_DEMO_PASSWORD || 'SchoveraDemo2026!';
 if (!url || !serviceKey || !key) throw new Error('Required Supabase environment configuration is missing.');

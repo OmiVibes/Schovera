@@ -1,4 +1,7 @@
 import { chromium } from 'playwright';
+import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+
+assertLocalTestEnvironment(process.env, { requireServiceRole: false });
 
 const baseUrl = process.env.SCHOVERA_TEST_URL || 'http://localhost:3000';
 const password = process.env.SCHOVERA_DEMO_PASSWORD || 'SchoveraDemo2026!';

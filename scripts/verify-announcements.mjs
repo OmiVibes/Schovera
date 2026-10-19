@@ -1,6 +1,9 @@
 /* Server-only Phase 2B verification. Temporary records are removed by exact IDs. */
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+
+assertLocalTestEnvironment();
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
   serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY,
   publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,

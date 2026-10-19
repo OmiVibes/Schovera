@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import {
   getLanguagePreference,
   getLocale,
@@ -14,6 +15,8 @@ import {
   translate,
 } from '../src/lib/i18n.ts';
 import { formatSchoolDate, schoolToday } from '../src/lib/school-date.mjs';
+
+assertLocalTestEnvironment(process.env, { requireServiceRole: false });
 
 assert.deepEqual(languageOptions.map(({ code }) => code), ['en', 'hi', 'mr']);
 assert.equal(parseLanguage('hi'), 'hi');
