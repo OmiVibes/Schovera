@@ -93,6 +93,7 @@ export async function POST(request: Request) {
   if (data?.outcome !== 'accepted' && data?.outcome !== 'unresolved') return reply(500, { error: 'event processing result unavailable' });
   return reply(data.duplicate ? 200 : 202, {
     receipt_id: data.receipt_id,
+    event_id: event.event_id,
     outcome: data.outcome,
     sequence_state: data.sequence_state,
     received_at: data.received_at,

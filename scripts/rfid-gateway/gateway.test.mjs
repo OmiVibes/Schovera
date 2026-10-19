@@ -3,10 +3,13 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { generateKeyPairSync, randomUUID } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { openGatewayDatabase } from './storage.mjs';
 import { hashReaderKey, ingestReaderSubmission, signReaderSubmission, LocalAcknowledgementLost } from './ingress.mjs';
 import { FakeLocalTransport, syncPendingEvents } from './transport.mjs';
 import { assertSafeTarget } from '../rfid-simulator/core.ts';
+import { canonicalEventV2, eventV2Hash } from '../rfid-simulator/event-v2.ts';
+import { syncPendingV2Events } from './local-v2-transport.mjs';
 
 const directories = [];
 const stores = [];
@@ -38,7 +41,7 @@ function event(overrides = {}) {
 }
 
 function submit(store, input = event(), options = {}) {
-  const submission = signReaderSubmission(input, { readerId, key: readerKey, timestamp: NOW, nonce: options.nonce ?? randomUUID() });
+  const submission = signReaderSubmission(input, { readerId: options.readerId ?? readerId, key: options.readerKey ?? readerKey, timestamp: NOW, nonce: options.nonce ?? randomUUID() });
   submission.readerKey = options.readerKey ?? readerKey;
   return ingestReaderSubmission(store, submission, { now: options.now ?? NOW, ...options.faults });
 }
@@ -52,7 +55,7 @@ describe('durable local gateway', () => {
     const store = setup();
     expect(store.db.prepare('PRAGMA journal_mode').get().journal_mode).toBe('wal');
     expect(store.db.prepare('PRAGMA foreign_keys').get().foreign_keys).toBe(1);
-    expect(store.db.prepare('PRAGMA user_version').get().user_version).toBe(1);
+    expect(store.db.prepare('PRAGMA user_version').get().user_version).toBe(2);
   });
   it('2 rejects network-share database paths', () => {
     expect(() => openGatewayDatabase('\\\\server\\share\\gateway.sqlite')).toThrow(/network share/);
@@ -66,7 +69,7 @@ describe('durable local gateway', () => {
   it('4 refuses an unsupported nonzero schema version', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'schovera-gateway-version-')); directories.push(dir);
     const db = openGatewayDatabase(path.join(dir, 'db.sqlite'));
-    db.db.exec('PRAGMA user_version = 2'); db.close();
+    db.db.exec('PRAGMA user_version = 3'); db.close();
     expect(() => openGatewayDatabase(path.join(dir, 'db.sqlite'))).toThrow(/newer than this simulator supports/);
   });
   it('5 accepts a valid authenticated synthetic event and returns a durable receipt', () => {
@@ -159,6 +162,18 @@ describe('durable local gateway', () => {
     const reopened = openGatewayDatabase(dbPath); stores.push(reopened);
     expect(reopened.getEvent(deviceId, input.event_id).queue_state).toBe('pending');
   });
+  it('recovers a process killed during synchronization as pending without changing its payload', () => {
+    const store = setup(); const input = event(); submit(store, input);
+    const original = store.getEvent(deviceId, input.event_id);
+    store.startAttempt(deviceId, input.event_id, new Date(NOW).toISOString());
+    expect(store.getEvent(deviceId, input.event_id).queue_state).toBe('syncing');
+    const dbPath = store.filePath; store.close(); stores.splice(stores.indexOf(store), 1);
+    const reopened = openGatewayDatabase(dbPath); stores.push(reopened);
+    expect(reopened.getEvent(deviceId, input.event_id)).toMatchObject({
+      queue_state: 'pending', canonical_payload: original.canonical_payload, payload_hash: original.payload_hash,
+      local_receipt_id: original.local_receipt_id, last_error_class: 'interrupted_sync_recovered',
+    });
+  });
   it('21 enforces bounded local queue capacity and fails closed', () => {
     const store = setup({ maxEvents: 1 }); submit(store, event());
     expect(() => submit(store, event({ device_sequence: 2 }))).toThrow(/queue is full/);
@@ -226,5 +241,62 @@ describe('durable local gateway', () => {
   it('32 distinguishes queue records from classroom attendance (no attendance schema/table)', () => {
     const store = setup(); submit(store);
     expect(store.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='attendance_records'").get()).toBeUndefined();
+  });
+  it('migrates v1 SQLite non-destructively and preserves ambiguous pending payloads', async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'schovera-gateway-v1-migration-')); directories.push(dir);
+    const dbPath = path.join(dir, 'gateway.sqlite');
+    const legacy = new DatabaseSync(dbPath);
+    legacy.exec(`
+      PRAGMA foreign_keys=ON;
+      CREATE TABLE gateway_readers(reader_id TEXT PRIMARY KEY,device_id TEXT NOT NULL UNIQUE,token_sha256 TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL) STRICT;
+      INSERT INTO gateway_readers VALUES('${readerId}','${deviceId}','${hashReaderKey(readerKey)}',1,'${new Date(NOW).toISOString()}');
+      CREATE TABLE gateway_events(
+        event_id TEXT NOT NULL,device_id TEXT NOT NULL,reader_id TEXT NOT NULL REFERENCES gateway_readers(reader_id),
+        canonical_payload TEXT NOT NULL,payload_hash TEXT NOT NULL,event_type TEXT NOT NULL,
+        device_sequence INTEGER NOT NULL,observed_at TEXT NOT NULL,sequence_state TEXT NOT NULL,
+        queue_state TEXT NOT NULL DEFAULT 'pending' CHECK(queue_state IN ('pending','delivered','attention')),
+        attempt_count INTEGER NOT NULL DEFAULT 0,next_retry_at TEXT,last_error_class TEXT,
+        local_receipt_id TEXT NOT NULL UNIQUE,local_received_at TEXT NOT NULL,remote_receipt_id TEXT,
+        remote_received_at TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,
+        PRIMARY KEY(device_id,event_id),UNIQUE(reader_id,device_sequence)) STRICT;
+      CREATE TABLE gateway_nonces(reader_id TEXT NOT NULL REFERENCES gateway_readers(reader_id),nonce TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(reader_id,nonce)) STRICT;
+      CREATE TABLE fake_transport_receipts(device_id TEXT NOT NULL,event_id TEXT NOT NULL,payload_hash TEXT NOT NULL,receipt_id TEXT NOT NULL UNIQUE,received_at TEXT NOT NULL,PRIMARY KEY(device_id,event_id)) STRICT;
+      CREATE INDEX gateway_events_queue_idx ON gateway_events(queue_state,next_retry_at,created_at);
+      PRAGMA user_version=1;
+    `);
+    const legacyEvent = event();
+    const legacyPayload = JSON.stringify(legacyEvent);
+    const legacyHash = 'a'.repeat(64);
+    legacy.prepare(`INSERT INTO gateway_events(event_id,device_id,reader_id,canonical_payload,payload_hash,event_type,device_sequence,
+      observed_at,sequence_state,queue_state,attempt_count,next_retry_at,last_error_class,local_receipt_id,local_received_at,
+      remote_receipt_id,remote_received_at,created_at,updated_at) VALUES(?,?,?,?,?,?,? ,?,'in_order','pending',2,NULL,'offline',?, ?,NULL,NULL,?,?)`)
+      .run(legacyEvent.event_id,deviceId,readerId,legacyPayload,legacyHash,legacyEvent.event_type,legacyEvent.device_sequence,
+        legacyEvent.observed_at,'legacy-local-receipt',new Date(NOW).toISOString(),new Date(NOW).toISOString(),new Date(NOW).toISOString());
+    legacy.close();
+    const migrated = openGatewayDatabase(dbPath); stores.push(migrated);
+    const before = migrated.getEvent(deviceId, legacyEvent.event_id);
+    expect(migrated.db.prepare('PRAGMA user_version').get().user_version).toBe(2);
+    expect(before).toMatchObject({ queue_state: 'pending', canonical_payload: legacyPayload, payload_hash: legacyHash, local_receipt_id: 'legacy-local-receipt', attempt_count: 2 });
+    expect((await syncPendingV2Events(migrated, { send: () => { throw new Error('legacy payload must never be sent'); } }, { now: NOW }))[0])
+      .toMatchObject({ state: 'attention_required', error_class: 'legacy_v1_sync_blocked' });
+    const after = migrated.getEvent(deviceId, legacyEvent.event_id);
+    expect(after).toMatchObject({ queue_state: 'attention', canonical_payload: legacyPayload, payload_hash: legacyHash, local_receipt_id: 'legacy-local-receipt' });
+  });
+  it('stores and re-authenticates the complete v2 assignment-bound payload without rewriting it', () => {
+    const store = setup();
+    const assignedDevice = randomUUID();
+    const assignedReader = randomUUID();
+    const key = 'b'.repeat(64);
+    store.registerReader({ readerId: assignedReader, deviceId: assignedDevice, tokenHash: hashReaderKey(key), now: new Date(NOW).toISOString() });
+    const input = { schema_version: 2, event_id: randomUUID(), device_id: assignedDevice, credential_ref: 'opaque-credential-v2',
+      credential_assignment_id: randomUUID(), credential_assignment_version: 4, assignment_capability: 'signed.synthetic-capability',
+      event_type: 'check_in', observed_at: new Date(NOW).toISOString(), device_sequence: 1 };
+    const receipt = submit(store, input, { readerId: assignedReader, readerKey: key });
+    const stored = store.getEvent(assignedDevice, input.event_id);
+    expect(receipt).toMatchObject({ event_id: input.event_id, outcome: 'recorded_locally', queue_state: 'pending' });
+    expect(stored.canonical_payload).toBe(canonicalEventV2(input));
+    expect(stored.payload_hash).toBe(eventV2Hash(input));
+    expect(submit(store, input, { readerId: assignedReader, readerKey: key }).duplicate).toBe(true);
+    expect(() => submit(store, { ...input, credential_assignment_version: 5 }, { readerId: assignedReader, readerKey: key })).toThrow(/different content/);
   });
 });

@@ -2,7 +2,38 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-export const GATEWAY_SCHEMA_VERSION = 1;
+export const GATEWAY_SCHEMA_VERSION = 2;
+
+function createEventsTableSql(tableName = 'gateway_events') {
+  return `CREATE TABLE ${tableName} (
+    event_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    reader_id TEXT NOT NULL REFERENCES gateway_readers(reader_id),
+    canonical_payload TEXT NOT NULL,
+    payload_hash TEXT NOT NULL CHECK(length(payload_hash) = 64),
+    event_type TEXT NOT NULL CHECK(event_type IN ('check_in', 'check_out')),
+    device_sequence INTEGER NOT NULL CHECK(device_sequence > 0),
+    observed_at TEXT NOT NULL,
+    sequence_state TEXT NOT NULL CHECK(sequence_state IN ('in_order', 'gap', 'out_of_order')),
+    clock_quality TEXT NOT NULL DEFAULT 'unknown' CHECK(clock_quality IN ('unknown', 'ok', 'uncertain')),
+    clock_skew_ms INTEGER,
+    queue_state TEXT NOT NULL DEFAULT 'pending' CHECK(queue_state IN ('pending', 'syncing', 'delivered', 'attention')),
+    attempt_count INTEGER NOT NULL DEFAULT 0 CHECK(attempt_count >= 0),
+    last_attempt_at TEXT,
+    next_retry_at TEXT,
+    last_error_class TEXT,
+    local_receipt_id TEXT NOT NULL UNIQUE,
+    local_received_at TEXT NOT NULL,
+    remote_receipt_id TEXT,
+    remote_received_at TEXT,
+    remote_outcome TEXT CHECK(remote_outcome IS NULL OR remote_outcome IN ('accepted', 'unresolved')),
+    remote_sequence_state TEXT CHECK(remote_sequence_state IS NULL OR remote_sequence_state IN ('in_order', 'gap', 'out_of_order')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (device_id, event_id),
+    UNIQUE (reader_id, device_sequence)
+  ) STRICT;`;
+}
 
 function assertLocalFilePath(filePath) {
   if (typeof filePath !== 'string' || !filePath.trim()) throw new Error('gateway database path is required');
@@ -36,7 +67,7 @@ export function openGatewayDatabase(filePath, { maxEvents = 10_000 } = {}) {
     if (version > GATEWAY_SCHEMA_VERSION) {
       throw new Error(`gateway database schema ${version} is newer than this simulator supports (${GATEWAY_SCHEMA_VERSION})`);
     }
-    if (version !== 0 && version !== GATEWAY_SCHEMA_VERSION) {
+    if (version !== 0 && version !== 1 && version !== GATEWAY_SCHEMA_VERSION) {
       throw new Error(`gateway database schema ${version} is unsupported; preserve the file for review`);
     }
     const integrity = db.prepare('PRAGMA integrity_check').get().integrity_check;
@@ -64,14 +95,19 @@ export function openGatewayDatabase(filePath, { maxEvents = 10_000 } = {}) {
             device_sequence INTEGER NOT NULL CHECK(device_sequence > 0),
             observed_at TEXT NOT NULL,
             sequence_state TEXT NOT NULL CHECK(sequence_state IN ('in_order', 'gap', 'out_of_order')),
-            queue_state TEXT NOT NULL DEFAULT 'pending' CHECK(queue_state IN ('pending', 'delivered', 'attention')),
+            clock_quality TEXT NOT NULL DEFAULT 'unknown' CHECK(clock_quality IN ('unknown', 'ok', 'uncertain')),
+            clock_skew_ms INTEGER,
+            queue_state TEXT NOT NULL DEFAULT 'pending' CHECK(queue_state IN ('pending', 'syncing', 'delivered', 'attention')),
             attempt_count INTEGER NOT NULL DEFAULT 0 CHECK(attempt_count >= 0),
+            last_attempt_at TEXT,
             next_retry_at TEXT,
             last_error_class TEXT,
             local_receipt_id TEXT NOT NULL UNIQUE,
             local_received_at TEXT NOT NULL,
             remote_receipt_id TEXT,
             remote_received_at TEXT,
+            remote_outcome TEXT CHECK(remote_outcome IS NULL OR remote_outcome IN ('accepted', 'unresolved')),
+            remote_sequence_state TEXT CHECK(remote_sequence_state IS NULL OR remote_sequence_state IN ('in_order', 'gap', 'out_of_order')),
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             PRIMARY KEY (device_id, event_id),
@@ -95,10 +131,30 @@ export function openGatewayDatabase(filePath, { maxEvents = 10_000 } = {}) {
           ) STRICT;
 
           CREATE INDEX gateway_events_queue_idx ON gateway_events(queue_state, next_retry_at, created_at);
-          PRAGMA user_version = ${GATEWAY_SCHEMA_VERSION};
         `);
+        db.exec(`PRAGMA user_version = ${GATEWAY_SCHEMA_VERSION};`);
+      });
+    } else if (version === 1) {
+      transaction(db, () => {
+        db.exec(`ALTER TABLE gateway_events RENAME TO gateway_events_v1;`);
+        db.exec(createEventsTableSql('gateway_events'));
+        db.exec(`INSERT INTO gateway_events(
+          event_id,device_id,reader_id,canonical_payload,payload_hash,event_type,device_sequence,
+          observed_at,sequence_state,clock_quality,clock_skew_ms,queue_state,attempt_count,next_retry_at,last_error_class,
+          local_receipt_id,local_received_at,remote_receipt_id,remote_received_at,created_at,updated_at
+        ) SELECT event_id,device_id,reader_id,canonical_payload,payload_hash,event_type,device_sequence,
+          observed_at,sequence_state,'unknown',NULL,queue_state,attempt_count,next_retry_at,last_error_class,
+          local_receipt_id,local_received_at,remote_receipt_id,remote_received_at,created_at,updated_at
+          FROM gateway_events_v1;`);
+        db.exec('DROP TABLE gateway_events_v1;');
+        db.exec('CREATE INDEX gateway_events_queue_idx ON gateway_events(queue_state, next_retry_at, created_at);');
+        db.exec(`PRAGMA user_version = ${GATEWAY_SCHEMA_VERSION};`);
       });
     }
+    // A process killed while a request was in flight has no durable remote receipt.
+    // Keep the immutable payload and retry it with the same event ID and a fresh nonce.
+    db.prepare(`UPDATE gateway_events SET queue_state='pending', last_error_class='interrupted_sync_recovered',
+      next_retry_at=NULL, updated_at=? WHERE queue_state='syncing'`).run(new Date().toISOString());
     db.exec('PRAGMA foreign_keys = ON;');
     const configuredCapacity = Number.isSafeInteger(maxEvents) && maxEvents > 0 ? maxEvents : 10_000;
     return new GatewayStore(db, resolved, configuredCapacity);
@@ -156,14 +212,15 @@ export class GatewayStore {
     return Number(this.db.prepare('SELECT COUNT(*) AS count FROM gateway_events').get().count);
   }
 
-  insertPending({ event, readerId, canonicalPayload, payloadHash, sequenceState, receiptId, now }) {
+  insertPending({ event, readerId, canonicalPayload, payloadHash, sequenceState, clockQuality = 'unknown', clockSkewMs = null, receiptId, now }) {
     this.db.prepare(`INSERT INTO gateway_events(
       event_id, device_id, reader_id, canonical_payload, payload_hash, event_type,
-      device_sequence, observed_at, sequence_state, queue_state, local_receipt_id,
+      device_sequence, observed_at, sequence_state, clock_quality, clock_skew_ms, queue_state, local_receipt_id,
       local_received_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`)
       .run(event.event_id, event.device_id, readerId, canonicalPayload, payloadHash,
         event.event_type, event.device_sequence, event.observed_at, sequenceState,
+        clockQuality, Number.isSafeInteger(clockSkewMs) ? clockSkewMs : null,
         receiptId, now, now, now);
   }
 
@@ -182,19 +239,20 @@ export class GatewayStore {
 
   startAttempt(deviceId, eventId, now) {
     this.db.prepare(`UPDATE gateway_events SET attempt_count = attempt_count + 1,
-      next_retry_at = NULL, updated_at = ? WHERE device_id = ? AND event_id = ? AND queue_state = 'pending'`)
-      .run(now, deviceId, eventId);
+      queue_state = 'syncing', last_attempt_at = ?, next_retry_at = NULL, updated_at = ?
+      WHERE device_id = ? AND event_id = ? AND queue_state = 'pending'`)
+      .run(now, now, deviceId, eventId);
   }
 
   recordRetry(deviceId, eventId, { nextRetryAt, errorClass, now }) {
     this.db.prepare(`UPDATE gateway_events SET queue_state = 'pending', next_retry_at = ?,
-      last_error_class = ?, updated_at = ? WHERE device_id = ? AND event_id = ? AND queue_state = 'pending'`)
+      last_error_class = ?, updated_at = ? WHERE device_id = ? AND event_id = ? AND queue_state IN ('pending','syncing')`)
       .run(nextRetryAt, errorClass, now, deviceId, eventId);
   }
 
   markAttention(deviceId, eventId, { errorClass, now }) {
     this.db.prepare(`UPDATE gateway_events SET queue_state = 'attention', next_retry_at = NULL,
-      last_error_class = ?, updated_at = ? WHERE device_id = ? AND event_id = ? AND queue_state = 'pending'`)
+      last_error_class = ?, updated_at = ? WHERE device_id = ? AND event_id = ? AND queue_state IN ('pending','syncing')`)
       .run(errorClass, now, deviceId, eventId);
   }
 
@@ -202,9 +260,20 @@ export class GatewayStore {
     return transaction(this.db, () => {
       beforeCommit?.();
       this.db.prepare(`UPDATE gateway_events SET queue_state = 'delivered', remote_receipt_id = ?,
-        remote_received_at = ?, next_retry_at = NULL, last_error_class = NULL, updated_at = ?
-        WHERE device_id = ? AND event_id = ? AND queue_state = 'pending'`)
-        .run(receipt.receipt_id, receipt.received_at, now, deviceId, eventId);
+        remote_received_at = ?, remote_outcome = ?, remote_sequence_state = ?, next_retry_at = NULL,
+        last_error_class = NULL, updated_at = ? WHERE device_id = ? AND event_id = ? AND queue_state IN ('pending','syncing')`)
+        .run(receipt.receipt_id, receipt.received_at, receipt.outcome ?? null, receipt.sequence_state ?? null, now, deviceId, eventId);
+    });
+  }
+
+  markRemoteAttention(deviceId, eventId, receipt, errorClass, now, beforeCommit) {
+    return transaction(this.db, () => {
+      beforeCommit?.();
+      this.db.prepare(`UPDATE gateway_events SET queue_state='attention', remote_receipt_id=?,
+        remote_received_at=?, remote_outcome=?, remote_sequence_state=?, next_retry_at=NULL,
+        last_error_class=?, updated_at=? WHERE device_id=? AND event_id=? AND queue_state IN ('pending','syncing')`)
+        .run(receipt.receipt_id, receipt.received_at, receipt.outcome, receipt.sequence_state ?? null,
+          errorClass, now, deviceId, eventId);
     });
   }
 
@@ -225,7 +294,9 @@ export class GatewayStore {
     const oldestAt = oldest ? Date.parse(oldest.created_at) : null;
     return {
       pending: counts.pending ?? 0,
-      delivered_to_fake_transport: counts.delivered ?? 0,
+      synchronizing: counts.syncing ?? 0,
+      delivered_to_fake_transport: Number(this.db.prepare("SELECT COUNT(*) AS count FROM gateway_events WHERE queue_state='delivered' AND remote_receipt_id LIKE 'fake-%'").get().count),
+      delivered_to_local_server: Number(this.db.prepare("SELECT COUNT(*) AS count FROM gateway_events WHERE queue_state='delivered' AND remote_outcome='accepted'").get().count),
       attention_required: counts.attention ?? 0,
       total_retained: this.eventCount(),
       oldest_pending_age_seconds: oldestAt === null ? null : Math.max(0, Math.floor((now - oldestAt) / 1000)),

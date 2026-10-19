@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { canonicalEvent, eventHash, validateEvent } from '../rfid-simulator/core.ts';
+import { canonicalGatewayEvent, gatewayEventHash, validateGatewayEvent } from './event-contract.mjs';
 
 const MAX_EVENT_BYTES = 16 * 1024;
 const MAX_CLOCK_SKEW_MS = 5 * 60_000;
@@ -25,7 +25,7 @@ export function hashReaderKey(key) {
 }
 
 export function signReaderSubmission(event, { readerId, key, timestamp = Date.now(), nonce = randomUUID() }) {
-  const payloadHash = eventHash(event);
+  const payloadHash = gatewayEventHash(event);
   const signature = createHmac('sha256', key).update(signingText({ readerId, timestamp, nonce, payloadHash })).digest('hex');
   return { readerId, timestamp: String(timestamp), nonce, signature, event };
 }
@@ -41,10 +41,10 @@ export function ingestReaderSubmission(store, submission, {
   beforeCommit,
   afterCommitBeforeAck,
 } = {}) {
-  const validation = validateEvent(submission?.event);
+  const validation = validateGatewayEvent(submission?.event);
   if (!validation.ok) throw new GatewayRejection('invalid_event', validation.error);
   const event = validation.event;
-  const canonicalPayload = canonicalEvent(event);
+  const canonicalPayload = canonicalGatewayEvent(event);
   if (Buffer.byteLength(canonicalPayload, 'utf8') > MAX_EVENT_BYTES) {
     throw new GatewayRejection('event_too_large', 'event exceeds the local 16 KiB limit');
   }
@@ -59,14 +59,14 @@ export function ingestReaderSubmission(store, submission, {
     throw new GatewayRejection('invalid_nonce', 'local reader nonce is invalid');
   }
   const expected = createHmac('sha256', submission.readerKey)
-    .update(signingText({ readerId: submission.readerId, timestamp: submission.timestamp, nonce: submission.nonce, payloadHash: eventHash(event) }))
+    .update(signingText({ readerId: submission.readerId, timestamp: submission.timestamp, nonce: submission.nonce, payloadHash: gatewayEventHash(event) }))
     .digest('hex');
   if (!constantTimeEqual(expected, submission.signature)) throw new GatewayRejection('invalid_authentication', 'local reader authentication failed');
   if (hashReaderKey(submission.readerKey) !== reader.token_sha256) throw new GatewayRejection('invalid_authentication', 'local reader authentication failed');
 
   const prior = store.getEvent(event.device_id, event.event_id);
   if (prior) {
-    if (prior.payload_hash !== eventHash(event)) throw new GatewayRejection('event_conflict', 'event ID was already used with different content');
+    if (prior.payload_hash !== gatewayEventHash(event)) throw new GatewayRejection('event_conflict', 'event ID was already used with different content');
     return acknowledgement(prior, true);
   }
   if (store.nonceExists(reader.reader_id, submission.nonce)) throw new GatewayRejection('nonce_replay', 'local reader nonce has already been used');
@@ -79,6 +79,8 @@ export function ingestReaderSubmission(store, submission, {
   const sequenceState = event.device_sequence === maximum + 1
     ? 'in_order'
     : event.device_sequence > maximum + 1 ? 'gap' : 'out_of_order';
+  const clockSkewMs = Date.parse(event.observed_at) - now;
+  const clockQuality = Math.abs(clockSkewMs) > 5 * 60_000 ? 'uncertain' : 'ok';
   const receivedAt = new Date(now).toISOString();
   const receiptId = randomUUID();
   try {
@@ -88,8 +90,10 @@ export function ingestReaderSubmission(store, submission, {
         event,
         readerId: reader.reader_id,
         canonicalPayload,
-        payloadHash: eventHash(event),
+        payloadHash: gatewayEventHash(event),
         sequenceState,
+        clockQuality,
+        clockSkewMs,
         receiptId,
         now: receivedAt,
       });
@@ -115,7 +119,8 @@ function acknowledgement(row, duplicate) {
     queue_state: row.queue_state,
     sequence_state: row.sequence_state,
     duplicate,
-    cloud_delivered: row.queue_state === 'delivered',
+    destination_receipt_recorded: row.queue_state === 'delivered' || Boolean(row.remote_receipt_id),
+    cloud_delivered: row.remote_outcome === 'accepted',
     received_at: row.local_received_at,
   };
 }
