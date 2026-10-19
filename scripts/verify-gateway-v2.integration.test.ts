@@ -40,6 +40,7 @@ const created = { schools: [] as string[], classes: [] as string[], students: []
 const observedExternal = new Set<string>();
 const parentLinkCheckpoints: Array<{ point: string; rows: number | null; errorCode: string | null }> = [];
 const fixtureSnapshots: Array<Record<string, unknown>> = [];
+const browserEntryQueryCounts = new WeakMap<object, { count: number }>();
 function tokenFacts(token: string, userId: string) {
   try {
     const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8')) as { sub?: string; role?: string; exp?: number; iss?: string; aud?: string | string[]; aal?: string; session_id?: string; app_metadata?: { provider?: string; providers?: string[]; role?: string } };
@@ -223,11 +224,14 @@ async function loginAndCheck(account: Account, expectedTexts: string[], forbidde
   });
   const page = await context.newPage();
   if (controlClock) await page.clock.install();
+  const entryQueryCount = { count: 0 };
+  browserEntryQueryCounts.set(page, entryQueryCount);
   page.on('pageerror', (error) => diagnostics.push(`pageerror ${error.message.slice(0, 160)}`));
   page.on('console', (message) => { if (message.type() === 'error') diagnostics.push(`console ${message.text().slice(0, 160)}`); });
   page.on('request', (request) => {
     const u = new URL(request.url());
     if (u.port !== '54321') return;
+    if (u.pathname === '/rest/v1/school_entry_events') entryQueryCount.count += 1;
     if (u.pathname === '/rest/v1/parent_student_links') {
       const authorization = request.headers().authorization ?? '';
       const browserToken = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
@@ -560,6 +564,28 @@ describe('Task 32H gateway to loopback local Supabase', () => {
     expect(await parentPage!.locator('[data-testid="school-entry-panel"] .school-entry-event').count()).toBe(beforeManualUpdate + 1);
     expect((await parentTransport.send(automaticEvent)).duplicate).toBe(true);
     expect(await parentPage!.locator('[data-testid="school-entry-panel"] .school-entry-event').count()).toBe(beforeManualUpdate + 1);
+    const parentEntryQueries = browserEntryQueryCounts.get(parentPage!)!;
+    const beforeHidden = parentEntryQueries.count;
+    await parentPage!.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await parentPage!.clock.runFor(60_000);
+    expect(parentEntryQueries.count).toBe(beforeHidden);
+    await parentPage!.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect.poll(() => parentEntryQueries.count).toBeGreaterThan(beforeHidden);
+    const beforeOffline = parentEntryQueries.count;
+    await parentPage!.context().setOffline(true);
+    await parentPage!.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await parentPage!.clock.runFor(60_000);
+    expect(parentEntryQueries.count).toBe(beforeOffline);
+    await parentPage!.context().setOffline(false);
+    await parentPage!.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect.poll(() => parentEntryQueries.count).toBeGreaterThan(beforeOffline);
+    await parentPage!.locator('[data-testid="school-entry-panel"][data-connection-state="online"]').waitFor({ timeout: 10_000 });
     await Promise.all(pages.map((page) => page.context().close()));
     const linkedParentBrowserSnapshot = fixtureSnapshots.find((item) => item.checkpoint === 'first-browser-parent-query-result' && item.parentScenario === 'linked-parent');
     expectCompleteParentFixture(linkedParentBrowserSnapshot, 'linked Parent browser response');

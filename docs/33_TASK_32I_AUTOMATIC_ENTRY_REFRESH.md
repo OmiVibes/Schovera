@@ -1,6 +1,6 @@
 # Task 32I — Automatic School Entry dashboard refresh
 
-**Status:** implementation and local synthetic verification in progress.
+**Status:** implemented; local synthetic verification is recorded below.
 
 ## Behavior
 
@@ -22,6 +22,20 @@ English, Hindi and Marathi include the Last updated and recoverable-background-e
 
 ## Local verification
 
-To be finalized after local checks. Expected checks include deterministic scheduler tests, Task 32H's local synthetic gateway-to-Supabase/browser integration with Parent/Teacher/Principal pages open during one poll, offline/reconnect verification, RFID/gateway/attribution suites, accessibility/i18n, role navigation/visuals, typecheck, lint and the isolated build.
+The initial Task 32H integration attempt in the clean worktree timed out on a cold Next route compilation, and the next attempt found the dev server had started before its synthetic issuer key was generated. After warming the route and restarting the server with the local-only test key in place, the integration passed. No production endpoint was contacted. A browser-clock expansion also checks hidden/offline pause and visible/online resume without long wall-clock sleeps.
+
+Passed checks so far:
+
+- `npm run test:entry-polling`: 4 deterministic scheduler tests (cadence, inactive pause/wake, bounded retry backoff, non-overlap/unmount stop).
+- `npm run test:rfid`: 22 tests; `npm run test:gateway`: 43 tests; `npm run test:credential-attribution`: 20 tests.
+- `npm run test:gateway:local-integration`: first warm local browser integration passed. It verifies Parent/Teacher/Principal automatic updates on already-open dashboards, Parent linked-child switching, Teacher class switching, RLS and unresolved-event exclusion, exact retry without duplicate UI, manual refresh, and cleanup using temporary synthetic data.
+- `npm run verify:student-profile`: passed.
+- `npm run verify:accessibility-i18n`: passed in the isolated local worktree. A prior attempt from the developer checkout timed out trying to start Next, so the test was rerun successfully with the clean local-only server already running.
+- `npm run verify:role-navigation`: passed routed navigation, selected-child continuity, role/account isolation, and 390px overflow.
+- `npm run verify:role-visuals`: passed 22 destinations × 4 widths (1440, 1024, 768, 390px).
+- `npm run verify:reconnect`: passed Parent/Teacher/Principal online recovery, multi-child/context isolation, profile, attendance, homework, timetable and duplicate-refresh checks.
+- `npm run typecheck`, `npm run lint`, and `git diff --check`: passed.
+
+The isolated production build remains to be run before final completion.
 
 All API/browser integration uses only the loopback local Supabase environment and temporary synthetic data. No hosted project or Vercel endpoint is used. Polling does not make scans instant, guarantee notification delivery, or establish presence/safety/attendance. Classroom `attendance_records` are unchanged. No physical reader was tested.
