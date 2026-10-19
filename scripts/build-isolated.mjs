@@ -205,6 +205,8 @@ async function main() {
     await writeFile(npmConfigPath, 'registry=https://registry.npmjs.org/\noffline=true\n', { flag: 'wx' });
     const npmUserConfigPath = path.join(snapshotRoot, 'npm-user.npmrc');
     await writeFile(npmUserConfigPath, 'registry=https://registry.npmjs.org/\noffline=true\n', { flag: 'wx' });
+    const npmGlobalConfigPath = path.join(snapshotRoot, 'npm-global.npmrc');
+    await writeFile(npmGlobalConfigPath, 'registry=https://registry.npmjs.org/\noffline=true\n', { flag: 'wx' });
     await ensureOnlyGeneratedEnvironmentFile(snapshotRoot);
 
     console.log(`Isolated snapshot commit: ${commit}`);
@@ -213,7 +215,7 @@ async function main() {
     const npmCli = process.env.npm_execpath;
     const npmEnv = minimalEnvironment({ npm: true, tempPath: privateTemp });
     npmEnv.npm_config_userconfig = npmUserConfigPath;
-    npmEnv.npm_config_globalconfig = npmUserConfigPath;
+    npmEnv.npm_config_globalconfig = npmGlobalConfigPath;
     npmEnv.HTTPS_PROXY = 'http://127.0.0.1:9';
     npmEnv.https_proxy = npmEnv.HTTPS_PROXY;
     npmEnv.HTTP_PROXY = npmEnv.HTTPS_PROXY;
