@@ -30,11 +30,15 @@ No message text is written to browser storage. The selected language choice is l
 4. Pause, resume or stop. Start another card, switch child/section, or sign out to verify the previous utterance is canceled.
 5. To demonstrate Marathi, use a browser/device with a Marathi speech voice installed/enabled in its operating-system speech settings, select Marathi on a Marathi notice, and confirm the selected voice is `mr-*` if inspecting browser capabilities. If no Marathi voice is listed, show the honest fallback rather than claiming Marathi audio.
 
+For the isolated local mocked-browser UI exercise, generate ignored local env files as documented in [Safe Supabase Development](25_SAFE_SUPABASE_DEVELOPMENT.md), start the app with `npm run dev -- --hostname 127.0.0.1`, then run `npm run verify:parent-voice` in another PowerShell window. It records the real browser's API/voice inventory before replacing playback with a mock; no notice is audibly played or sent to a speech service.
+
 The automated browser capability check records whether the real browser exposes the speech APIs and which voice locales it reports; it does not play private messages and does not assert that audio was audible. Unit/component tests use a mock speech engine and synthetic strings, so those passes establish control logic only.
 
 ## Verification record
 
-This section is updated with final Task 32J checks before commit. Planned checks: `npm run test:parent-voice`, accessibility/i18n browser verification, role navigation, Student Profile, reconnect, entry-polling, RFID/gateway/attribution regressions, typecheck, lint, and the isolated production build. The isolated build is local compilation evidence only; it is not a hosted deployment review and does not resolve the previously documented Next.js security advisory.
+Automated results: `npm run test:parent-voice` passed 13 tests; TypeScript and lint passed; the local `verify:parent-voice` browser test passed at 390px with exactly one mocked utterance, pause/resume/stop, keyboard focus and no HTTP request triggered by playback. The real headless Chromium reported both speech APIs present but zero voice locales, so audible speech was not tested. `verify:accessibility-i18n`, role navigation, Student Profile, entry-polling (4 tests), RFID (22), gateway (43) and credential-attribution (20) passed in the local-only worktree. Reconnect passed on its independent rerun after one transient timetable-render timeout. Isolated production build is run as the final committed check below. No real child data or hosted endpoint was used.
+
+The isolated build is local compilation evidence only; it is not a hosted deployment review and does not resolve the previously documented Next.js security advisory.
 
 ## Known limitations / future work
 

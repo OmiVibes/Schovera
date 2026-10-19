@@ -29,6 +29,7 @@
     "verify:reliability": "node --env-file=.env.test.local scripts/verify-reliability.mjs",
     "verify:reconnect": "node --env-file=.env.test.local scripts/verify-reconnect.mjs",
     "verify:accessibility-i18n": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/verify-accessibility-i18n.mjs",
+    "verify:parent-voice": "node --env-file=.env.test.local scripts/verify-parent-voice.mjs",
     "verify:role-navigation": "node --env-file=.env.test.local scripts/verify-role-navigation.mjs",
     "verify:role-visuals": "node --env-file=.env.test.local scripts/verify-role-visuals.mjs",
     "verify:teacher-ai": "node --env-file=.env.test.local scripts/verify-teacher-ai.mjs",
