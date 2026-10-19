@@ -46,6 +46,7 @@ npm ci --offline
 node .\scripts\configure-local-supabase-env.mjs
 git check-ignore .env.development.local .env.test.local
 npm run rfid:capability-key:init
+Write-Output "DEMO_ROOT=$demoRoot"
 npm run dev:rfid-local
 ```
 
