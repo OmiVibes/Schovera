@@ -120,7 +120,26 @@ The unit tests must pass. The second command is expected to fail with `simulator
 
 Three Task 32B-2 migrations add the local RFID device registry, opaque credentials, immutable check-in/out events, durable deduplication receipts, Principal provisioning/revocation RPCs, and the service-role-only event processor. They were applied incrementally to the loopback Supabase database and `npx supabase db lint --local` reported no schema errors. A fresh destructive replay was not run because that would erase the existing local demo database; preserve it unless the user explicitly chooses a reset.
 
-The local Next endpoint is disabled by default and requires explicit local mode, loopback Supabase configuration, and a loopback Host header. `npm run dev:rfid-local` is a separate guarded launcher that reads `.env.development.local` plus `.env.test.local`; standard `npm run dev` still clears the service-role credential. `npm run build:local-check` forces the build-time public Supabase values to the local loopback endpoint and clears private AI/service credentials without editing `.env.local`.
+The local Next endpoint is disabled by default and requires explicit local mode, loopback Supabase configuration, and a loopback Host header. `npm run dev:rfid-local` is a separate guarded launcher that reads `.env.development.local` plus `.env.test.local`; standard `npm run dev` still clears the service-role credential. Local production-build verification now uses the isolated workflow below; it never reads `.env.local`.
+
+### Isolated production-build verification (Task 32F-1)
+
+From PowerShell at the repository root, with all intended tracked changes committed:
+
+```powershell
+Set-Location 'D:\Notes\Degree\Projects\Schovera'
+npm run build:isolated
+```
+
+`npm run build:local-check` is a backward-compatible alias to the same isolated workflow. Do not run `next build` directly in the developer checkout when `.env.local` is present.
+
+The build runner creates a unique temporary snapshot from committed Git-tracked files only; it refuses to run with tracked modifications. It excludes every `.env*` file, `.npmrc`/credential files, `.local`, `.vercel`, database files, local spreadsheets/CSVs, uploads, review artifacts, existing dependencies and build output. Existing untracked developer files are never copied. The only generated Next environment file is `.env.production`, with `http://127.0.0.1:54321` and a clearly synthetic publishable-key placeholder; service-role and AI variables in that file are empty. Next's production environment-file discovery is rechecked recursively before and after build, and any file other than this generated file fails the run.
+
+Dependencies are installed in the snapshot with `npm ci --offline` using the committed lockfile, an isolated empty npm config, and the machine's npm cache. Missing cached packages fail closed; this command does not fall back to registry downloads. The build gets an allowlisted child environment rather than inheriting the developer environment. Synthetic service-role/OpenAI/private-variable sentinels are used only for leakage detection; the runner scans all `.next` outputs and fails if any sentinel appears. It also verifies the expected app/API route manifest and rejects Next output that reports `.env.local`.
+
+Next's existing `next/font/google` imports need Google Fonts assets during a production build. The isolated runner routes proxy-aware build egress through a loopback allowlist permitting only `fonts.googleapis.com` and `fonts.gstatic.com` on port 443 and denies other requests through that proxy; it records hostnames only. No Supabase or Vercel URL is configured. This application-level proxy is not an operating-system firewall: do not treat it as a general sandbox for untrusted build scripts. The isolated source is the committed repository and the npm install is offline. The temporary directory is uniquely generated under the OS temp directory, path-validated, and removed in a `finally` block on success or failure.
+
+This verifies a local build with synthetic settings, not production deployment configuration or hosted runtime behavior. It does not certify Vercel secrets, network policy, production Supabase security, or resolve any Next.js security advisory. Do not deploy solely because this local build passes.
 
 The new `npm run test:rfid:integration` uses only temporary synthetic schools/users/children/keys; it exercises the actual Task 32A simulator → local Next endpoint → local database flow, authenticated role RLS, dedupe/conflict/concurrency, timestamp/nonce/signature checks, credential reassignment/revocation, device revocation and cleanup. It does not change classroom attendance. It passed with post-cleanup checks confirming temporary event/receipt/school records were removed. The tests do not use hosted Supabase/Vercel and do not prove physical hardware behavior.
 

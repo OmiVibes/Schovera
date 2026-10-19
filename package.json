@@ -10,6 +10,7 @@
     "dev:rfid-local": "node scripts/dev-rfid-local.mjs",
     "build": "next build",
     "build:local-check": "node scripts/build-local-check.mjs",
+    "build:isolated": "node scripts/build-isolated.mjs",
     "start": "next start",
     "lint": "eslint src scripts --no-cache --concurrency 1",
     "typecheck": "tsc --noEmit",
