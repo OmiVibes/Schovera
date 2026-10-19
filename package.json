@@ -32,6 +32,12 @@
     "verify:role-visuals": "node --env-file=.env.test.local scripts/verify-role-visuals.mjs",
     "verify:teacher-ai": "node --env-file=.env.test.local scripts/verify-teacher-ai.mjs",
     "simulate:rfid": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-simulator/cli.mjs",
+    "gateway:init": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-gateway/cli.mjs init",
+    "gateway:status": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-gateway/cli.mjs status",
+    "simulate:gateway": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-gateway/cli.mjs simulate",
+    "gateway:sync": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-gateway/cli.mjs sync",
+    "gateway:revoke-reader": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/rfid-gateway/cli.mjs revoke-reader",
+    "test:gateway": "vitest run scripts/rfid-gateway/gateway.test.mjs",
     "test:rfid:integration": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/verify-rfid-integration.mjs",
     "test:rfid": "vitest run scripts/rfid-simulator/core.test.ts scripts/lib/local-test-env.test.ts src/lib/rfid/server.test.ts",
     "verify:local-i18n-reconnect": "node --env-file=.env.test.local scripts/verify-production-i18n.mjs"
