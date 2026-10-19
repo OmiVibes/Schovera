@@ -214,6 +214,7 @@ async function main() {
     console.log('Installing exact lockfile dependencies offline inside the isolated snapshot...');
     const npmCli = process.env.npm_execpath;
     const npmEnv = minimalEnvironment({ npm: true, tempPath: privateTemp });
+    npmEnv.NODE_ENV = 'development';
     npmEnv.npm_config_userconfig = npmUserConfigPath;
     npmEnv.npm_config_globalconfig = npmGlobalConfigPath;
     npmEnv.HTTPS_PROXY = 'http://127.0.0.1:9';
