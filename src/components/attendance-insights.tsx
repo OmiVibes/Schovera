@@ -9,7 +9,7 @@ import { loadAttendanceInsights } from '@/lib/attendance-insights-data';
 type Props = { role: 'teacher' | 'principal'; profileId: string; schoolId: string; classId?: string; revision?: string };
 type Dataset = Awaited<ReturnType<typeof loadAttendanceInsights>>;
 export function AttendanceInsights(props: Props) {
-  return <Insights key={`${props.profileId}:${props.classId ?? 'school'}`} {...props} />;
+  return <Insights key={`${props.role}:${props.profileId}:${props.schoolId}:${props.classId ?? 'school'}`} {...props} />;
 }
 function Insights({ role, profileId, schoolId, classId, revision }: Props) {
   const { t } = useI18n(); const id = useId();

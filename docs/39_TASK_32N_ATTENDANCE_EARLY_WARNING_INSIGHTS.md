@@ -23,7 +23,7 @@ There is no authoritative holiday calendar, expected school-day table, historica
 
 Coverage means single valid recorded entries divided by the current active roster, **on each recorded date only**. It is not expected-calendar coverage. Class summaries show exact date counts, completeness warnings and advisory counts; no class ranking or misleading cross-class percentages. No conclusion about whether help is needed follows from a missing indicator.
 
-Reads are bounded (100 active classes, 5,000 roster rows, 5,000 attendance rows in 500-row pages). Exceeding a bound fails closed with no partial insights. Principal data collection is bounded schoolwide; this is suitable for the small local demonstration, not an untested large-school analytics service. Reads are not a cross-query transactional snapshot; staff must refresh and review original records before action, particularly during concurrent register edits. No scheduled polling or automatic push is added.
+Reads are bounded (100 active classes, 5,000 roster rows, 5,000 attendance rows in 500-row pages). Exceeding a bound fails closed with no partial insights. Principal data collection is bounded schoolwide; this is suitable for the small local demonstration, not an untested large-school analytics service. Reads are not a cross-query transactional snapshot; staff must refresh and review original records before action, particularly during concurrent register edits. The school-date cutoff uses the browser clock converted to the stored school timezone; correct device time is a prerequisite, not a trusted hardware/server-time guarantee. No scheduled polling or automatic push is added.
 
 ## UI, privacy and access
 
