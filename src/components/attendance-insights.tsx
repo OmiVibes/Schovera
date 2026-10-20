@@ -56,6 +56,7 @@ function Insights({ role, profileId, schoolId, classId, revision }: Props) {
           <details><summary>{t('insights.coverage')}</summary><p>{t('insights.coverageCaution')}</p><ul>{selected.result.coverage.map((day) => <li key={day.date}>{day.date}: {day.recorded}/{day.expected} {t('insights.cells')}</li>)}</ul></details>
           <div className="insights-students">{selected.result.students.slice(page * 30, page * 30 + 30).map((s) => <article key={s.id}>
             <h3>{s.full_name}</h3>
+            <p>{t('insights.absenceCount')}: {s.absenceDates.length}/{selected.result.recent.length}</p>
             {s.patterns.some((p) => p !== 'improvement') && <h4>{t('insights.followup')}</h4>}
             {s.patterns.map((pattern) => <p key={pattern}>{t(`insights.${pattern}`)}</p>)}
             {s.patterns.length > 0 && <p>{t('insights.absenceDates')}: {s.absenceDates.join(', ') || '—'}</p>}

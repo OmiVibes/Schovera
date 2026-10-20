@@ -8,7 +8,7 @@ export type Language = (typeof languageOptions)[number]['code'];
 export const languageStorageKey = 'schovera.language';
 
 const english = {
-  'insights.title': 'Classroom attendance insights', 'insights.refresh': 'Refresh insights',
+  'insights.title': 'Classroom attendance insights', 'insights.refresh': 'Refresh insights', 'insights.absenceCount': 'Recorded absences / latest recorded dates (up to 5)',
   'insights.advisory': 'Explainable rule-based attendance support, not validated dropout prediction. Staff must review context before any supportive follow-up. No automatic messages or disciplinary action.',
   'insights.limitations': 'Only recorded class dates are used, not RFID scans. Missing dates are not absences. Holidays and historical enrollment are unknown; compare with the current roster and verify changes. Today is excluded.',
   'insights.rules': 'Last 10 recorded dates within 60 closed calendar days. Follow-up requires 5 complete recent class records: 3 absences in 5, or absences on the latest 3 recorded dates. Improvement: at least 3 absences in the earlier 5, at most 1 in the latest 5; all 10 must be complete. Late is not absent.',
@@ -238,7 +238,7 @@ const english = {
 export type TranslationKey = keyof typeof english;
 
 const hindi: Record<TranslationKey, string> = {
-  'insights.title': 'कक्षा उपस्थिति की समीक्षा', 'insights.refresh': 'समीक्षा ताज़ा करें',
+  'insights.title': 'कक्षा उपस्थिति की समीक्षा', 'insights.refresh': 'समीक्षा ताज़ा करें', 'insights.absenceCount': 'दर्ज अनुपस्थिति / अंतिम दर्ज तिथियाँ (अधिकतम 5)',
   'insights.advisory': 'यह स्पष्ट नियमों पर आधारित सहायता है, स्कूल छोड़ने का प्रमाणित पूर्वानुमान नहीं। सहायता से पहले कर्मचारी संदर्भ जाँचें। कोई स्वचालित संदेश या अनुशासनात्मक कार्रवाई नहीं।',
   'insights.limitations': 'केवल दर्ज कक्षा तिथियाँ, RFID नहीं। लापता तिथियाँ अनुपस्थिति नहीं हैं। छुट्टियाँ और पुराने नामांकन अज्ञात हैं; वर्तमान सूची में बदलाव जाँचें। आज शामिल नहीं है।',
   'insights.rules': 'पिछले 60 पूरे कैलेंडर दिनों में अंतिम 10 दर्ज तिथियाँ। समीक्षा के लिए अंतिम 5 तिथियों का पूरा डेटा चाहिए: 5 में 3 अनुपस्थितियाँ या अंतिम 3 दर्ज तिथियों पर अनुपस्थिति। सुधार: पहले 5 में कम से कम 3, अंतिम 5 में अधिकतम 1; सभी 10 पूरे हों। देर से आना अनुपस्थिति नहीं है।',
@@ -451,7 +451,7 @@ const hindi: Record<TranslationKey, string> = {
 };
 
 const marathi: Record<TranslationKey, string> = {
-  'insights.title': 'वर्ग उपस्थिती आढावा', 'insights.refresh': 'आढावा ताजा करा',
+  'insights.title': 'वर्ग उपस्थिती आढावा', 'insights.refresh': 'आढावा ताजा करा', 'insights.absenceCount': 'नोंदवलेली अनुपस्थिती / अलीकडच्या नोंदवलेल्या तारखा (कमाल 5)',
   'insights.advisory': 'ही स्पष्ट नियमांवर आधारित मदत आहे, शाळा सोडण्याचे प्रमाणित भाकीत नाही. मदतीपूर्वी कर्मचाऱ्यांनी संदर्भ तपासावा. स्वयंचलित संदेश किंवा शिस्तभंग कारवाई नाही.',
   'insights.limitations': 'फक्त नोंदवलेल्या वर्ग तारखा, RFID नाही. नसलेल्या तारखा म्हणजे अनुपस्थिती नाही. सुट्ट्या आणि जुनी नावनोंदणी अज्ञात आहेत; सध्याच्या यादीतील बदल तपासा. आजचा दिवस वगळला आहे.',
   'insights.rules': 'मागील 60 पूर्ण दिनदर्शिका दिवसांतील शेवटच्या 10 नोंदवलेल्या तारखा. आढाव्यासाठी अलीकडच्या 5 तारखांची पूर्ण नोंद हवी: 5 पैकी 3 अनुपस्थिती किंवा शेवटच्या 3 नोंदवलेल्या तारखांना अनुपस्थिती. सुधारणा: आधीच्या 5 मध्ये किमान 3, शेवटच्या 5 मध्ये कमाल 1; सर्व 10 पूर्ण हवेत. उशिरा येणे अनुपस्थिती नाही.',

@@ -26,4 +26,15 @@ it.each(['absent', 'present'])('duplicate/conflicting %s cells are not counted',
 it('timezone determines closed-day cutoff', () => { const now = new Date('2026-10-19T20:00:00Z'); expect(insightRange(now, 'Asia/Kolkata').to).toBe('2026-10-19'); expect(insightRange(now, 'America/Los_Angeles').to).toBe('2026-10-18'); });
 it('does not synthesize weekends or holidays', () => { const data = rows(Array(5).fill('absent')).map((r, i) => ({ ...r, attendance_date: ['2026-10-02', '2026-10-05', '2026-10-08', '2026-10-12', '2026-10-16'][i] })); expect(classroomInsights(students, data, 'c', range).dates).toHaveLength(5); });
 it('empty data does not infer absence', () => expect(classroomInsights(students, [], 'c', range).followup).toBe(0));
+it('an incomplete earlier period suppresses improvement but not a complete recent absence observation', () => {
+  const other = { id: 'b', class_id: 'c', full_name: 'Synthetic B' };
+  const data = [...rows(Array(10).fill('absent')), ...rows(Array(10).fill('present')).slice(5).map((r) => ({ ...r, student_id: 'b' }))];
+  const r = classroomInsights([...students, other], data, 'c', range);
+  expect(r.quality).toBe(true); expect(r.enough).toBe(true); expect(r.followup).toBe(1); expect(r.improved).toBe(0);
+});
+it('late records are not recorded absences', () => expect(result(Array(5).fill('late')).students[0].absenceDates).toEqual([]));
+it('does not mutate input records or infer reasons', () => {
+  const input = rows(Array(5).fill('absent')); const original = JSON.stringify(input);
+  classroomInsights(students, input, 'c', range); expect(JSON.stringify(input)).toBe(original);
+});
 it('other classes, unknown former students and dates after cutoff are excluded', () => { const data = rows(Array(5).fill('absent')).map((r) => ({ ...r, class_id: 'other' })); expect(classroomInsights(students, data, 'c', range).dates).toEqual([]); });
