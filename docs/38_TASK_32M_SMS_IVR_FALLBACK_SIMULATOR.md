@@ -76,7 +76,39 @@ Stop the server you started (Ctrl+C) before cleanup. From the original repositor
 
 The integration verifier tests channel consent/optouts, generation invalidation, actor/RLS boundaries, approved/current translation and original fallback, lost links, source corrections, Teacher assignment expiry, Important announcements, queue/concurrent receipt deduplication, retry bounds and provider outcomes. Browser checks cover Parent preference saves, keyboard checkbox activation, English/Hindi/Marathi, Teacher queue/dispatch, Principal review and 390px overflow; non-loopback browser requests are blocked and recorded. It checks that service credentials are absent from downloaded browser scripts without printing their value, and verifies no false acknowledgement/attendance/RFID rows. Synthetic records are removed and cleanup checked.
 
-Verification results will be recorded after the complete local run. Do not interpret this implementation description as a test pass.
+### Recorded local verification — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Local migration and `supabase db lint --local` | Applied successfully to loopback Supabase; no schema lint errors. No reset or hosted operation. |
+| `test:fallback` | 10 passed. |
+| `test:fallback:integration` | Complete DB, HTTP and Parent/Teacher/Principal browser flow passed repeatedly, including final translated-heading assertions, contrast and cleanup. |
+| `test:translations`, `test:parent-voice`, `test:entry-polling` | 2, 13 and 4 passed respectively. |
+| `test:rfid`, `test:gateway`, `test:credential-attribution` | 22, 43 and 20 passed respectively. The 43 gateway tests include Node's existing experimental SQLite warning. |
+| `test:translations:db` and `test:translations:integration` | Passed, including approved translated text used by mocked browser speech, original preservation and approval invalidation. |
+| `test:rfid:integration`, `test:gateway:local-integration` | Both passed with isolated synthetic records. |
+| `verify:parent-voice` | Passed at 390px. Browser API present but zero real voice locales; actual audible playback was not tested. |
+| `verify:accessibility-i18n`, `verify:role-navigation`, `verify:student-profile` | Passed. |
+| `verify:role-visuals` | Passed all 22 destinations at 1440, 1024, 768 and 390px. Separate expanded fallback-panel captures were inspected. |
+| `verify:reconnect` | Initial run failed at the previously recorded final Teacher timetable-loading assertion, after earlier recovery scenarios passed. Independent rerun passed the complete suite. This existing timing flake is not claimed fixed by Task 32M. |
+| `typecheck`, `lint`, `git diff --check` | Passed on the implementation; final lint/diff verification repeated after test improvements. |
+| `build:isolated` | Passed at source commit `6a6120899102668acce95c9f1658293bd14dd8e2`; production compilation, TypeScript, static generation and expected route manifest all passed. |
+
+An early database-test fixture attempted to change translation status without clearing approval metadata, violating its existing constraint; the test now uses the actual translation-save RPC to withdraw approval. Initial browser assertions used Node fetch for a forged Host (normalized by fetch) and exact status text mixed with attempt text; these harness issues were corrected with raw loopback HTTP and a distinct visible status span, then the full suite passed. Visual review found an inherited hover color that reduced Parent save-button contrast; scoped button styling and a computed minimum 4.5:1 hover-contrast assertion now pass.
+
+The isolated build discovered **only generated `.env.production`**, verified expected routes including the disabled-by-default local simulator route, found no synthetic private sentinels in output, and cleaned its temporary snapshot. Only the existing Google Fonts build hosts were observed through the allowlisted proxy (`fonts.googleapis.com`, `fonts.gstatic.com`); this is not an OS-level network sandbox or a claim of zero external font traffic. No hosted Supabase, Vercel, SMS or voice provider was contacted. The browser harness blocked/recorded non-loopback destinations and passed with none attempted; local service credentials were absent from downloaded browser scripts.
+
+Synthetic fallback fixtures were removed and absence verified after success and earlier failures. The loopback test server was stopped; its exact generated disposable worktree, ignored local env files and synthetic issuer key were removed after validating the temp path. Privacy-safe synthetic screenshots remain in OS temporary directories, not the repository. The original checkout's `.env.local` was never opened, copied, loaded or modified. Protected pre-existing untracked `AGENTS.md`, `CLAUDE.md`, `local-dev.err`, `local-dev.out` and `review/` were preserved. No new dependency, hosted schema/configuration, real family data, production write, push, merge to main or deployment was involved.
+
+### Changed files
+
+- `supabase/migrations/20261020120000_add_local_fallback_simulator.sql`: local consent, queue, authorization and audit model.
+- `src/lib/fallback-provider.ts`, `src/lib/fallback-server.ts`, `src/lib/fallback-provider.test.ts`: pure fake adapter, server gate and focused tests.
+- `src/app/api/fallback-simulator/route.ts`: gated authenticated local orchestration, no webhook/provider transport.
+- `src/components/fallback-simulator.tsx`, `src/components/schovera-app.tsx`, `src/app/globals.css`, `src/lib/i18n.ts`: role controls, integration, responsive/contrast styling and three-language UI.
+- `scripts/verify-fallback.mjs`: controlled synthetic DB/HTTP/browser acceptance and cleanup.
+- `scripts/dev-rfid-local.mjs`, `scripts/build-isolated.mjs`, `package.json`: opt-in local launcher flags/alias, expected-route build verification and test scripts.
+- `docs/38_TASK_32M_SMS_IVR_FALLBACK_SIMULATOR.md`: setup, evidence, limits and handoff.
 
 ## Retention and limitations
 
@@ -86,4 +118,4 @@ Browser automation checks programmatic labels, native controls, keyboard interac
 
 A real Indian provider requires a separately authorized task, reviewed school/guardian consent and opt-outs, verified contact ownership, applicable regulatory/provider registration and approved templates, child-data/privacy/legal review, retention, secure credentials, HTTPS, callback authentication/replay protection, shared rate/cost limits, monitoring, provider-side idempotency and reconciliation, and a reviewed deployment/security boundary. Confirm current requirements with the provider and qualified school advisers; no regulatory compliance is claimed here. Never plug a real provider into this local fake route. A real external send introduces an irrevocable side effect and needs a transaction/outbox/reconciliation design beyond this two-phase pure simulation.
 
-Task 32N is not started. No real-family communication, hosted ingestion or deployment is authorized by Task 32M.
+Task 32M is complete within the local simulation boundary. Task 32N readiness: **READY for review and a separately scoped local follow-up**; no next task is started. Real SMS/IVR integration remains **BLOCKED** on the approvals and engineering controls above. No real-family communication, hosted ingestion or deployment is authorized by Task 32M.
