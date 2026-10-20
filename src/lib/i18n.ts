@@ -9,7 +9,7 @@ export const languageStorageKey = 'schovera.language';
 
 const english = {
   'translation.language': 'Reading language', 'translation.original': 'Original', 'translation.viewOriginal': 'View original',
-  'translation.originalUnknown': 'Original text · language not recorded. Choose the original language before listening if uncertain.',
+  'translation.originalUnknown': 'Original text · language not recorded. Choose its language before listening.',
   'translation.loading': 'Checking reviewed translation…', 'translation.approved': 'School-approved translation',
   'translation.unavailable': 'A reviewed translation is unavailable. Showing the original.',
   'translation.loadError': 'Translation could not be checked. Showing the original. Try again.',

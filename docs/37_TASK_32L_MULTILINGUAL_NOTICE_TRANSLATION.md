@@ -35,7 +35,7 @@ RFID/entry events, classroom attendance and acknowledgement RPCs are unchanged. 
 
 ## Parent UI and speech
 
-Reading-language selection is independent of interface language. The existing originals have no reliable source-language field, so the UI says the original language was not recorded. For an original message, use the existing speech selector if detection is uncertain; Devanagari is not automatically classified as Hindi or Marathi. No source language is inferred from the Parent interface setting.
+Reading-language selection is independent of interface language. The existing originals have no reliable source-language field, so the UI says the original language was not recorded. Listening to an original requires explicit English/Hindi/Marathi selection; Listen stays disabled at Auto until that choice is made. Devanagari is not automatically classified as Hindi or Marathi, and no source language is inferred from the Parent interface setting. Approved versions instead supply their known target language directly.
 
 Approved versions pass their explicit target language and currently displayed title/message to the Task 32J controller. English requests an English voice (preferring en-IN), Hindi a hi voice, and Marathi a mr voice (preferring the matching Indian locale). The speech language control is fixed while displaying an approved language version, preventing accidental unrelated-language playback. Missing voices leave the text visible and show the existing helpful fallback.
 
