@@ -75,11 +75,13 @@ try {
 
   const candidates = ['/parent/updates', '/parent/notices', '/parent/profile'];
   let control = page.locator('.parent-speech-controls').first();
+  await control.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   for (const route of candidates) {
     if (await control.count()) break;
     await page.goto(new URL(route, baseURL).toString(), { waitUntil: 'domcontentloaded' });
     await page.locator('.role-parent').waitFor();
     control = page.locator('.parent-speech-controls').first();
+    await control.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   }
   assert.ok(await control.count(), 'Local demo Parent has no communication card to exercise voice controls.');
   // Existing originals have no reliable language metadata: choose explicitly.
