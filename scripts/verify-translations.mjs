@@ -151,7 +151,16 @@ try {
     await review.locator('summary').click();
     await review.locator('.translation-editor > label select').selectOption('mr');
     const reviewText = review.getByLabel('Translated message', { exact: true });
-    await reviewText.fill(`${samples.mr.body} Unsaved review comparison.`);
+    try {
+      await reviewText.fill(`${samples.mr.body} Unsaved review comparison.`);
+    } catch (error) {
+      console.error('Principal editor diagnostic:', await review.evaluate((node) => ({
+        open: node.open, fields: node.querySelectorAll('textarea').length,
+        language: node.querySelector('select')?.value,
+        statuses: [...node.querySelectorAll('[role="status"],[role="alert"]')].map((element) => element.textContent),
+      })).catch(() => ({ editorMissing: true })));
+      throw error;
+    }
     await Promise.all([
       p.page.waitForResponse((response) => new URL(response.url()).pathname === '/rest/v1/student_updates'),
       p.page.evaluate(() => window.dispatchEvent(new Event('focus'))),
