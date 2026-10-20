@@ -933,6 +933,9 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
               key={row.id}
               className={classId === row.id ? 'active' : ''}
               onClick={() => {
+                // Re-selecting the current class must preserve its loaded roster
+                // and unsaved register; the classId effect would not run again.
+                if (row.id === classId) return;
                 activeClassIdRef.current = row.id;
                 classRequestVersionRef.current += 1;
                 activeStudentIdRef.current = '';
