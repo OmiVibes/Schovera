@@ -31,7 +31,7 @@ export async function actorClient(actor) {
   await must(client.auth.signInWithPassword({ email: actor.email, password: actor.password })); return client;
 }
 export function readManualFixture() { assertCleanCheckout(); return JSON.parse(readFileSync(manualPaths().manifestPath, 'utf8')); }
-export async function prepareManualFixture() {
+export async function prepareManualFixture({ onCreated } = {}) {
   const admin = clients();
   if (existsSync(pointer)) throw new Error('A manual fixture already exists. Clean only that fixture before preparing another.');
   const runId = randomUUID(), runDirectory = path.join(directory, runId);
@@ -39,6 +39,7 @@ export async function prepareManualFixture() {
   const fixture = { version: 1, runId, code: `MANUAL-${runId}`, schoolId: null, accounts: {}, students: [], classes: [], createdUsers: [], dates: [] };
   const save = () => writeFileSync(path.join(runDirectory, 'manifest.json'), JSON.stringify(fixture, null, 2), { mode: 0o600 });
   writeFileSync(pointer, JSON.stringify({ runId }), { flag: 'wx', mode: 0o600 }); save();
+  onCreated?.(fixture);
   try {
     fixture.schoolId = (await must(admin.from('schools').insert({ name: 'Synthetic personal testing school', code: fixture.code, timezone: 'Asia/Kolkata' }).select().single())).id; save();
     for (const [name, role] of [['principal', 'principal'], ['teacher', 'teacher'], ['parent', 'parent'], ['unlinkedParent', 'parent'], ['unassignedTeacher', 'teacher']]) {

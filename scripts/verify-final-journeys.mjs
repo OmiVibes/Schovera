@@ -1,10 +1,9 @@
 // Connected real-browser regression; every account and record is synthetic/local.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { prepareManualFixture, cleanManualFixture, actorClient, manualPaths } from './manual-demo.mjs';
+import { prepareManualFixture, cleanManualFixture, actorClient, manualPaths, readManualFixture } from './manual-demo.mjs';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 
 assertLocalTestEnvironment();
@@ -39,7 +38,10 @@ function entry(command) {
   return JSON.parse(result.stdout);
 }
 try {
-  fixture = await prepareManualFixture(); browser = await chromium.launch({ headless: true });
+  fixture = await prepareManualFixture({ onCreated: (created) => { fixture = created; } });
+  await assert.rejects(prepareManualFixture(), /already exists/, 'A second preparation must preserve the existing fixture');
+  assert.equal(readManualFixture().runId, fixture.runId);
+  browser = await chromium.launch({ headless: true });
   const teacher = await login(fixture.accounts.teacher); await go(teacher.page, 'teacher', 'attendance');
   await teacher.page.getByRole('button', { name: 'Grade 8A', exact: true }).click();
   await teacher.page.locator('.teacher-attendance-register .roster-row').filter({ hasText: 'Synthetic Child A' }).waitFor();
@@ -104,5 +106,8 @@ try {
   throw error;
 } finally {
   await browser?.close();
-  if (fixture || existsSync(new URL('../.local/schovera-manual-demo/current.json', import.meta.url))) await cleanManualFixture();
+  if (fixture) {
+    assert.equal(readManualFixture().runId, fixture.runId, 'Refusing cleanup of another run');
+    await cleanManualFixture();
+  }
 }
