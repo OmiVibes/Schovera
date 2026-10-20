@@ -1904,6 +1904,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
   const router = useRouter();
   const db = useMemo(() => createClient(), []);
   const communicationRequestVersionRef = useRef(0);
+  const communicationLoadedSchoolRef = useRef<string | null>(null);
   const [all, setAll] = useState<Update[]>([]),
     [classes, setClasses] = useState<any[]>([]),
     [todayAttendance, setTodayAttendance] = useState<Attendance[]>([]),
@@ -1917,14 +1918,14 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
   }, [page]);
   const refresh = async () => {
     const version = ++communicationRequestVersionRef.current;
-    setCommunicationLoading(true);
+    if (communicationLoadedSchoolRef.current !== profile.school_id) setCommunicationLoading(true);
     const { data, error } = await db
       .from('student_updates')
       .select('*,students(full_name,roll_number,classes(grade,division)),acknowledgements(acknowledged_at)')
       .eq('school_id', profile.school_id)
       .order('sent_at', { ascending: false });
     if (version !== communicationRequestVersionRef.current) return;
-    setAll(data || []);
+    if (!error) { setAll(data || []); communicationLoadedSchoolRef.current = profile.school_id; }
     setCommunicationError(
       error ? 'Recent communication could not be loaded.' : '',
     );
@@ -2146,7 +2147,8 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
             <button type="button" className={communicationFilter === 'awaiting' ? 'active' : ''} aria-pressed={communicationFilter === 'awaiting'} onClick={showAwaitingOnly}>Awaiting <span>{awaiting}</span></button>
           </div>
         </div>
-        {communicationError ? (
+        {communicationError && all.length > 0 && <p className="hint" role="status">{communicationError} Previously loaded communication is still shown.</p>}
+        {communicationError && !all.length ? (
           <p className="error">{communicationError}</p>
         ) : communicationLoading ? (
           <PrincipalCommunicationSkeleton />
