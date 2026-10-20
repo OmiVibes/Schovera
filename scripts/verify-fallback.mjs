@@ -1,6 +1,7 @@
 // Local synthetic acceptance only. Never discovers .env.local or phones/providers.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
@@ -168,7 +169,12 @@ try {
     const concurrent = await source(); await queue(teacher, concurrent); const cd = (await review(teacher, concurrent)).deliveries[0];
     await Promise.all(Array.from({ length: 3 }, () => request(teacher, { op: 'dispatch', delivery_id: cd.id, scenario: 'deliver' })));
     assert.equal((await review(teacher, concurrent)).deliveries[0].attempt_count, 1);
-    const forged = await fetch(`${base}/api/fallback-simulator`, { headers: { Host: 'schovera.vercel.app' } }); assert.equal(forged.status, 404);
+    // Node fetch normalizes Host; use raw local HTTP to test the actual header.
+    const forgedStatus = await new Promise((resolve, reject) => {
+      const req = httpRequest(`${base}/api/fallback-simulator`, { headers: { Host: 'schovera.vercel.app' } }, (response) => { response.resume(); resolve(response.statusCode); });
+      req.on('error', reject); req.end();
+    });
+    assert.equal(forgedStatus, 404);
     console.log('Fallback HTTP checks passed: fake provider scenarios, timeout confirmation, terminal/concurrent deduplication, forged Host and identity/phone injection refusal.');
 
     browser = await chromium.launch({ headless: true });
