@@ -12,6 +12,7 @@ import { I18nProvider, LanguageSelector, useI18n } from '@/lib/i18n-provider';
 import { SchoolEntryPanel } from '@/components/school-entry-panel';
 import { useParentSpeech } from '@/components/parent-speech-controls';
 import { NoticeContent, TranslationManager } from '@/components/notice-translations';
+import { FallbackDispatch, ParentFallbackPreferences } from '@/components/fallback-simulator';
 import type { ParentSpeechController } from '@/lib/parent-speech';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
@@ -1708,7 +1709,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
         error={attendanceError}
         loading={attendanceLoading}
       /></div>}
-      {page === 'notices' && <div id="parent-notices"><Announcements profile={profile} parentView speech={speech} /></div>}
+      {page === 'notices' && <div id="parent-notices"><ParentFallbackPreferences /><Announcements profile={profile} parentView speech={speech} /></div>}
       {page === 'updates' && <section className="parent-updates" id="parent-updates" aria-labelledby="child-updates-heading">
         <div className="section-heading">
           <p className="eyebrow">{t('parent.childSpecific')}</p>
@@ -2221,6 +2222,7 @@ function PrincipalCommunicationCard({ update, corrected, correctionOf }: { updat
       {corrected && <p className="correction-reference">A newer correction is available in this history.</p>}
       <p className="principal-update-message">{update.message}</p>
       {!corrected && <TranslationManager source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} canApprove />}
+      {!corrected && needsAcknowledgement && <FallbackDispatch kind="update" sourceId={update.id} />}
       <footer>
         <time dateTime={update.sent_at}>{displayDate(update.sent_at)}</time>
         {needsAcknowledgement && (
@@ -2377,6 +2379,7 @@ function Announcements({
               </header>
               {parentView ? <NoticeContent source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} speech={speech} /> : <><h3>{announcement.title}</h3><p>{announcement.body}</p></>}
               {profile.role === 'principal' && <TranslationManager source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} canApprove />}
+              {profile.role === 'principal' && announcement.priority === 'important' && <FallbackDispatch kind="announcement" sourceId={announcement.id} />}
               <footer>
                 <Icon name="school" />
                 <span>Schovera International School</span>
@@ -2454,6 +2457,7 @@ function Card({
       {parent && corrected && <p className="original-message-label">{t('ack.originalMessage')}</p>}
       {parent ? <NoticeContent source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} speech={speech} /> : <p>{update.message}</p>}
       {teacher && !corrected && <TranslationManager source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} />}
+      {teacher && !corrected && update.importance === 'important' && <FallbackDispatch kind="update" sourceId={update.id} />}
       <small className={teacher ? 'teacher-update-meta' : undefined}>
         {update.profiles?.full_name && `${update.profiles.full_name} · `}
         {update.students?.full_name && `${update.students.full_name} · `}

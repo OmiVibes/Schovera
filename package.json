@@ -6,6 +6,9 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "test:fallback": "vitest run src/lib/fallback-provider.test.ts",
+    "test:fallback:integration": "node --env-file=.env.test.local scripts/verify-fallback.mjs",
+    "dev:simulators-local": "node scripts/dev-rfid-local.mjs",
     "test:translations": "vitest run src/components/notice-translations.test.tsx",
     "test:translations:db": "node --env-file=.env.test.local scripts/verify-translations.mjs --database-only",
     "test:translations:integration": "node --env-file=.env.test.local scripts/verify-translations.mjs",

@@ -2045,3 +2045,19 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   .skeleton span, .principal-skeleton-avatar, .principal-communication-skeleton div > span { animation: none; }
 }
+/* Local-only synthetic communication controls. No phone fields. */
+.fallback-panel { border: 1px solid var(--border, #ccd9d4); border-radius: 12px; padding: 16px; margin-block: 16px; background: var(--surface, #fff); color: var(--ink, #18312a); min-width: 0; }
+.fallback-panel summary { cursor: pointer; font-weight: 650; min-height: 44px; padding-block: 10px; }
+.fallback-warning { font-weight: 650; color: #725016; background: #fff6df; border-radius: 8px; padding: 10px; }
+.fallback-panel fieldset { display: grid; gap: 12px; padding: 12px; border: 1px solid #ccd9d4; min-width: 0; }
+.fallback-panel select, .fallback-panel button { min-height: 44px; padding: 8px 12px; max-width: 100%; border: 1px solid #a4b9b0; border-radius: 8px; background: #fff; color: #18312a; }
+.fallback-panel button { cursor: pointer; font-weight: 600; }
+.fallback-panel button:disabled { cursor: default; opacity: .6; }
+.fallback-panel :focus-visible { outline: 3px solid #187568; outline-offset: 3px; }
+.fallback-checkbox { display: flex; gap: 12px; align-items: center; min-height: 44px; }
+.fallback-checkbox input { width: 20px; height: 20px; flex-shrink: 0; }
+.fallback-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.fallback-panel > label { display: block; margin-block: 8px; }
+.fallback-deliveries { padding: 0; list-style: none; display: grid; gap: 10px; }
+.fallback-deliveries li { border-top: 1px solid #ccd9d4; padding-top: 12px; overflow-wrap: anywhere; }
+.fallback-deliveries small { display: block; overflow-wrap: anywhere; }

@@ -254,7 +254,7 @@ async function main() {
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
     const builtRoutes = Object.keys(manifest);
     const expectedRoutes = ['/page', '/[role]/page', '/[role]/[section]/page', '/api/device/v1/events/route',
-      '/api/device/v2/capability-keys/route', '/api/device/v2/capabilities/route', '/api/device/v2/events/route', '/api/teacher-ai/route'];
+      '/api/device/v2/capability-keys/route', '/api/device/v2/capabilities/route', '/api/device/v2/events/route', '/api/teacher-ai/route', '/api/fallback-simulator/route'];
     const missingRoutes = expectedRoutes.filter((route) => !builtRoutes.includes(route));
     if (missingRoutes.length) throw new Error(`Expected application routes missing from build: ${missingRoutes.join(', ')}`);
     await scanForSecretSentinels(path.join(snapshotRoot, '.next'));
