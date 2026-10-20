@@ -86,6 +86,9 @@ try {
   assert.ok(await listen.count(), 'Listen action is missing its accessible English name.');
   await listen.focus();
   assert.equal(await listen.evaluate((node) => node === document.activeElement), true, 'Listen action is not keyboard focusable.');
+  // Focusing the window can schedule the app's existing authorized recovery
+  // reads. Let those settle before attributing subsequent requests to playback.
+  await page.waitForLoadState('networkidle');
   const requestsBeforePlayback = requests.length;
   await listen.click();
   await control.getByRole('status').filter({ hasText: 'Reading notice aloud.' }).waitFor();
