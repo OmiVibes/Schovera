@@ -135,7 +135,7 @@ try {
   const hindiChildSelector = parentPage.locator('.child-switcher select');
   if (await hindiChildSelector.count()) await hindiChildSelector.selectOption({ label: 'Aarav Patil' });
   for (const section of ['प्रोफ़ाइल', 'अपडेट', 'उपस्थिति', 'गृहकार्य', 'समय-सारणी', 'स्कूल सूचनाएँ']) {
-    await parentPage.getByRole('link', { name: section }).click();
+    await parentPage.locator('nav.app-section-nav').getByRole('link', { name: section, exact: true }).click();
     await parentPage.waitForFunction(() => document.documentElement.lang === 'hi');
   }
   await parentLanguage.selectOption('mr');

@@ -93,6 +93,9 @@ try {
   for (const view of views) { assert.deepEqual(view.external, []); assert.deepEqual(view.errors, []); }
   console.log('Connected journeys passed: Teacher correction/insights/send/draft; Principal approval/review; Parent translated mocked speech/acknowledgement/homework/attendance/timetable/profile/consent/child switching; durable offline/restart/local sync/duplicate/revocation; empty contexts and logout.');
   console.log(`Private generated fixture was held only in its ignored run directory (${manualPaths().runDirectory}); no credentials printed.`);
+} catch (error) {
+  console.error(`Connected journey assertion failed: ${error.message}`);
+  throw error;
 } finally {
   await browser?.close();
   if (fixture || existsSync(new URL('../.local/schovera-manual-demo/current.json', import.meta.url))) await cleanManualFixture();

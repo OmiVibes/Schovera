@@ -94,7 +94,9 @@ export async function cleanManualFixture() {
     const school = await must(admin.from('schools').select('id,code').eq('id', fixture.schoolId).maybeSingle());
     if (school && school.code !== `MANUAL-${fixture.runId}`) throw new Error('Cleanup refuses a school not owned by this fixture');
     if (school) {
-      for (const table of ['device_event_receipts', 'school_entry_events', 'student_credentials', 'school_devices', 'rfid_capability_signing_keys', 'fallback_simulation_deliveries', 'fallback_simulation_preferences', 'communication_translations', 'attendance_records', 'class_assignments', 'timetable_entries']) await must(admin.from(table).delete().eq('school_id', school.id));
+      const devices = await must(admin.from('school_devices').select('id').eq('school_id', school.id));
+      if (devices.length) await must(admin.from('device_event_receipts').delete().in('device_id', devices.map((device) => device.id)));
+      for (const table of ['school_entry_events', 'student_credentials', 'school_devices', 'rfid_capability_signing_keys', 'fallback_simulation_deliveries', 'fallback_simulation_preferences', 'communication_translations', 'attendance_records', 'class_assignments', 'timetable_entries']) await must(admin.from(table).delete().eq('school_id', school.id));
       let updates = await must(admin.from('student_updates').select('id,corrects_update_id').eq('school_id', school.id));
       if (updates.length) await must(admin.from('acknowledgements').delete().in('update_id', updates.map((u) => u.id)));
       while (updates.length) {
