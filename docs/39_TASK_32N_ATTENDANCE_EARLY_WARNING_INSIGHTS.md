@@ -27,7 +27,7 @@ Reads are bounded (100 active classes, 5,000 roster rows, 5,000 attendance rows 
 
 ## UI, privacy and access
 
-Teacher Attendance includes a separate panel for the workspace's currently assigned class; changing class remounts the panel, aborts prior queries and hides stale results. Principal Attendance includes same-school per-class summaries and a class inspector. Both show the search interval, actual recorded dates, explicit thresholds, completeness disclosure, student date/status evidence and read-only advisory explanations. Detail lists paginate 30 students. Teachers must review context and choose any supportive follow-up themselves.
+Teacher Attendance includes a separate panel for the workspace's currently assigned class; changing account, role, school or class remounts the panel, aborts prior queries and hides stale results. Principal Attendance includes same-school per-class summaries and a class inspector. Both show the search interval, actual recorded dates, explicit thresholds, completeness disclosure, student date/status evidence and read-only advisory explanations. Detail lists paginate 30 students. Teachers must review context and choose any supportive follow-up themselves.
 
 The new loader uses the existing authenticated browser client, verifies the signed-in profile/role/school, restricts Teachers to active assignments and queries only RLS-authorized classes/students/attendance. No service key, privileged reader, API route, new policy, table or migration is added. A forged role argument cannot grant database access. Parents retain the existing linked-child attendance experience; the staff panel is not mounted for Parents and the staff loader rejects Parent profiles. The rule code is not secret: a Parent may still reason about their own authorized records; there is no stored internal indicator dataset newly exposed to them.
 
@@ -67,8 +67,50 @@ Run existing attendance, fallback, translations, voice, polling, RFID, gateway, 
 
 ## Verification record
 
-Pending complete browser/regression/build verification; implementation descriptions above are not claims of passing tests.
+Local synthetic acceptance was run on 2026-10-20. The initial rule suite had 14 passing tests; subsequent additions cover late status, earlier-period completeness and input immutability. The initial lint run rejected synchronous effect-driven state updates; the component now keys asynchronous results and derives loading state, hiding prior results while a new request is pending. A test-helper TypeScript inference error for nullable Auth user results was corrected with an explicit null check and correct generic response typing. Both issues were found before final verification; neither was bypassed or suppressed.
+
+The local integration test passed its complete browser run on the first attempt: assigned/unassigned Teacher, same/cross-school Principal, Parent staff-loader denial and preserved linked-child attendance, anonymous denial, keyboard record disclosure, English/Hindi/Marathi headings, 390px overflow, offline hiding/reconnect, injected loading/error states, Principal empty-class detail and correction recomputation in an already-open Teacher panel. It compares before/after attendance rows for read-only viewing, then explicitly changes its synthetic history through the existing authorized save RPC and verifies follow-up disappears and improvement appears. Synthetic school rows were checked for zero RFID observations, fallback preferences/deliveries and school communications. Cleanup removed the controlled attendance rows, audits, relationships, accounts, classes and schools and verified absence.
+
+Expanded Teacher mobile and Principal desktop screenshots were inspected. Browser destinations were intercepted and restricted to loopback, with no external attempts. The existing fallback browser regression additionally checks downloaded shared-app JavaScript for the **local** service credential without printing it. Audible speech and real screen-reader user testing were not performed; existing browser voice tests use controlled speech behavior, and the real browser reported zero voice locales. No holidays/enrollment history, real-student pilot, intervention efficacy, dropout prediction or hardware behavior is claimed validated.
+
+| Check | Result |
+|---|---|
+| `test:attendance-insights` | 21 passed: 17 rule/date/quality tests and 4 account/role/school/class stale-result tests. |
+| `test:attendance-insights:integration` | Passed, database-only preflight and full synthetic browser acceptance. |
+| `verify:attendance` | Passed roster save/update, Parent history, Principal overview and access isolation. |
+| `test:fallback`, `test:fallback:integration` | 10 unit tests and full DB/HTTP/browser suite passed. |
+| `test:translations`, `test:translations:integration` | 2 unit tests and complete database/browser approval workflow passed. |
+| `test:parent-voice`, `verify:parent-voice` | 13 unit/control tests and 390px browser checks passed; no audible-playback claim. |
+| `test:entry-polling` | 4 passed. |
+| `test:rfid`, `test:rfid:integration` | 22 unit/helper tests and local v2 integration passed. |
+| `test:gateway`, `test:gateway:local-integration` | 43 unit/fault tests and durable-outbox/local-Supabase acceptance passed; existing Node SQLite experimental warning remains. |
+| `test:credential-attribution` | 20 passed. |
+| `verify:student-profile`, `verify:role-navigation`, `verify:accessibility-i18n` | Passed. |
+| `verify:reconnect` | Complete run passed on its first Task 32N attempt, including final timetable recovery. |
+| `verify:role-visuals` | All 22 destinations × 1440/1024/768/390px passed, including Teacher and Principal Attendance. |
+| `typecheck`, `lint`, `git diff --check` | Passed after the initial development fixes described above; final context-isolation test source was included in typecheck/lint. |
+| `build:isolated` | Passed at `0d46ad0a32df201e8bbed50ea90561e1b087c586`, then repeated successfully at final application-code commit `0066d2d071c6a38698d41e37c2b5355b35206b89` after scope-key hardening. Later changes add only tests, a test script and this evidence. |
+
+Total focused unit/control/rule checks: **135 passed** (21 new plus 114 existing). Plain-script and local DB/browser acceptance suites above are additional checks, not inflated unit counts. The final request-isolation tests prove old results disappear immediately while a new authorization-context read remains pending.
+
+Both isolated builds loaded only generated `.env.production` with loopback placeholders; compilation, TypeScript, static generation, expected route manifests and synthetic private-sentinel absence checks passed. Only the existing public Google Fonts hosts were observed through the build's allowlisted proxy; that proxy is not an OS network sandbox. No Supabase production, Vercel, AI or communications provider was contacted. This is compilation/security-isolation evidence, not hosted deployment or model validation.
+
+The owned local test server was stopped and the exact generated disposable worktree was removed after temp-path validation, including its ignored local env files and synthetic issuer key. Both build snapshots were also cleaned. Privacy-safe synthetic screenshots remain only in the OS temporary directory. The original `.env.local` was never opened, copied, loaded or modified. No new dependencies, migration, schema/RLS changes, production data/configuration changes, push, merge to main or deployment occurred. Pre-existing untracked `AGENTS.md`, `CLAUDE.md`, `local-dev.err`, `local-dev.out` and `review/` were preserved.
+
+### Files changed
+
+- `src/lib/attendance-insights.ts`: deterministic records-only rules and school-date range.
+- `src/lib/attendance-insights-data.ts`: bounded authenticated/RLS-scoped read loader.
+- `src/lib/attendance-insights.test.ts`: pure rule, quality and date tests.
+- `src/components/attendance-insights.tsx`: staff-only read-only panel and request isolation.
+- `src/components/attendance-insights.test.tsx`: authorization-context stale-result tests.
+- `scripts/verify-attendance-insights.integration.test.ts`: guarded synthetic DB/browser acceptance and cleanup.
+- `src/components/schovera-app.tsx`, `src/app/globals.css`, `src/lib/i18n.ts`: scoped integration, styles and English/Hindi/Marathi copy.
+- `package.json`: two test commands; dependency/lockfile contents unchanged.
+- `docs/39_TASK_32N_ATTENDANCE_EARLY_WARNING_INSIGHTS.md`: evidence, demonstration and limits.
 
 ## Pilot gates and interpretation risks
 
 Thresholds are transparent **demonstration defaults**, not clinically/statistically validated or approved school policy. Before a pilot, staff must agree the observation window and minimum evidence, establish calendar/enrollment and correction quality, review false positives/negatives with privacy-safe synthetic/consented evidence, and test accessibility with actual staff. Measure recording completeness, reviewed advisory counts, disputed/corrected records and helpfulness of voluntary supportive follow-up, never a claimed dropout probability. Require human decision ownership, access/retention review, consent/communication procedures and an appropriate stop/rollback process. No real-student pilot, external service, deployment or Task 32O is authorized here.
+
+Task 32N: **complete within the local synthetic support boundary**. Task 32O: **READY for review and a separately scoped local follow-up**, not started. Real-student pilot/production acceptance remains blocked on the policy, data-quality, privacy and measurement gates above.
