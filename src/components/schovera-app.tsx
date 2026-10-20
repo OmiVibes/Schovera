@@ -2002,7 +2002,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
     markedClassIds = new Set(todayAttendance.map((row) => row.class_id)),
     visibleCommunication = communicationFilter === 'awaiting'
       ? awaitingUpdates
-      : all.slice(0, 6);
+      : page === 'communication' ? all : all.slice(0, 6);
   const showAwaitingCommunication = () => {
     setCommunicationFilter('awaiting');
     router.push('/principal/communication?filter=awaiting');
