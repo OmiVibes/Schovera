@@ -168,7 +168,7 @@ Fresh checks on **2026-10-20**, Windows / Node **22.18.0**, Docker **27.4.0**, S
 | `npm run verify:final-journeys` | PASS, twice after corrections | Fresh 5-account synthetic school; connected browser journeys plus separate-process queue/restart/sync/duplicate/revocation and verified cleanup |
 | `npm run verify:local-i18n-reconnect` | PASS after fixes | Actual Marathi Important update → reconnect → per-update acknowledgement → staff coverage/metrics → reload persistence → exact cleanup |
 | `npm run typecheck` / `npm run lint` | PASS | Final source, no lint warnings |
-| `npm run build:isolated` | PASS | Snapshot `b2a922f033f149161f85b542a3e2796356a4785f`, containing the final application fix; later edits affect test helpers/docs only |
+| `npm run build:isolated` | PASS, twice | Initial snapshot `b2a922f033f149161f85b542a3e2796356a4785f`; final snapshot `e5971146253b8a5f54515a11b9a3a429f10f3626`, including all final application/test helpers; only documentation evidence was updated afterward |
 | `npm audit` | 5 HIGH / 0 CRITICAL | Development lint-tool chain only; nonzero audit exit expected, findings remain open |
 | `npm audit --omit=dev` | PASS | 0 known production-dependency vulnerabilities at audit time; not proof of whole-system security |
 | `npm run simulate:rfid -- --target https://schovera.vercel.app` | EXPECTED REFUSAL | Exit 1 before network delivery; no Vercel request |
@@ -202,6 +202,8 @@ Fresh audit: `next@16.3.8` and `react@19.2.8` include the prior security patch; 
 Local software demonstration: **READY WITH LIMITATIONS**. The safe manual path, role workflows, local AI, translations, fake fallback, insights and offline-to-local entry flow are available. Human audio/translation accuracy, low-literacy comprehension, real touchscreen use and student presentation rehearsal remain unverified. Some legacy UI is English-only. Realtime/reconnect suites showed initial timeouts before passing. Development-tool advisories remain open. Real SMS/calls, physical readers, Pi power/storage, hosted ingestion, real-school permissions/impact and production security/deployment are not accepted by this audit.
 
 Task 32P adds tests, an owned synthetic manual fixture/gateway helper, safe documentation and the one active-class UI guard only. No migration, new dependency, production write, push, merge or deployment is authorized or performed. Temporary test fixtures are removed; existing shared local seeded data and protected untracked `AGENTS.md`, `CLAUDE.md`, `local-dev.err`, `local-dev.out`, `review/` remain untouched. Final cleanup and Git status are recorded in the handoff report; the server used for testing is stopped, not left secretly running. Follow the startup instructions to run your own session.
+
+Final cleanup checks: the exact owned audit worktree was path-validated and removed; port 3000 had no listener; local PostgreSQL counted **zero `MANUAL-%` schools and zero `@manual.local.test` Auth users**. Both isolated build snapshots reported successful removal. Only the original repository remains in `git worktree list`. Temporary synthetic screenshots remain in the OS temporary directory as non-secret evidence; no screenshot, credential, key or SQLite artifact was committed. Local Supabase/shared pre-existing demo data were deliberately left intact. The final typecheck/lint and `e597114` isolated build passed. Documentation-link checks passed; all 52 manual-checklist actual-result cells remain blank and NOT TESTED. Tracked Git state was clean before this final evidence-only update and is rechecked after its commit.
 
 ## Personal checklist — fill this in yourself
 
@@ -257,9 +259,9 @@ Actual-result and screenshot cells are intentionally blank. Every status starts 
 | 46 | Presenter | Laptop voices | Test actual presentation browser/OS and audio output | Available English/Hindi/Marathi voices documented; fallback rehearsed | | NOT TESTED | |
 | 47 | Presenter | Offline demonstration | Rehearse full queue→outage→restart→sync flow | Honest smooth demonstration; no remote-alert promise during outage | | NOT TESTED | |
 | 48 | Presenter | Competition rehearsal | Student explains synthetic vs real features and limitations | Understandable, accurate claims; no hardware/safety/provider overclaim | | NOT TESTED | |
-| 49 | Operator | Cleanup/reset | Log out; demo:clean; stop own server; remove exact worktree | Owned fixtures and private temporary files removed; shared data preserved | | NOT TESTED | |
-| 50 | Teacher | AI and spreadsheet | With local Ollama running, request a generic exam/syllabus draft; edit it; import a tiny synthetic workbook, edit a cell and download | Editable draft, no auto-publishing; Teacher checks accuracy; local workbook export is not full Excel fidelity | | NOT TESTED | |
-| 51 | Teacher | Active class regression | Click the already-selected class twice, including after editing an unsaved attendance status | Roster and unsaved status remain; no zero-student endless loading | | NOT TESTED | |
-| 52 | Principal | School-wide notice | Publish a clearly synthetic notice; view it as Parent and Teacher | Same-school official notice; distinct from child-update acknowledgement model | | NOT TESTED | |
+| 49 | Teacher | AI and spreadsheet | With local Ollama running, request a generic exam/syllabus draft; edit it; import a tiny synthetic workbook, edit a cell and download | Editable draft, no auto-publishing; Teacher checks accuracy; local workbook export is not full Excel fidelity | | NOT TESTED | |
+| 50 | Teacher | Active class regression | Click the already-selected class twice, including after editing an unsaved attendance status | Roster and unsaved status remain; no zero-student endless loading | | NOT TESTED | |
+| 51 | Principal | School-wide notice | Publish a clearly synthetic notice; view it as Parent and Teacher | Same-school official notice; distinct from child-update acknowledgement model | | NOT TESTED | |
+| 52 | Operator | Cleanup/reset | Log out; demo:clean; stop own server; remove exact worktree | Owned fixtures and private temporary files removed; shared data preserved | | NOT TESTED | |
 
 Stop after Task 32P. Manual feedback, a school pilot, hardware integration and production deployment require separate follow-up.
