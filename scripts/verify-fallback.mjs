@@ -2,6 +2,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
@@ -13,6 +16,7 @@ const base = process.env.SCHOVERA_TEST_URL || 'http://127.0.0.1:3000';
 const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 const password = `Synthetic-${randomUUID()}!aA1`;
 const schools = [], users = [], updates = [];
+const captures = process.argv.includes('--screenshots') ? mkdtempSync(join(tmpdir(), 'schovera-fallback-ui-')) : null;
 let browser;
 const must = async (query) => { const { data, error } = await query; if (error) throw new Error(error.message); return data; };
 const denied = async (query) => assert.ok((await query).error, 'unauthorized mutation succeeded');
@@ -184,6 +188,7 @@ try {
     await panel.getByLabel('Preferred notice language').selectOption('mr');
     await panel.getByRole('button', { name: 'Save my preferences', exact: true }).click(); await panel.getByText('Preferences saved.', { exact: false }).waitFor();
     const saved = await must(parent.client.from('fallback_simulation_preferences').select('*'));
+    if (captures) await panel.screenshot({ path: join(captures, 'parent-mobile.png') });
     assert.equal(saved.find((p) => p.channel === 'sms').opted_in, false); assert.equal(saved.find((p) => p.channel === 'ivr').opted_in, true);
     assert.ok(saved.every((p) => p.preferred_language === 'mr' && /^SIM-/.test(p.recipient_ref)));
     await sms.focus(); await family.page.keyboard.press('Space'); assert.equal(await sms.isChecked(), true);
@@ -205,11 +210,13 @@ try {
     await manager.getByText('Pending simulation', { exact: true }).first().waitFor();
     await manager.getByRole('button', { name: 'Run fake delivery / check status' }).first().click();
     await manager.getByText('SIMULATED delivered — not read', { exact: true }).waitFor();
+    if (captures) await manager.screenshot({ path: join(captures, 'teacher-mobile.png') });
     assert.ok(await staff.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     const leader = await login(principal, '/principal/communication');
     const oversight = leader.page.locator('.principal-communication-card').filter({ hasText: uiSource.title }).getByTestId('fallback-dispatch');
     await oversight.locator('summary').click(); await oversight.getByText('SIMULATED delivered — not read', { exact: true }).waitFor();
     assert.ok(await leader.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    if (captures) { await leader.page.setViewportSize({ width: 1440, height: 1000 }); await oversight.screenshot({ path: join(captures, 'principal-desktop.png') }); }
     // Check source code downloaded by browser without ever printing the value.
     const bundles = await family.page.locator('script[src]').evaluateAll((nodes) => nodes.map((n) => n.src));
     for (const script of bundles) {
@@ -219,6 +226,7 @@ try {
     assert.deepEqual([...family.external, ...staff.external, ...leader.external], []);
     for (const view of [family, staff, leader]) await view.context.close();
     console.log('Fallback browser checks passed: Parent preferences, keyboard checkbox, en/hi/mr, Teacher queue/dispatch, Principal review, 390px and no external destinations/browser service key.');
+    if (captures) console.log(`Synthetic UI captures: ${captures}`);
   }
   assert.equal((await must(admin.from('acknowledgements').select('id').in('update_id', updates))).length, 0, 'fake delivery never acknowledges');
   for (const table of ['attendance_records', 'school_entry_events']) assert.equal((await must(admin.from(table).select('id').eq('student_id', student.id))).length, 0);

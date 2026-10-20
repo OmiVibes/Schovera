@@ -104,7 +104,7 @@ function Operator({ kind, sourceId }: { kind: 'update' | 'announcement'; sourceI
         {!review.deliveries.length && <p>{t('fallback.empty')}</p>}
         <ul className="fallback-deliveries">{review.deliveries.map((d, index) => <li key={d.id}>
           <p><strong>{t('fallback.item')} {index + 1} · {d.channel.toUpperCase()}</strong> · {d.language === 'original' ? t('translation.original') : languageOptions.find((o) => o.code === d.language)?.label}</p>
-          <p>{t(`fallback.status.${d.status}`)} · {t('fallback.attempts')}: {d.attempt_count}/5</p>
+          <p><span>{t(`fallback.status.${d.status}`)}</span> · {t('fallback.attempts')}: {d.attempt_count}/5</p>
           {d.receipt_ref && <small>{d.receipt_ref}</small>}
           {!['delivered', 'failed', 'blocked'].includes(d.status) && <><p className="hint">{t('fallback.retryAt')}: {new Date(d.next_attempt_at).toLocaleString()}</p><button type="button" disabled={busy} onClick={() => void action({ op: 'dispatch', delivery_id: d.id, scenario })}>{t('fallback.simulate')}</button></>}
         </li>)}</ul>
