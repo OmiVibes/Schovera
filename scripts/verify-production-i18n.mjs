@@ -195,9 +195,11 @@ try {
   const persistedAcknowledgements = await must(admin.from('acknowledgements').select('id').eq('update_id', teacherUpdateId));
   expect(acknowledgementResponse.ok() && persistedAcknowledgements.length === 1, `Production Parent acknowledgement failed at the RPC/database boundary (HTTP ${acknowledgementResponse.status()}, rows ${persistedAcknowledgements.length}).`);
   try {
-    await parentPage.locator('.attention-panel').getByText('तुम्ही सर्व अपडेट पाहिले आहेत', { exact: true }).waitFor({ state: 'visible', timeout: 20000 });
-    await parentPage.locator('#parent-updates .update-card').filter({ hasText: title }).getByText('पुष्टी केली', { exact: true }).waitFor({ state: 'visible', timeout: 20000 });
+    // Other seeded Important notices may still be awaiting. Only our controlled
+    // item must leave the urgent panel, without reload or navigation first.
+    await parentImportantCard.waitFor({ state: 'detached', timeout: 20000 });
     expect(await parentPage.locator('.attention-panel .update-card').filter({ hasText: title }).count() === 0, 'Acknowledged Important item remained in the urgent Parent panel.');
+    expect(parentLoadCount === initialLoads, 'Parent reloaded instead of updating the acknowledged item in place.');
   } catch {
     const panelText = (await parentPage.locator('.attention-panel').innerText()).replaceAll(title, '[controlled update]');
     throw new Error(`Acknowledgement persisted, but Marathi Parent status did not update without refresh. Panel state: ${panelText}`);
@@ -209,6 +211,10 @@ try {
     return values[0] === before[0] && values[1] === before[1] + 1 && values[2] === before[2] - 1;
   }, principalBeforeAck, { timeout: 20000 });
   expect((await must(admin.from('acknowledgements').select('id').eq('update_id', teacherUpdateId))).length === 1, 'Production Important acknowledgement row count was not exactly one.');
+
+  // Updates is now a separate route, not hidden underneath Home.
+  await parentPage.locator('nav.app-section-nav a[href="/parent/updates"]').click();
+  await parentPage.locator('#parent-updates .update-card').filter({ hasText: title }).getByText('पुष्टी केली', { exact: true }).waitFor({ state: 'visible', timeout: 20000 });
 
   for (const page of pages) await page.reload({ waitUntil: 'networkidle' });
   await parentPage.locator('#parent-child-heading').waitFor({ state: 'visible', timeout: 20000 });
@@ -225,7 +231,7 @@ try {
   await parentPage.waitForFunction(() => document.documentElement.lang === 'en');
   await parentPage.locator('#parent-updates .update-card').filter({ hasText: title }).getByText('Acknowledged', { exact: true }).waitFor({ state: 'visible', timeout: 10000 });
   acceptanceCompleted = true;
-  console.log('Production Marathi Important update, reconnect recovery, acknowledgement Realtime, metrics, and refresh persistence passed.');
+  console.log('Local Marathi Important update, reconnect recovery, acknowledgement Realtime, metrics, and refresh persistence passed.');
 } catch (error) {
   verificationError = error;
 } finally {
@@ -239,7 +245,7 @@ try {
         expect(await page.getByText(title, { exact: false }).count() === 0, 'A controlled acceptance update remained visible after local cleanup and refresh.');
       }
       expect(await pages[1].locator('.language-selector select').inputValue() === 'en', 'Production Parent final smoke check did not return to English.');
-      console.log('Production post-cleanup smoke passed for Teacher, Parent, and Principal; controlled UI data absent.');
+      console.log('Local post-cleanup smoke passed for Teacher, Parent, and Principal; controlled UI data absent.');
     }
   } catch (error) {
     verificationError = verificationError
