@@ -150,6 +150,14 @@ try {
     const review = p.page.locator('.principal-communication-card').filter({ hasText: original.title }).locator('.translation-manager');
     await review.locator('summary').click();
     await review.locator('.translation-editor > label select').selectOption('mr');
+    const reviewText = review.getByLabel('Translated message', { exact: true });
+    await reviewText.fill(`${samples.mr.body} Unsaved review comparison.`);
+    await Promise.all([
+      p.page.waitForResponse((response) => new URL(response.url()).pathname === '/rest/v1/student_updates'),
+      p.page.evaluate(() => window.dispatchEvent(new Event('focus'))),
+    ]);
+    assert.equal(await reviewText.inputValue(), `${samples.mr.body} Unsaved review comparison.`);
+    await reviewText.fill(samples.mr.body);
     await review.getByRole('checkbox').check();
     await review.getByRole('button', { name: 'Approve reviewed translation', exact: true }).click();
     await review.getByText('School-approved translation', { exact: true }).waitFor();
@@ -196,6 +204,9 @@ try {
   assert.equal(await translation(parent.client, original, 'mr'), null);
   await must(action(teacher, original, 'mr', 'submit'));
   await must(action(principal, original, 'mr', 'approve'));
+  await must(admin.from('teacher_class_assignments').update({ ended_at: new Date().toISOString() }).eq('teacher_id', teacher.id).eq('class_id', klass.id));
+  await denied(action(teacher, original, 'mr', 'save', samples.mr));
+  await must(admin.from('teacher_class_assignments').update({ ended_at: null }).eq('teacher_id', teacher.id).eq('class_id', klass.id));
   const correction = await must(teacher.client.rpc('send_student_update_correction', { p_original_update_id: original.id, p_title: 'Corrected source', p_message: 'Original instructions corrected to 11:00.' }));
   created.updates.push(correction);
   assert.equal((await translation(teacher.client, original, 'mr')).status, 'needs_review');
