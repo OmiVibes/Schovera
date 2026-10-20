@@ -44,6 +44,7 @@ it('switches approved languages, speaks the visible text, stops on language/sour
   }
   await act(async () => root.render(<Harness value={source} />));
   expect(fixture.reads).toEqual([]);
+  expect((host.querySelector('.parent-speech-button') as HTMLButtonElement).disabled).toBe(true);
   const change = async (value: string) => { await act(async () => { const select = host.querySelector('.notice-language-toolbar select') as HTMLSelectElement; select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); }); };
   fixture.rows.set('synthetic-a:hi', { id: 'hi', title: 'सूचना', body: 'पुस्तकालय नौ बजे खुलता है। <img src=x>', language: 'hi', status: 'approved' });
   await change('hi');

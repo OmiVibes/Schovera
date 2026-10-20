@@ -82,6 +82,8 @@ try {
     control = page.locator('.parent-speech-controls').first();
   }
   assert.ok(await control.count(), 'Local demo Parent has no communication card to exercise voice controls.');
+  // Existing originals have no reliable language metadata: choose explicitly.
+  await control.getByLabel('Notice language', { exact: true }).selectOption('en');
   const listen = control.getByRole('button', { name: 'Listen to notice' });
   assert.ok(await listen.count(), 'Listen action is missing its accessible English name.');
   await listen.focus();

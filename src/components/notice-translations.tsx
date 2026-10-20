@@ -54,7 +54,7 @@ function TranslationView({ source, speech }: { source: CommunicationSource; spee
     </div>
     <p className="hint notice-language-status" role="status">{choice === 'original' ? t('translation.originalUnknown') : !current ? t('translation.loading') : current.failed ? t('translation.loadError') : translated ? t('translation.approved') : t('translation.unavailable')}</p>
     <div lang={content.language} className="notice-visible-text"><h3>{content.title}</h3><p>{content.body}</p></div>
-    {speech && <ParentSpeechControls noticeId={`${source.kind}:${source.id}`} text={`${content.title}. ${content.body}`} language={content.language} controller={speech.controller} state={speech.state} />}
+    {speech && <ParentSpeechControls noticeId={`${source.kind}:${source.id}`} text={`${content.title}. ${content.body}`} language={content.language} requireLanguageChoice controller={speech.controller} state={speech.state} />}
   </div>;
 }
 

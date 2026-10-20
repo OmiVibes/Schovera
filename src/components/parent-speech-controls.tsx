@@ -24,18 +24,21 @@ export function ParentSpeechControls({
   noticeId,
   text,
   language,
+  requireLanguageChoice = false,
   controller,
   state,
 }: {
   noticeId: string;
   text: string;
   language?: Exclude<NoticeLanguageChoice, 'auto'>;
+  requireLanguageChoice?: boolean;
   controller: ParentSpeechController;
   state: ReturnType<ParentSpeechController['getSnapshot']>;
 }) {
   const { t } = useI18n();
   const isActive = state.noticeId === noticeId && state.phase !== 'idle';
   const [choice, setChoice] = useSpeechChoice(noticeId);
+  const needsChoice = requireLanguageChoice && !language && choice === 'auto';
   useEffect(() => () => {
     if (controller.getSnapshot().noticeId === noticeId) controller.stop();
   }, [controller, noticeId, text, language]);
@@ -52,7 +55,7 @@ export function ParentSpeechControls({
         </select>
       </label>
       {!isActive || state.phase === 'unavailable' || state.phase === 'error' ? (
-        <button type="button" className="parent-speech-button" onClick={() => void controller.play(noticeId, text, language ?? choice)} disabled={!text.trim()}>
+        <button type="button" className="parent-speech-button" onClick={() => void controller.play(noticeId, text, language ?? choice)} disabled={!text.trim() || needsChoice}>
           {t('speech.listen')}
         </button>
       ) : (
@@ -70,6 +73,7 @@ export function ParentSpeechControls({
       {isActive && state.messageKey && (
         <span className="parent-speech-status" role="status" aria-live="polite">{t(state.messageKey)}</span>
       )}
+      {needsChoice && <span className="parent-speech-status" role="status">{t('speech.chooseLanguage')}</span>}
     </div>
   );
 }
