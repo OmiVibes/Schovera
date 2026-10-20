@@ -1,5 +1,8 @@
 import { it, expect } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { chromium, type Browser, type Page } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
@@ -15,6 +18,7 @@ it('local synthetic attendance scope, corrections, advisory UI and cleanup', asy
   const schools: string[] = [], users: string[] = [];
   const password = `Synthetic-${randomUUID()}!aA1`;
   let browser: Browser | undefined;
+  let teacherPage: Page | undefined;
   // Do not log queries, tokens, notice bodies or fixture identifiers.
   async function must<T extends { data: unknown; error: { message: string } | null }>(query: PromiseLike<T>): Promise<NonNullable<T['data']>> { const r = await query; if (r.error) throw new Error(r.error.message); return r.data as NonNullable<T['data']>; }
   async function school() { const s = await must(admin.from('schools').insert({ name: `Synthetic insights ${randomUUID()}`, code: `IN-${randomUUID().slice(0, 8)}`, timezone: 'Asia/Kolkata' }).select().single()); schools.push(s.id); return s.id as string; }
@@ -61,7 +65,10 @@ it('local synthetic attendance scope, corrections, advisory UI and cleanup', asy
 
     if (process.env.SCHOVERA_INSIGHTS_DATABASE_ONLY !== '1') {
       browser = await chromium.launch({ headless: true });
+      const captures = mkdtempSync(join(tmpdir(), 'schovera-insights-ui-'));
       const staff = await login(teacher); await panel(staff.page).getByText('Attendance Follow-up Suggested', { exact: true }).waitFor();
+      teacherPage = staff.page;
+      await panel(staff.page).screenshot({ path: join(captures, 'teacher-mobile.png'), style: '.application-shell{visibility:hidden!important}' });
       const child = panel(staff.page).locator('.insights-students article').filter({ hasText: students[0].full_name });
       await child.getByText('Inspect underlying attendance records', { exact: true }).focus(); await staff.page.keyboard.press('Enter');
       expect(await child.locator('details[open]').count()).toBe(1); expect(await child.getByText(dates[9], { exact: true }).count()).toBeGreaterThan(0);
@@ -87,10 +94,14 @@ it('local synthetic attendance scope, corrections, advisory UI and cleanup', asy
       expect(await panel(leader.page).getByText(students[2].full_name, { exact: true }).count()).toBe(0);
       await panel(leader.page).getByLabel('Inspect class').selectOption(classes[1].id); await panel(leader.page).getByText(students[2].full_name, { exact: true }).waitFor();
       await panel(leader.page).getByText('Not enough complete data:', { exact: false }).first().waitFor();
+      await leader.page.setViewportSize({ width: 1440, height: 1000 });
+      await panel(leader.page).getByLabel('Inspect class').selectOption(classes[0].id);
+      await panel(leader.page).screenshot({ path: join(captures, 'principal-desktop.png') });
       const family = await login(parent); expect(await panel(family.page).count()).toBe(0);
       expect([...staff.external, ...leader.external, ...family.external]).toEqual([]);
-      for (const view of [staff, leader, family]) await view.context.close();
+      for (const view of [leader, family]) await view.context.close();
       console.log('Insights browser passed: evidence disclosure keyboard, en/hi/mr, 390px, Parent exclusion, Principal details, offline/loading/error and bounded refresh.');
+      console.log(`Synthetic insights screenshots: ${captures}`);
     }
     expect(await must(admin.from('attendance_records').select('*').eq('school_id', a).order('id'))).toEqual(before);
     // Explicit correction through the existing authorized attendance workflow.
@@ -98,6 +109,11 @@ it('local synthetic attendance scope, corrections, advisory UI and cleanup', asy
     const corrected = await loadAttendanceInsights(teacher.client, teacher.id, a, 'teacher', classes[0].id);
     const evaluated = classroomInsights(corrected.students, corrected.records, classes[0].id, corrected.range);
     expect(evaluated.followup).toBe(0); expect(evaluated.improved).toBe(1);
+    if (teacherPage) {
+      await panel(teacherPage).getByRole('button', { name: 'Refresh insights' }).click();
+      await panel(teacherPage).getByText('Recent improvement:', { exact: false }).waitFor();
+      expect(await panel(teacherPage).getByText('Attendance Follow-up Suggested', { exact: true }).count()).toBe(0);
+    }
     for (const table of ['school_entry_events', 'fallback_simulation_preferences', 'fallback_simulation_deliveries', 'student_updates', 'announcements']) expect(await must(admin.from(table).select('id').eq('school_id', a))).toHaveLength(0);
     console.log('Insights corrections recomputed; read-only UI made no attendance changes and created no RFID/fallback/communication records.');
   } finally {
