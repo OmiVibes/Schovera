@@ -38,9 +38,9 @@ it('switches approved languages, speaks the visible text, stops on language/sour
     speaking: false, paused: false, getVoices: () => [{ lang: 'en-IN' }, { lang: 'hi-IN' }, { lang: 'mr-IN' }],
     speak: (utterance) => { spoken.push(utterance); utterance.onstart?.(); }, cancel, pause: vi.fn(), resume: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(),
   }, createUtterance: (text) => ({ text, lang: '', voice: null, onstart: null, onend: null, onerror: null }) }));
-  function Harness({ value }: { value: CommunicationSource }) {
+  function Harness({ value, duplicate = false }: { value: CommunicationSource; duplicate?: boolean }) {
     const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-    return <I18nProvider><NoticeContent source={value} speech={{ controller, state }} /></I18nProvider>;
+    return <I18nProvider><NoticeContent source={value} speech={{ controller, state }} />{duplicate && <NoticeContent source={value} speech={{ controller, state }} />}</I18nProvider>;
   }
   await act(async () => root.render(<Harness value={source} />));
   expect(fixture.reads).toEqual([]);
@@ -61,4 +61,8 @@ it('switches approved languages, speaks the visible text, stops on language/sour
   await act(async () => root.render(<Harness value={{ ...source, id: 'synthetic-b', title: 'Child B', body: 'Only child B text' }} />));
   expect(host.textContent).not.toContain('वाचनालय'); expect(host.textContent).not.toContain(source.body); expect(host.textContent).toContain('Only child B text');
   expect((host.querySelector('.notice-language-toolbar select') as HTMLSelectElement).value).toBe('original');
+  await act(async () => root.render(<Harness value={source} duplicate />));
+  await change('hi');
+  await act(async () => { (host.querySelector('.parent-speech-button') as HTMLButtonElement).click(); });
+  expect([...host.querySelectorAll('button')].filter((button) => button.textContent === 'Pause')).toHaveLength(1);
 });

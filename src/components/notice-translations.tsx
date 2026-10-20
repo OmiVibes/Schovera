@@ -15,6 +15,9 @@ export function NoticeContent(props: { source: CommunicationSource; speech?: Spe
 
 function TranslationView({ source, speech }: { source: CommunicationSource; speech?: Speech }) {
   const { t } = useI18n();
+  // Home can show the same update twice with independent reading choices.
+  // Playback state belongs to this visible card, not every copy of its source.
+  const speechInstance = useId();
   const db = useMemo(() => createClient(), []);
   const [choice, setChoice] = useState<Language | 'original'>('original');
   const [revision, setRevision] = useState(0);
@@ -54,7 +57,7 @@ function TranslationView({ source, speech }: { source: CommunicationSource; spee
     </div>
     <p className="hint notice-language-status" role="status">{choice === 'original' ? t('translation.originalUnknown') : !current ? t('translation.loading') : current.failed ? t('translation.loadError') : translated ? t('translation.approved') : t('translation.unavailable')}</p>
     <div lang={content.language} className="notice-visible-text"><h3>{content.title}</h3><p>{content.body}</p></div>
-    {speech && <ParentSpeechControls noticeId={`${source.kind}:${source.id}`} text={`${content.title}. ${content.body}`} language={content.language} requireLanguageChoice controller={speech.controller} state={speech.state} />}
+    {speech && <ParentSpeechControls noticeId={`${source.kind}:${source.id}:${speechInstance}`} text={`${content.title}. ${content.body}`} language={content.language} requireLanguageChoice controller={speech.controller} state={speech.state} />}
   </div>;
 }
 
