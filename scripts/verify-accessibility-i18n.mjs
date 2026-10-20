@@ -133,6 +133,9 @@ try {
       assert.ok(await listenButton.count(), `Missing localized notice speech action in ${language}.`);
       const languageChoice = speechControls.first().getByRole('combobox', { name: translate(language, 'speech.language') });
       assert.ok(await languageChoice.count(), `Missing accessible language choice in ${language}.`);
+      // The synthetic original is English; its language must be explicitly
+      // selected independently of the interface locale before Listen enables.
+      if (await languageChoice.isEnabled()) await languageChoice.selectOption('en');
       await listenButton.focus();
       assert.equal(await listenButton.evaluate((node) => node === document.activeElement), true, 'Listen action is not keyboard reachable.');
       await page.setViewportSize({ width: 390, height: 844 });
