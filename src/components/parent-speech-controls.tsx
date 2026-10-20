@@ -23,23 +23,28 @@ export function useParentSpeech(scope: string, getEnvironment = getBrowserSpeech
 export function ParentSpeechControls({
   noticeId,
   text,
+  language,
   controller,
   state,
 }: {
   noticeId: string;
   text: string;
+  language?: Exclude<NoticeLanguageChoice, 'auto'>;
   controller: ParentSpeechController;
   state: ReturnType<ParentSpeechController['getSnapshot']>;
 }) {
   const { t } = useI18n();
   const isActive = state.noticeId === noticeId && state.phase !== 'idle';
   const [choice, setChoice] = useSpeechChoice(noticeId);
+  useEffect(() => () => {
+    if (controller.getSnapshot().noticeId === noticeId) controller.stop();
+  }, [controller, noticeId, text, language]);
 
   return (
     <div className="parent-speech-controls" role="group" aria-label={t('speech.controls')}>
       <label className="parent-speech-language">
         <span>{t('speech.language')}</span>
-        <select value={choice} onChange={(event) => setChoice(event.target.value as NoticeLanguageChoice)} aria-label={t('speech.language')}>
+        <select value={language ?? choice} disabled={Boolean(language)} onChange={(event) => { controller.stop(); setChoice(event.target.value as NoticeLanguageChoice); }} aria-label={t('speech.language')}>
           <option value="auto">{t('speech.auto')}</option>
           <option value="en">{t('speech.english')}</option>
           <option value="hi">{t('speech.hindi')}</option>
@@ -47,7 +52,7 @@ export function ParentSpeechControls({
         </select>
       </label>
       {!isActive || state.phase === 'unavailable' || state.phase === 'error' ? (
-        <button type="button" className="parent-speech-button" onClick={() => void controller.play(noticeId, text, choice)} disabled={!text.trim()}>
+        <button type="button" className="parent-speech-button" onClick={() => void controller.play(noticeId, text, language ?? choice)} disabled={!text.trim()}>
           {t('speech.listen')}
         </button>
       ) : (

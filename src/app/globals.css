@@ -1,5 +1,24 @@
 @import 'tailwindcss';
 
+/* Reviewed language versions share the existing card surfaces. */
+.notice-language-view, .translation-manager, .translation-editor { min-width: 0; }
+.notice-language-toolbar, .translation-actions { display: flex; align-items: end; flex-wrap: wrap; gap: .65rem; margin-block: .8rem; }
+.notice-language-toolbar label, .translation-editor label { display: grid; gap: .35rem; font-size: .85rem; font-weight: 600; }
+.notice-language-toolbar select, .translation-editor select, .translation-editor input:not([type=checkbox]), .translation-editor textarea { width: 100%; max-width: 100%; min-height: 44px; padding: .65rem .75rem; border: 1px solid #b5c5d5; border-radius: .6rem; background: white; color: #18334b; font: inherit; }
+.notice-language-toolbar button, .translation-editor button { min-height: 44px; padding: .55rem .8rem; border: 1px solid #b5c5d5; border-radius: .6rem; background: #f4f8fc; color: #173f65; font-weight: 600; cursor: pointer; }
+.notice-language-toolbar button:focus-visible, .translation-editor :focus-visible, .translation-manager summary:focus-visible { outline: 3px solid #2475b7; outline-offset: 3px; }
+.translation-editor button:disabled { opacity: .55; cursor: default; }
+.notice-visible-text, .translation-preview-grid section { overflow-wrap: anywhere; white-space: pre-wrap; }
+.translation-manager { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid #d7e1eb; }
+.translation-manager summary { min-height: 44px; cursor: pointer; color: #17496b; font-weight: 600; }
+.translation-editor { padding-block: .75rem; }
+.translation-preview-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 1rem; margin-block: .8rem; }
+.translation-preview-grid section { min-width: 0; padding: .85rem; background: #f4f8fc; border-radius: .75rem; }
+.translation-editor textarea { resize: vertical; }
+.translation-actions label { display: flex; align-items: start; max-width: 32rem; }
+.translation-actions input[type=checkbox] { width: 1.2rem; height: 1.2rem; flex-shrink: 0; }
+@media (max-width: 768px) { .translation-preview-grid { grid-template-columns: minmax(0,1fr); } .notice-language-toolbar label { flex: 1 1 100%; } }
+
 :root {
   --ink: #172033;
   --ink-soft: #475467;

@@ -6,6 +6,9 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "test:translations": "vitest run src/components/notice-translations.test.tsx",
+    "test:translations:db": "node --env-file=.env.test.local scripts/verify-translations.mjs --database-only",
+    "test:translations:integration": "node --env-file=.env.test.local scripts/verify-translations.mjs",
     "dev": "node scripts/dev-local.mjs",
     "dev:rfid-local": "node scripts/dev-rfid-local.mjs",
     "build": "next build",

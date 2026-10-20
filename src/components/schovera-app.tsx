@@ -10,7 +10,8 @@ import { formatSchoolDate, schoolToday } from '@/lib/school-date.mjs';
 import { getLocale, translate, type Language, type TranslationKey } from '@/lib/i18n';
 import { I18nProvider, LanguageSelector, useI18n } from '@/lib/i18n-provider';
 import { SchoolEntryPanel } from '@/components/school-entry-panel';
-import { ParentSpeechControls, useParentSpeech } from '@/components/parent-speech-controls';
+import { useParentSpeech } from '@/components/parent-speech-controls';
+import { NoticeContent, TranslationManager } from '@/components/notice-translations';
 import type { ParentSpeechController } from '@/lib/parent-speech';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
@@ -1693,10 +1694,9 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
         {updatesLoading ? <Skeleton label={t('parent.loadingUpdates')} rows={1} /> : updatesError ? <p className="error" role="alert">{updatesError}</p> : latestEffectiveUpdate ? <article className="parent-latest-update-content">
           <span className="update-icon" aria-hidden="true"><Icon name={categoryIcon(latestEffectiveUpdate.category)} /></span>
           <div className="parent-latest-copy"><div className="parent-latest-meta"><span>{localizedCategory(latestEffectiveUpdate.category, t)}</span>{latestEffectiveUpdate.importance === 'important' && <span className="parent-important-label">{t('importance.important')}</span>}{latestEffectiveUpdate.corrects_update_id && <span className="parent-correction-label">{t('correction.label')}</span>}</div>
-            <h3>{latestEffectiveUpdate.title}</h3><p>{latestEffectiveUpdate.message}</p>
+            <NoticeContent source={{ kind: 'update', id: latestEffectiveUpdate.id, title: latestEffectiveUpdate.title, body: latestEffectiveUpdate.message }} speech={speech} />
             <footer><span>{latestEffectiveUpdate.profiles?.full_name ? t('parent.fromTeacher', { name: latestEffectiveUpdate.profiles.full_name }) : t('parent.recentTeacherCommunication')}</span><time dateTime={latestEffectiveUpdate.sent_at}>{displayDate(latestEffectiveUpdate.sent_at, language)}</time></footer>
             {latestEffectiveUpdate.importance === 'important' && <p className={latestEffectiveUpdate.acknowledgements?.some((item) => item.parent_id === profile.id) ? 'parent-latest-status acknowledged' : 'parent-latest-status awaiting'}>{latestEffectiveUpdate.acknowledgements?.some((item) => item.parent_id === profile.id) ? t('ack.acknowledged') : t('ack.awaiting')}</p>}
-            <ParentSpeechControls noticeId={`update:${latestEffectiveUpdate.id}`} text={latestEffectiveUpdate.message} controller={speech.controller} state={speech.state} />
           </div>
         </article> : <p className="empty compact-empty">{t('parent.noRecentCommunication')}</p>}
       </section>}
@@ -1885,7 +1885,7 @@ function StudentOverview({ student, classLabel, role, parentId, speech }: { stud
       <div className="student-profile-summary" aria-label={text('parent.profileAtGlance', 'Student profile at a glance')}><article><Icon name="attendance" /><span><small>{text('parent.attendance', 'Attendance')}</small><b>{attendance.length ? localizedStatus(attendance[0].status, t) : text('parent.attendanceNotRecorded', 'Not recorded')}</b></span></article><article><Icon name="updates" /><span><small>{text('parent.profileCommunication', 'Communication')}</small><b>{awaiting ? text('parent.communicationSummaryAwaiting', '{count} awaiting').replace('{count}', String(awaiting)) : latest ? text('parent.communicationUpToDate', 'Up to date') : text('parent.noUpdates', 'No updates')}</b></span></article><article><Icon name="homework" /><span><small>{text('parent.homework', 'Homework')}</small><b>{upcoming.length ? `${upcoming.length} upcoming` : text('parent.homeworkNoneUpcoming', 'None upcoming')}</b></span></article></div>
       <div className="student-profile-grid">
         <section className="card profile-section"><p className="eyebrow">{text('parent.attendance', 'ATTENDANCE')}</p><h2>{text('parent.profileAttendance', 'Recent attendance')}</h2>{errors.attendance ? <p className="error" role="alert">{text('parent.attendanceError', errors.attendance)}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>{text('attendance.present', 'Present')}</span><span><b>{counts.absent}</b>{text('attendance.absent', 'Absent')}</span><span><b>{counts.late}</b>{text('attendance.late', 'Late')}</span></div><p className="hint">{role === 'parent' ? t('parent.attendanceLatest', { status: localizedStatus(attendance[0].status, t), date: displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language) }) : `Latest: ${localizedStatus(attendance[0].status, t)} · ${displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language)}`}</p></> : <p className="empty compact-empty">{text('parent.noAttendanceRecorded', 'No attendance recorded yet.')}</p>}</section>
-        <section className="card profile-section"><p className="eyebrow">{text('parent.profileCommunication', 'COMMUNICATION')}</p><h2>{text('parent.profileCommunication', 'Teacher updates')}</h2>{errors.updates ? <p className="error" role="alert">{text('parent.updatesError', errors.updates)}</p> : latest ? <><p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p><p className="hint">{localizedCategory(latest.category, t)} · {displayDate(latest.sent_at, language)}</p>{latest.importance === 'important' && <p className={isAcknowledged(latest) ? 'status present' : 'status pending'}>{isAcknowledged(latest) ? t('ack.acknowledged') : t('ack.awaiting')}</p>}{role === 'parent' && speech && <ParentSpeechControls noticeId={`update:${latest.id}`} text={latest.message} controller={speech.controller} state={speech.state} />}</> : <p className="empty compact-empty">{text('parent.noRecentCommunication', 'No teacher updates yet.')}</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">{text('parent.profileCommunication', 'COMMUNICATION')}</p><h2>{text('parent.profileCommunication', 'Teacher updates')}</h2>{errors.updates ? <p className="error" role="alert">{text('parent.updatesError', errors.updates)}</p> : latest ? <><p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p><p className="hint">{localizedCategory(latest.category, t)} · {displayDate(latest.sent_at, language)}</p>{latest.importance === 'important' && <p className={isAcknowledged(latest) ? 'status present' : 'status pending'}>{isAcknowledged(latest) ? t('ack.acknowledged') : t('ack.awaiting')}</p>}{role === 'parent' && speech && <NoticeContent source={{ kind: 'update', id: latest.id, title: latest.title, body: latest.message }} speech={speech} />}</> : <p className="empty compact-empty">{text('parent.noRecentCommunication', 'No teacher updates yet.')}</p>}</section>
         <section className="card profile-section"><p className="eyebrow">{text('parent.homework', 'HOMEWORK')}</p><h2>{text('parent.profileHomework', 'Upcoming homework')}</h2>{errors.homework ? <p className="error" role="alert">{text('parent.homeworkError', errors.homework)}</p> : next ? <><p className="profile-update-title"><span className="update-icon"><Icon name="homework" /></span><b>{next.title}</b></p><p className="hint">{next.subject} · {dueLabel(next.due_date, role === 'parent' ? language : 'en')}</p><p className="hint">{upcoming.length} upcoming assignment{upcoming.length === 1 ? '' : 's'}</p></> : <p className="empty compact-empty">{text('parent.noUpcomingHomework', 'No upcoming homework.')}</p>}</section>
       </div>
     </>}
@@ -2218,6 +2218,7 @@ function PrincipalCommunicationCard({ update, corrected, correctionOf }: { updat
       {correctionOf && <p className="correction-reference">Corrects: {correctionOf}</p>}
       {corrected && <p className="correction-reference">A newer correction is available in this history.</p>}
       <p className="principal-update-message">{update.message}</p>
+      {!corrected && <TranslationManager source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} canApprove />}
       <footer>
         <time dateTime={update.sent_at}>{displayDate(update.sent_at)}</time>
         {needsAcknowledgement && (
@@ -2372,9 +2373,8 @@ function Announcements({
                 <span className="notice-origin">{parentView ? t('parent.schoolWideNotice') : 'School-wide notice'}</span>
                 {announcement.priority === 'important' && <span className="notice-important"><Icon name="important" /> {parentView ? t('importance.important') : 'Important'}</span>}
               </header>
-              <h3>{announcement.title}</h3>
-              <p>{announcement.body}</p>
-              {parentView && speech && <ParentSpeechControls noticeId={`announcement:${announcement.id}`} text={`${announcement.title}. ${announcement.body}`} controller={speech.controller} state={speech.state} />}
+              {parentView ? <NoticeContent source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} speech={speech} /> : <><h3>{announcement.title}</h3><p>{announcement.body}</p></>}
+              {profile.role === 'principal' && <TranslationManager source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} canApprove />}
               <footer>
                 <Icon name="school" />
                 <span>Schovera International School</span>
@@ -2445,13 +2445,13 @@ function Card({
       {update.importance === 'important' && (
         <span className="important">{parent ? t('importance.important') : 'Important'}</span>
       )}</div>
-      <h3>{update.title}</h3>
+      {!parent && <h3>{update.title}</h3>}
       {correctionOf && <p className="correction-reference">{parent ? t('correction.corrects', { title: correctionOf }) : `Corrects: ${correctionOf}`}</p>}
       {corrected && <p className="correction-reference">{parent ? t('correction.replaced') : 'This update was corrected by a newer communication.'}</p>}
       {parent && childContext && <p className="parent-update-context"><Icon name="student" /> {t('parent.aboutChild', { context: childContext })}</p>}
       {parent && corrected && <p className="original-message-label">{t('ack.originalMessage')}</p>}
-      <p>{update.message}</p>
-      {parent && speech && <ParentSpeechControls noticeId={`update:${update.id}`} text={update.message} controller={speech.controller} state={speech.state} />}
+      {parent ? <NoticeContent source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} speech={speech} /> : <p>{update.message}</p>}
+      {teacher && !corrected && <TranslationManager source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} />}
       <small className={teacher ? 'teacher-update-meta' : undefined}>
         {update.profiles?.full_name && `${update.profiles.full_name} · `}
         {update.students?.full_name && `${update.students.full_name} · `}
