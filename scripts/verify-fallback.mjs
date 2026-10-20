@@ -207,7 +207,10 @@ try {
     for (const lang of ['hi', 'mr', 'en']) {
       await family.page.evaluate((value) => { localStorage.setItem('schovera.language', value); }, lang);
       await family.page.reload({ waitUntil: 'networkidle' }); await panel.waitFor();
-      assert.ok(await panel.getByRole('heading', { level: 3 }).textContent());
+      const headings = { en: 'SMS and call simulation preferences', hi: 'SMS और कॉल अनुकरण की प्राथमिकताएँ', mr: 'SMS आणि कॉल अनुकरण प्राधान्ये' };
+      assert.equal(await panel.getByRole('heading', { level: 3 }).textContent(), headings[lang]);
+      assert.equal(await panel.getByRole('checkbox').count(), 2);
+      assert.equal(await panel.locator('input[type=tel]').count(), 0);
       assert.equal(await family.page.evaluate(() => document.documentElement.lang), lang);
       assert.ok(await family.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     }
