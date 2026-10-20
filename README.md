@@ -4,21 +4,11 @@ Schovera connects teachers, parents, and school leaders around student communica
 
 ## Run locally
 
-1. Use Node.js 20.9–22 and install dependencies:
+Follow the [Task 32P Windows setup and 52-step personal checklist](docs/41_TASK_32P_FINAL_SOFTWARE_TESTING.md). Use Node 22.13–22.x for the complete gateway demonstration, Docker/local Supabase, and a disposable clean worktree. **Do not create, load, move or edit the original checkout's production `.env.local`.**
 
-   ```powershell
-   npm ci
-   ```
+The documented flow installs lockfile dependencies inside that worktree, generates ignored loopback-only environment files, initializes a synthetic issuer, and starts `npm run dev:simulators-local` on [http://127.0.0.1:3000](http://127.0.0.1:3000). `demo:prepare` generates temporary role accounts; `demo:credentials` displays them privately, and `demo:clean` removes only that owned fixture. No reusable passwords are documented.
 
-2. Create `.env.local` with the Supabase project URL and publishable key supplied for your development environment. Never put a service-role key in browser-visible variables or commit secrets. Teacher AI defaults to a local Ollama model; install Ollama and run `ollama pull gemma3:1b`. See [Teacher AI setup](docs/TEACHER_AI_SETUP.md).
-
-3. Start the application:
-
-   ```powershell
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) and sign in using the role accounts issued for your test environment. Do not use real students' personal data during acceptance testing.
+Teacher AI supports local Ollama; the Task 32P run used the already-installed `gemma3:1b` model. See [Teacher AI setup](docs/TEACHER_AI_SETUP.md). If the model or local service is unavailable, report that explicitly; do not switch to a cloud model or send student data.
 
 ## Step-by-step manual showcase check
 
@@ -64,7 +54,7 @@ Repeat the essential Teacher send/attendance/AI and Parent update/acknowledgemen
 
 ## Automated checks
 
-Run from the repository root. The integration verifiers use the Supabase values in `.env.local` and create temporary test records; run them against a dedicated non-production test project. Do not run cleanup or verification scripts against a school with real records unless you have confirmed their scope.
+Run server/browser checks from the disposable worktree with its guarded local server already running. Integration verifiers explicitly load `.env.test.local`, require local test mode, reject hosted/non-loopback targets before creating clients, and create temporary synthetic records. They do not load `.env.local`. Preserve existing shared local seed data; use the Task 32P owned-fixture cleanup for personal testing, never a remote reset.
 
 ```powershell
 npm run verify:phase1
@@ -84,7 +74,7 @@ npm run verify:teacher-ai
 npm test
 npm run typecheck
 npm run lint
-npm run build
+npm run build:isolated
 npm audit
 ```
 

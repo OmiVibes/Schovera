@@ -18,8 +18,10 @@ Status describes checked-in implementation, not a promise that every browser, la
 | Voice | Parent play/pause/resume/stop; unavailable fallback; original/translated language selection | IMPLEMENTED | Mock engine unit/browser tests only; audible quality and OS voice inventory require human testing |
 | Teacher | Dashboard; assigned classes/students; Important Updates; corrections; acknowledgement coverage | IMPLEMENTED | Existing RPC/idempotency/correction/profile suites and real browser flow |
 | Teacher | Attendance register/correction; homework; timetable; student records | IMPLEMENTED | Classroom attendance remains independent of RFID |
+| Teacher AI | Editable draft generation and local spreadsheet edit/export | IMPLEMENTED | Live loopback Ollama `gemma3:1b` generated a 3,090-character draft; teacher validation/Parent denial passed. Content accuracy requires Teacher review; basic workbook editor is not full Excel fidelity |
 | Insights | Teacher and Principal explainable attendance patterns | IMPLEMENTED | Deterministic rules with recorded-day denominator and minimum-data guards; not prediction, diagnosis, punishment or automatic messaging |
 | Principal | Dashboard; school communication/acknowledgement overview; reviewed translations; school data | IMPLEMENTED | Own-school RLS; actual-role browser journeys |
+| Principal | School notices; timetable management; class attendance/homework overview | IMPLEMENTED | Existing announcement/timetable RPC and browser checks, optimistic-edit/idempotency tests |
 | Fallback | Parent opt-in/out and language preferences; authorized staff queues/status review | SIMULATED | No provider, telephone number, real SMS/call or proof of reading |
 | Entry | Hardware-free RFID event creation and signed v2 ingestion | SIMULATED | Synthetic device only; local endpoint deliberately unavailable on hosted targets |
 | Entry security | Immutable assignment/capability binding; revocation/reassignment; replay/idempotent receipts; unresolved outcomes | IMPLEMENTED | Local API/DB security tests; unresolved events do not become named visible records |
@@ -127,7 +129,79 @@ Do not delete the repository, original `.local` directory, protected untracked f
 
 ## Automated evidence
 
-Evidence is recorded below after the final run. Initial failures and reruns are retained, not silently converted into unconditional passes. Source inspection and scripted assertions do not prove every human usability claim.
+Fresh checks on **2026-10-20**, Windows / Node **22.18.0**, Docker **27.4.0**, Supabase CLI **2.121.0**, Next **16.3.8**, React **19.2.8**. Local API: `http://127.0.0.1:54321`; guarded application: `http://127.0.0.1:3000` in an owned temporary worktree, not the developer checkout. All 30 existing migrations were already applied locally; no migration/reset was performed. `supabase db lint --local` passed. The tracked baseline was clean, with only the protected pre-existing untracked files. Git ancestry checks confirmed the architecture, gateway, attribution, isolated-build, v2, offline-sync, polling, voice, security-patch, translation, fallback, insights and business-model commits are ancestors of `773c87a`; their source and scripts remain present. No dependency/lockfile/schema change was made in Task 32P.
+
+### Commands and actual results
+
+| Command | Final result | Count / scope |
+|---|---|---|
+| `npm run test:rfid` | PASS | 22 focused tests, including local-environment/production-target refusal |
+| `npm run test:gateway` | PASS | 43 tests, persistence, fault windows and local transport |
+| `npm run test:credential-attribution` | PASS | 20 policy/capability tests |
+| `npm run test:entry-polling` | PASS | 4 scheduling/lifecycle tests |
+| `npm run test:parent-voice` | PASS | 13 control/language tests, mock speech only |
+| `npm run test:translations` | PASS | 2 component tests |
+| `npm run test:fallback` | PASS | 10 fake-provider tests |
+| `npm run test:attendance-insights` | PASS | 21 rules/component tests |
+| `npm run test:rfid:integration` | PASS | 1 Vitest integration scenario: capability issuance, signatures, revocation/races, replay and role RLS |
+| `npm run test:gateway:local-integration` | PASS | 1 Vitest integration scenario: durable outbox/local API/role browser visibility, polling and cleanup |
+| `npm run test:attendance-insights:integration` | PASS | 1 Vitest integration scenario: RLS, browser contexts, language, errors/offline, read-only behavior and correction recomputation |
+| `npm run test:translations:db` | PASS | Source preservation/invalidation, approval authorization, draft/role isolation; cleanup verified |
+| `npm run test:translations:integration` | PASS | Real browser Teacher draft → Principal approval → Parent reading/speech/acknowledgement; mocked sound |
+| `npm run test:fallback:integration` | PASS | DB/HTTP/browser consent, scope, fake outcomes/retries, Host/injection rejection and no browser service key |
+| `npm run verify:attendance` | PASS | Local class/day workflow and permission assertions |
+| `npm run verify:announcements` | PASS | Authorized school notices |
+| `npm run verify:assignments` | PASS | Homework scope and validation |
+| `npm run verify:corrections` | PASS ON THIRD RUN | First two attempts timed out waiting for initial Teacher→Parent Realtime preflight; third passed all assertions without changes to this test |
+| `npm run verify:idempotency` | PASS | Authoritative retry behavior |
+| `npm run verify:student-profile` | PASS | Authorized assembled student profile |
+| `npm run verify:timetable` | PASS | School week, schedule scope/conflicts/stale edits |
+| `npm run verify:reliability` | PASS | Existing reliability edges |
+| `npm run verify:phase1` | PASS | Persistence, Realtime, acknowledgements, roles and tenant isolation |
+| `npm test` | PASS | Supported alias for Phase 1; separately invoked, not extra unique unit tests |
+| `npm run verify:reconnect` | PASS ON RERUN | First reached the final remount but timed out waiting for Parent heading; independent rerun passed the complete flow |
+| `npm run verify:role-navigation` | PASS | Role/account switching, routes, session/context continuity, no full-screen navigation loading flashes |
+| `npm run verify:accessibility-i18n` | PASS | Label/focus/language/browser checks; not a complete accessibility certification |
+| `npm run verify:parent-voice` | PASS | 390px mocked controls; real browser speech API present but **zero voice locales** reported; audible playback NOT TESTED |
+| `npm run verify:role-visuals` | PASS, twice | 22 destinations × 4 widths = 88 route/width checks per run; desktop/mobile captures |
+| `npm run verify:teacher-ai` with `VERIFY_TEACHER_AI_LIVE=1` | PASS | Local Ollama `gemma3:1b` response, spreadsheet import/edit/download at 390px, 401/400/403 authorization/validation |
+| `npm run verify:final-journeys` | PASS, twice after corrections | Fresh 5-account synthetic school; connected browser journeys plus separate-process queue/restart/sync/duplicate/revocation and verified cleanup |
+| `npm run verify:local-i18n-reconnect` | PASS after fixes | Actual Marathi Important update → reconnect → per-update acknowledgement → staff coverage/metrics → reload persistence → exact cleanup |
+| `npm run typecheck` / `npm run lint` | PASS | Final source, no lint warnings |
+| `npm run build:isolated` | PASS | Snapshot `b2a922f033f149161f85b542a3e2796356a4785f`, containing the final application fix; later edits affect test helpers/docs only |
+| `npm audit` | 5 HIGH / 0 CRITICAL | Development lint-tool chain only; nonzero audit exit expected, findings remain open |
+| `npm audit --omit=dev` | PASS | 0 known production-dependency vulnerabilities at audit time; not proof of whole-system security |
+| `npm run simulate:rfid -- --target https://schovera.vercel.app` | EXPECTED REFUSAL | Exit 1 before network delivery; no Vercel request |
+| `git diff --check` | PASS | Whitespace/scope verification |
+
+**Counts:** 135 focused Vitest tests across the eight unit commands, plus three additional Vitest integration scenarios. Standalone DB/browser scripts contain many assertions but are not inflated into an invented individual-test count. Repeated runs and `npm test`/Phase 1 aliases are not counted as additional unique unit tests.
+
+Not run: interactive `test:watch`; the resolved-incident diagnostic `test:diagnose-parent-postgrest` (not a regression suite); duplicate `test:rfid:v2-integration` alias; raw `build`/`start` in the production-env checkout (unsafe environment discovery / no owned root build); global `seed:demo` / destructive `clean:demo` or DB reset (existing shared local fixtures preserved). Manual lifecycle commands were exercised through the connected test; the credential-display command was deliberately not printed in the audit log. No hardware, actual audio, real SMS/IVR, hosted acceptance, OS-wide network sandbox or real-school pilot test was performed.
+
+### Confirmed issues and fixes
+
+1. **Application bug, reproduced repeatedly:** clicking an already-active Teacher class cleared students and set loading, but the effect keyed by unchanged `classId` never reloaded. Attendance stayed at zero students and the Students page lost its roster. The minimal early return preserves roster/unsaved work. The connected browser test explicitly re-clicks Grade 8A and asserts its roster remains before correcting attendance and creating an update. No authorization/schema behavior changed.
+2. **Legacy localized-browser test drift:** a partial-text Hindi link matched two links; the test queried the database before its send RPC completed; it looked for Home's attention panel after leaving the Parent on Notices; and it assumed acknowledging one notice meant every unrelated notice was acknowledged. Selectors now target exact navigation, await the real write response, open the intended route before the outage, prove only the controlled urgent item disappears **without reload**, then verify its separate Updates-route acknowledgement, staff metrics, reload persistence and cleanup. Earlier failures are retained here; assertions were corrected to current route/per-notice semantics, not removed to conceal application failure.
+3. **New demo-helper development failures:** initial cleanup incorrectly filtered receipts by nonexistent `school_id`; it now resolves only owned device IDs and deletes their receipts first. Early connected-test selectors also targeted a hidden filter option rather than a visible event, and an original title that changes under translation. Corrected locators assert a single real event per authorized role and the displayed translated card. The fixture journal permits recovery after partial setup; a second prepare is rejected and tests cannot clean another pre-existing run. Final lifecycle runs verified cleanup. These were new harness failures, not claimed pre-existing product defects.
+4. **Documentation hazard:** the old README still instructed `.env.local` setup and said integration tests loaded it. It now points to the clean-worktree flow and the actual guarded `.env.test.local` behavior; raw root build instructions were replaced with `build:isolated`.
+
+The corrections Realtime preflight and final reconnect remount timeouts were not proven to have the same root cause as the roster bug. Their independent passing reruns do not establish zero flakiness; keep this limitation visible.
+
+### UI/security review and evidence boundaries
+
+Every implemented route was checked by the visual/navigation harness at 390/768/1024/1440px; no horizontal overflow or route-state failure was reported. Representative Parent Home/Updates, Teacher Attendance and Principal Communication desktop/mobile captures were visually inspected for layout, grouping, controls and typography. These checks do not prove all color pairs meet WCAG, that no loading flicker can occur on every device, or that every legacy string is translated. Remaining English-only staff/profile/timetable copy is a known limitation, not a localization pass. Full family readability and touchscreen judgment remain human checks below. Screenshots are synthetic, temporary OS evidence, not repository assets.
+
+Authorization was exercised as linked/unlinked Parent, assigned/unassigned Teacher, own/other-school Principal, and anonymous caller. Translation drafts are not Parent-readable; approval remains Principal-only and invalidates on source changes. Fallback tests cover opt-out, lost links, correction/version changes, fake delivery deduplication and absence of attendance/acknowledgement side effects. Signed v2 tests cover immutable assignment proof, wrong tenant/device, replay/changed hash, concurrent submission/revocation, unresolved results, old attribution preservation and no classroom attendance mutation. Gateway enrollment receives synthetic reader/device secrets and a signed assignment capability, **never Supabase service-role or capability-issuer private keys**. Browser secret checks use local-only values; no production secret was read for comparison. Event-table Realtime remains unpublished (local catalog count zero).
+
+The URL/mode guards reject hosted destinations before a client/request; they are not a cryptographic provenance check for arbitrary keys pasted into an environment file. The env generator obtains matching values from local CLI status. The isolated app reports `.env.development.local` only; the build reports generated `.env.production` only, scans synthetic private sentinels, checks all expected routes and removes its snapshot. Build proxy egress observed only `fonts.googleapis.com` and `fonts.gstatic.com`; npm audit contacted its advisory registry, and the local Ollama launcher performed its own background GitHub update check. No global zero-egress claim is made. No hosted Supabase or Vercel test/deployment was performed.
+
+Fresh audit: `next@16.3.8` and `react@19.2.8` include the prior security patch; no production dependency advisories were returned. Five remaining HIGH findings are `braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `eslint-config-next` in the development lint chain. The audit's proposed `eslint-config-next@14.2.35` is an incompatible major downgrade and was **not** applied. See [braces advisory GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). Address in a separate compatible dependency update; do not call the repository vulnerability-free or production-ready.
+
+### Handoff and remaining limits
+
+Local software demonstration: **READY WITH LIMITATIONS**. The safe manual path, role workflows, local AI, translations, fake fallback, insights and offline-to-local entry flow are available. Human audio/translation accuracy, low-literacy comprehension, real touchscreen use and student presentation rehearsal remain unverified. Some legacy UI is English-only. Realtime/reconnect suites showed initial timeouts before passing. Development-tool advisories remain open. Real SMS/calls, physical readers, Pi power/storage, hosted ingestion, real-school permissions/impact and production security/deployment are not accepted by this audit.
+
+Task 32P adds tests, an owned synthetic manual fixture/gateway helper, safe documentation and the one active-class UI guard only. No migration, new dependency, production write, push, merge or deployment is authorized or performed. Temporary test fixtures are removed; existing shared local seeded data and protected untracked `AGENTS.md`, `CLAUDE.md`, `local-dev.err`, `local-dev.out`, `review/` remain untouched. Final cleanup and Git status are recorded in the handoff report; the server used for testing is stopped, not left secretly running. Follow the startup instructions to run your own session.
 
 ## Personal checklist — fill this in yourself
 
@@ -184,5 +258,8 @@ Actual-result and screenshot cells are intentionally blank. Every status starts 
 | 47 | Presenter | Offline demonstration | Rehearse full queue→outage→restart→sync flow | Honest smooth demonstration; no remote-alert promise during outage | | NOT TESTED | |
 | 48 | Presenter | Competition rehearsal | Student explains synthetic vs real features and limitations | Understandable, accurate claims; no hardware/safety/provider overclaim | | NOT TESTED | |
 | 49 | Operator | Cleanup/reset | Log out; demo:clean; stop own server; remove exact worktree | Owned fixtures and private temporary files removed; shared data preserved | | NOT TESTED | |
+| 50 | Teacher | AI and spreadsheet | With local Ollama running, request a generic exam/syllabus draft; edit it; import a tiny synthetic workbook, edit a cell and download | Editable draft, no auto-publishing; Teacher checks accuracy; local workbook export is not full Excel fidelity | | NOT TESTED | |
+| 51 | Teacher | Active class regression | Click the already-selected class twice, including after editing an unsaved attendance status | Roster and unsaved status remain; no zero-student endless loading | | NOT TESTED | |
+| 52 | Principal | School-wide notice | Publish a clearly synthetic notice; view it as Parent and Teacher | Same-school official notice; distinct from child-update acknowledgement model | | NOT TESTED | |
 
 Stop after Task 32P. Manual feedback, a school pilot, hardware integration and production deployment require separate follow-up.

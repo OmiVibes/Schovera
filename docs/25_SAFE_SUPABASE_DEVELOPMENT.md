@@ -1,5 +1,7 @@
 # Safe Supabase development setup (Task 32B-1)
 
+**Current full-software testing runbook:** [Task 32P](41_TASK_32P_FINAL_SOFTWARE_TESTING.md) provides disposable-worktree startup, fresh synthetic role credentials, an owned-fixture reset, the durable offline entry demonstration and a personal checklist. Use that clean-worktree procedure for HTTP/browser tests; do not start Next in the original checkout containing production `.env.local`. Earlier dated run records below remain historical evidence, not permission to load production configuration.
+
 ## Local-only boundary
 
 Schovera's existing `.env.local` is reserved as-is and points to a hosted Supabase project. Never use it for development DB mutations, migration checks, seed/cleanup, or integration verification. All DB-writing seed/cleanup/verifier commands now load `.env.test.local` and call `assertLocalTestEnvironment()` before constructing a client. The guard requires `SCHOVERA_TEST_MODE=local`, an HTTP loopback Supabase URL, a loopback browser URL when configured, and local-only keys. There is no remote mode in these scripts.
