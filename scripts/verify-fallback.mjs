@@ -188,7 +188,18 @@ try {
     await panel.getByLabel('Preferred notice language').selectOption('mr');
     await panel.getByRole('button', { name: 'Save my preferences', exact: true }).click(); await panel.getByText('Preferences saved.', { exact: false }).waitFor();
     const saved = await must(parent.client.from('fallback_simulation_preferences').select('*'));
-    if (captures) await panel.screenshot({ path: join(captures, 'parent-mobile.png') });
+    const saveButton = panel.getByRole('button', { name: 'Save my preferences', exact: true });
+    await saveButton.hover();
+    assert.ok(await saveButton.evaluate((button) => {
+      const style = getComputedStyle(button);
+      const luminance = (color) => {
+        const rgb = color.match(/[\d.]+/g).slice(0, 3).map((v) => Number(v) / 255).map((v) => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+        return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
+      };
+      const a = luminance(style.color), b = luminance(style.backgroundColor);
+      return (Math.max(a, b) + .05) / (Math.min(a, b) + .05) >= 4.5;
+    }), 'save button hover contrast');
+    if (captures) await panel.screenshot({ path: join(captures, 'parent-mobile.png'), style: '.application-shell{visibility:hidden!important}' });
     assert.equal(saved.find((p) => p.channel === 'sms').opted_in, false); assert.equal(saved.find((p) => p.channel === 'ivr').opted_in, true);
     assert.ok(saved.every((p) => p.preferred_language === 'mr' && /^SIM-/.test(p.recipient_ref)));
     await sms.focus(); await family.page.keyboard.press('Space'); assert.equal(await sms.isChecked(), true);
@@ -210,7 +221,7 @@ try {
     await manager.getByText('Pending simulation', { exact: true }).first().waitFor();
     await manager.getByRole('button', { name: 'Run fake delivery / check status' }).first().click();
     await manager.getByText('SIMULATED delivered — not read', { exact: true }).waitFor();
-    if (captures) await manager.screenshot({ path: join(captures, 'teacher-mobile.png') });
+    if (captures) await manager.screenshot({ path: join(captures, 'teacher-mobile.png'), style: '.application-shell{visibility:hidden!important}' });
     assert.ok(await staff.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     const leader = await login(principal, '/principal/communication');
     const oversight = leader.page.locator('.principal-communication-card').filter({ hasText: uiSource.title }).getByTestId('fallback-dispatch');

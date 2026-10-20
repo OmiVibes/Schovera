@@ -2052,6 +2052,9 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
 .fallback-panel fieldset { display: grid; gap: 12px; padding: 12px; border: 1px solid #ccd9d4; min-width: 0; }
 .fallback-panel select, .fallback-panel button { min-height: 44px; padding: 8px 12px; max-width: 100%; border: 1px solid #a4b9b0; border-radius: 8px; background: #fff; color: #18312a; }
 .fallback-panel button { cursor: pointer; font-weight: 600; }
+.fallback-panel button:hover:not(:disabled) { background: #f4f8fc; color: #18334b; }
+.fallback-panel button[type='submit'] { background: var(--brand); color: #fff; }
+.fallback-panel button[type='submit']:hover:not(:disabled) { background: var(--brand-dark); color: #fff; }
 .fallback-panel button:disabled { cursor: default; opacity: .6; }
 .fallback-panel :focus-visible { outline: 3px solid #187568; outline-offset: 3px; }
 .fallback-checkbox { display: flex; gap: 12px; align-items: center; min-height: 44px; }
