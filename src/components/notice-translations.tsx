@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n-provider';
 import { languageOptions, type Language } from '@/lib/i18n';
@@ -95,6 +95,7 @@ function TranslationEditor({ source, canApprove }: { source: CommunicationSource
 
 function DraftForm({ source, language, row, canApprove, onSaved }: { source: CommunicationSource; language: Language; row: ReviewedTranslation | null; canApprove: boolean; onSaved: () => void }) {
   const { t } = useI18n();
+  const fieldId = useId();
   const db = useMemo(() => createClient(), []);
   const [title, setTitle] = useState(row?.title ?? '');
   const [body, setBody] = useState(row?.body ?? '');
@@ -117,7 +118,7 @@ function DraftForm({ source, language, row, canApprove, onSaved }: { source: Com
     <p role="status">{t(`translation.${row?.status ?? 'draft'}`)}</p>
     <div className="translation-preview-grid">
       <section><h4>{t('translation.original')}</h4><b>{source.title}</b><p>{source.body}</p></section>
-      <section lang={language}><h4>{t('translation.preview')}</h4><label>{t('translation.title')}<input value={title} required minLength={3} maxLength={160} onChange={(event) => setTitle(event.target.value)} /></label><label>{t('translation.body')}<textarea value={body} required minLength={3} maxLength={3000} onChange={(event) => setBody(event.target.value)} rows={5} /></label></section>
+      <section lang={language}><h4>{t('translation.preview')}</h4><label htmlFor={`${fieldId}-title`}>{t('translation.title')}</label><input id={`${fieldId}-title`} value={title} required minLength={3} maxLength={160} onChange={(event) => setTitle(event.target.value)} /><label htmlFor={`${fieldId}-body`}>{t('translation.body')}</label><textarea id={`${fieldId}-body`} value={body} required minLength={3} maxLength={3000} onChange={(event) => setBody(event.target.value)} rows={5} /></section>
     </div>
     <p className="hint">{t('translation.saveWarning')}</p>
     {failed && <p role="alert" className="error">{t('translation.saveError')}</p>}
