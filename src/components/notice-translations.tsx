@@ -118,7 +118,7 @@ function DraftForm({ source, language, row, canApprove, onSaved }: { source: Com
     <p role="status">{t(`translation.${row?.status ?? 'draft'}`)}</p>
     <div className="translation-preview-grid">
       <section><h4>{t('translation.original')}</h4><b>{source.title}</b><p>{source.body}</p></section>
-      <section lang={language}><h4>{t('translation.preview')}</h4><label htmlFor={`${fieldId}-title`}>{t('translation.title')}</label><input id={`${fieldId}-title`} value={title} required minLength={3} maxLength={160} onChange={(event) => setTitle(event.target.value)} /><label htmlFor={`${fieldId}-body`}>{t('translation.body')}</label><textarea id={`${fieldId}-body`} value={body} required minLength={3} maxLength={3000} onChange={(event) => setBody(event.target.value)} rows={5} /></section>
+      <section><h4>{t('translation.preview')}</h4><label htmlFor={`${fieldId}-title`}>{t('translation.title')}</label><input lang={language} id={`${fieldId}-title`} value={title} required minLength={3} maxLength={160} onChange={(event) => setTitle(event.target.value)} /><label htmlFor={`${fieldId}-body`}>{t('translation.body')}</label><textarea lang={language} id={`${fieldId}-body`} value={body} required minLength={3} maxLength={3000} onChange={(event) => setBody(event.target.value)} rows={5} /></section>
     </div>
     <p className="hint">{t('translation.saveWarning')}</p>
     {failed && <p role="alert" className="error">{t('translation.saveError')}</p>}
