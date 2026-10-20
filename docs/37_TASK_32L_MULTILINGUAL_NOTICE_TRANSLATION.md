@@ -11,7 +11,7 @@ Starting HEAD was `d7c28014fabbe0af4fd2ebe9d95ed4b09c9f7ea7` on `feat/task32k-pr
 1. A Teacher opens the student’s sent communication and selects **Manage translations**. Teachers can manage only their own updates in currently assigned classes.
 2. Select a target language, enter a translated title and message, and compare them with the original in the adjacent preview. Save creates a draft; it does not change the original or publish a translation.
 3. Submit the saved draft for Principal review. Pending versions remain private to the authorized staff.
-4. The same-school Principal opens **Communication**, expands **Manage translations**, checks the original against the language version, confirms the meaning/dates/amounts/instructions checklist, and approves it. Approval is enforced by the database, not just button visibility.
+4. The same-school Principal opens **Communication**, expands **Manage translations**, checks the original against the language version, confirms the meaning/dates/amounts/instructions checklist, and approves it. That page retains access to all communications already loaded by its existing query rather than limiting review to the six Home preview cards. Approval is enforced by the database, not just button visibility.
 5. A Parent selects a reading language. Only an approved, current, authorized version can replace the visible text. **View original** restores the original with one action. A missing, pending, stale or failed translation query shows the original and an explicit status.
 
 Principals manage school-announcement translations from **School notices** through the same draft/submit/approve stages. The current roles have no separately appointed translation reviewer, so Principal approval is the conservative review boundary. A Principal may draft and review their own school announcement; the software does not certify bilingual skill or enforce two different people. Schools must select competent reviewers. Teachers cannot self-approve.
@@ -62,7 +62,30 @@ The DB-only variant creates uniquely named synthetic schools, users, classes, st
 
 ## Verification record
 
-Implementation checks and final regression results are recorded after the current local run. A successful isolated build establishes compilation with synthetic local settings; it does not certify hosted security, voice pronunciation or translation accuracy.
+Local run date: **2026-10-20**. Docker was initially stopped; the installed Docker Desktop was started, and the existing loopback-bound Supabase stack was resumed. No installation, remote project link, reset or hosted migration was needed.
+
+| Check | Result |
+|---|---|
+| Local migration and `supabase db lint --local` | Passed; the one new migration applied incrementally, with no schema lint errors. Existing local demo data was preserved; a destructive reset/replay was not performed. |
+| `test:translations` | Passed, 2 tests covering fallback/status policy plus approved-language rendering, literal markup, explicit original-language choice, correct voice text/language, cancellation, source switching and independent playback state for duplicate visible cards. |
+| `test:translations:db` | Passed; original preservation, draft privacy, Principal approval, stale reviewer rejection, cross-school/unlinked/Teacher scope denial, denied Parent table/RPC writes, correction/text-edit invalidation and original acknowledgement identity. |
+| `test:translations:integration` | Passed on the final application code. Real local Teacher draft/save/submit and Principal approval UI, unsaved review text across focus refetch, Parent English/Hindi/Marathi selection, mocked speech/pause/resume/stop, missing-voice fallback, child switching, acknowledgement, escaping, 390px layout and zero external browser targets. Test-owned fixtures cleaned and cleanup assertions passed. |
+| `test:parent-voice` | Passed, 13 tests, including missing Hindi/Marathi voice rejection and playback lifecycle. |
+| `verify:parent-voice` | Passed on the final application code; explicit original-language selection, keyboard controls and no HTTP requests during isolated mocked playback. Real headless browser APIs were present but reported zero installed voice locales. Audible playback was not verified. |
+| `verify:accessibility-i18n` | Passed for English/Hindi/Marathi UI, keyboard access and responsive widths, with explicit original speech-language selection. |
+| `verify:role-navigation` / `verify:role-visuals` | Passed role/account/child isolation and navigation; visual audit passed 22 destinations at 1440, 1024, 768 and 390px. Teacher draft, Principal review and Parent Marathi captures were additionally inspected; artifacts remain outside Git under OS temp. |
+| `verify:student-profile` / `verify:reconnect` | Passed role/scoped profile inputs and all role recovery, acknowledgement, attendance/homework/timetable, multi-child/context and duplicate-refresh checks. |
+| `test:entry-polling`, `test:rfid`, `test:gateway`, `test:credential-attribution` | Passed: 4, 22, 43 and 20 tests respectively. |
+| `test:rfid:integration` / `test:gateway:local-integration` | Passed synthetic local database/API, durable queue/reopen/sync/revocation, dashboard polling/RLS and cleanup checks. |
+| `npm test` (`verify:phase1`) | Passed persistence, Important-update acknowledgement, Realtime delivery, roles, tenant isolation and normal-update behavior. |
+| Typecheck / lint / `git diff --check` | Passed. |
+| `build:isolated` | Passed on final application commit `ae4849b63adda91c4183d73c359f97d39cd8621b`. Next loaded only generated `.env.production`; expected routes and TypeScript passed; synthetic private sentinels were absent; observed proxy egress was limited to the existing Google Fonts allowlist; snapshot cleanup passed. Later changes only record this result in documentation. |
+
+The browser run found and fixed two application issues: Principal background refresh could unmount an open translation draft, and wrapping a populated textarea in its label produced an unstable accessible name. Refetch now preserves loaded cards/drafts, and fields have explicit label associations. Duplicate Home representations of the same update now have separate playback identities. Legacy speech tests also needed to await loaded authorized communication, explicitly choose the unknown original language, and freeze unrelated background recovery timers while measuring mocked speech requests; their no-HTTP assertion is retained. Initial failing harness attempts were not counted as passes; all final checks above passed.
+
+The disposable local worktree server was stopped and that exact generated worktree (including local env files and synthetic issuer keys) was removed. Temporary synthetic database/auth records were cleaned, including after failed harness attempts. Pre-existing root `AGENTS.md`, `CLAUDE.md`, logs, `review/`, local fixtures and gateway data were preserved. `.env.local` was not opened, loaded, copied or modified. No production Supabase/Vercel request, production schema/data change, push, merge to main or deployment occurred. No dependencies were added.
+
+A successful isolated build establishes compilation with synthetic local settings; it does not certify hosted security, real voice pronunciation or translation accuracy. Human audible playback and competent translation review remain manual requirements.
 
 ## Manual demonstration
 
