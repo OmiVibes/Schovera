@@ -1709,7 +1709,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
         error={attendanceError}
         loading={attendanceLoading}
       /></div>}
-      {page === 'notices' && <div id="parent-notices"><ParentFallbackPreferences /><Announcements profile={profile} parentView speech={speech} /></div>}
+      {page === 'notices' && <div id="parent-notices"><ParentFallbackPreferences key={profile.id} /><Announcements profile={profile} parentView speech={speech} /></div>}
       {page === 'updates' && <section className="parent-updates" id="parent-updates" aria-labelledby="child-updates-heading">
         <div className="section-heading">
           <p className="eyebrow">{t('parent.childSpecific')}</p>
