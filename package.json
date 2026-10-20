@@ -6,6 +6,13 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "verify:final-journeys": "node --env-file=.env.test.local scripts/verify-final-journeys.mjs",
+    "demo:prepare": "node --env-file=.env.test.local scripts/manual-demo.mjs prepare",
+    "demo:credentials": "node scripts/manual-demo.mjs credentials",
+    "demo:info": "node scripts/manual-demo.mjs info",
+    "demo:clean": "node --env-file=.env.test.local scripts/manual-demo.mjs clean",
+    "demo:revoke-card": "node --env-file=.env.test.local scripts/manual-demo.mjs revoke-card",
+    "demo:entry": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/manual-entry.mjs",
     "test:attendance-insights": "vitest run src/lib/attendance-insights.test.ts src/components/attendance-insights.test.tsx",
     "test:attendance-insights:integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-attendance-insights.integration.test.ts",
     "test:fallback": "vitest run src/lib/fallback-provider.test.ts",

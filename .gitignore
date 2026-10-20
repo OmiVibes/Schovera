@@ -15,6 +15,7 @@
 /playwright-report
 /test-results
 /.local/schovera-rfid-gateway/
+/.local/schovera-manual-demo/
 
 # next.js
 /.next/
