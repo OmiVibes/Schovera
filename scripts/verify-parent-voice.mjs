@@ -91,6 +91,11 @@ try {
   // Focusing the window can schedule the app's existing authorized recovery
   // reads. Let those settle before attributing subsequent requests to playback.
   await page.waitForLoadState('networkidle');
+  // Freeze unrelated scheduled recovery/polling timers during this mocked
+  // speech-only check. Speech events here use microtasks, not timer playback.
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await page.waitForLoadState('networkidle');
   const requestsBeforePlayback = requests.length;
   await listen.click();
   await control.getByRole('status').filter({ hasText: 'Reading notice aloud.' }).waitFor();
