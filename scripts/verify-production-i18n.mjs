@@ -165,7 +165,9 @@ try {
   parentPage.on('load', () => { parentLoadCount += 1; });
   const initialLoads = parentLoadCount;
   await contexts[1].setOffline(true);
+  const sendResponse = teacherPage.waitForResponse((response) => response.url().includes('/rpc/send_student_update') && response.request().method() === 'POST');
   await teacherPage.getByRole('button', { name: 'Send update to parent' }).click();
+  expect((await sendResponse).ok(), 'Teacher update RPC did not succeed.');
   const createdRows = await must(admin.from('student_updates').select('id,importance,corrects_update_id').eq('teacher_id', teacherProfile.id).eq('student_id', aarav.id).eq('title', title));
   expect(createdRows.length === 1 && createdRows[0].importance === 'important' && !createdRows[0].corrects_update_id, 'Teacher UI did not create exactly one Important update.');
   teacherUpdateId = createdRows[0].id;
