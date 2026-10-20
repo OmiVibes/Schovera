@@ -1,6 +1,9 @@
 // Guarded local acceptance: all accounts/content are synthetic and removed in finally.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
@@ -11,6 +14,7 @@ const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const base = process.env.SCHOVERA_TEST_URL || 'http://127.0.0.1:3000';
 const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 const suffix = randomUUID().slice(0, 8);
+const screenshotDirectory = process.argv.includes('--screenshots') ? mkdtempSync(join(tmpdir(), 'schovera-translations-')) : null;
 const password = `Synthetic-${randomUUID()}!aA1`;
 const created = { schools: [], users: [], updates: [] };
 let browser;
@@ -145,6 +149,7 @@ try {
     await manager.getByRole('button', { name: 'Save draft', exact: true }).click();
     await manager.getByRole('button', { name: 'Submit for review', exact: true }).click();
     await manager.getByText('Submitted for Principal review', { exact: true }).waitFor();
+    if (screenshotDirectory) await manager.screenshot({ path: join(screenshotDirectory, 'teacher-draft.png') });
     await noOverflow(t.page);
     const p = await login(principal, '/principal/communication');
     const review = p.page.locator('.principal-communication-card').filter({ hasText: original.title }).locator('.translation-manager');
@@ -170,6 +175,7 @@ try {
     await review.getByRole('checkbox').check();
     await review.getByRole('button', { name: 'Approve reviewed translation', exact: true }).click();
     await review.getByText('School-approved translation', { exact: true }).waitFor();
+    if (screenshotDirectory) await review.screenshot({ path: join(screenshotDirectory, 'principal-review.png') });
     await noOverflow(p.page);
     const family = await login(parent, '/parent/updates', true);
     const card = family.page.locator('.parent-updates .update-card').first();
@@ -182,6 +188,7 @@ try {
       await family.page.waitForFunction((lang) => window.__translationSpeech.utterances.at(-1)?.lang === `${lang}-IN`, language);
     }
     assert.ok((await family.page.evaluate(() => window.__translationSpeech.cancels)) > 0);
+    if (screenshotDirectory) await content.screenshot({ path: join(screenshotDirectory, 'parent-marathi.png') });
     await content.getByRole('button', { name: 'Pause', exact: true }).click();
     await content.getByRole('button', { name: 'Resume', exact: true }).click();
     await content.getByRole('button', { name: 'Stop', exact: true }).click();
@@ -203,6 +210,7 @@ try {
     assert.deepEqual([...t.external, ...p.external, ...family.external], []);
     for (const view of [t, p, family]) await view.context.close();
     console.log('Translation browser flow passed: Teacher draft, Principal approval, three languages, visible-text speech, original/fallback, acknowledgement, child switching, escaped text, 390px and no external targets. Audible playback was mocked.');
+    if (screenshotDirectory) console.log(`Synthetic translation UI captures: ${screenshotDirectory}`);
   } else {
     await approved(teacher, principal, original, 'mr', samples.mr);
     await must(parent.client.rpc('acknowledge_update', { p_update_id: original.id }));
