@@ -6,6 +6,8 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "test:attendance-insights": "vitest run src/lib/attendance-insights.test.ts",
+    "test:attendance-insights:integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-attendance-insights.integration.test.ts",
     "test:fallback": "vitest run src/lib/fallback-provider.test.ts",
     "test:fallback:integration": "node --env-file=.env.test.local scripts/verify-fallback.mjs",
     "dev:simulators-local": "node scripts/dev-rfid-local.mjs",

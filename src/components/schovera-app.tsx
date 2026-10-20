@@ -13,6 +13,7 @@ import { SchoolEntryPanel } from '@/components/school-entry-panel';
 import { useParentSpeech } from '@/components/parent-speech-controls';
 import { NoticeContent, TranslationManager } from '@/components/notice-translations';
 import { FallbackDispatch, ParentFallbackPreferences } from '@/components/fallback-simulator';
+import { AttendanceInsights } from '@/components/attendance-insights';
 import type { ParentSpeechController } from '@/lib/parent-speech';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
@@ -1184,7 +1185,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
             setRecords({ ...records, [studentId]: status })
           }
           onSave={saveAttendance}
-        /></div>
+        />{classId && <AttendanceInsights role="teacher" profileId={profile.id} schoolId={profile.school_id} classId={classId} revision={attendanceNote} />}</div>
       ) : mode === 'homework' ? (
         <div id="teacher-homework"><TeacherAssignments classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
       ) : mode === 'timetable' ? (
@@ -2132,6 +2133,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
           </>
         )}
       </div>}
+      {page === 'attendance' && <AttendanceInsights role="principal" profileId={profile.id} schoolId={profile.school_id} />}
       {(page === 'home' || page === 'communication') && <div className="card principal-recent-communication" id="principal-recent-communication">
         <div className="principal-communication-heading">
           <div>
