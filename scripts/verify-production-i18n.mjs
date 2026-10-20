@@ -148,6 +148,10 @@ try {
   if (await childSelector.count()) await childSelector.selectOption({ label: 'Aarav Patil' });
   await parentPage.waitForFunction(() => document.querySelector('#parent-child-heading')?.textContent?.includes('Aarav Patil'), null, { timeout: 15000 });
   await expect(await parentPage.locator('.language-selector select').inputValue() === 'mr', 'Language change altered the selected child context.');
+  // The localized route loop ends on Notices. Recovery below intentionally
+  // asserts the Home attention panel, without navigating/refetching after send.
+  await parentPage.locator('nav.app-section-nav a[href="/parent/home"]').click();
+  await parentPage.locator('#parent-home[data-content-ready="true"]').waitFor({ state: 'visible' });
 
   const classLabel = `Grade ${assignment.classes.grade}${assignment.classes.division}`;
   await teacherPage.getByRole('link', { name: 'विद्यार्थी' }).count().then(async (count) => {
