@@ -95,6 +95,9 @@ try {
   console.log(`Private generated fixture was held only in its ignored run directory (${manualPaths().runDirectory}); no credentials printed.`);
 } catch (error) {
   console.error(`Connected journey assertion failed: ${error.message}`);
+  for (const { page } of views) {
+    console.error(JSON.stringify(await page.evaluate(() => ({ path: location.pathname, date: document.querySelector('input[type=date]')?.value, register: document.querySelector('.teacher-attendance-register')?.innerText, alerts: [...document.querySelectorAll('[role=alert],.error')].map((e) => e.textContent) }))));
+  }
   throw error;
 } finally {
   await browser?.close();
