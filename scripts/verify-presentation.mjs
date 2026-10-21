@@ -57,6 +57,8 @@ try {
   assert.ok((await owner.rpc('edit_class_assignment',{...args,p_expected_updated_at:saved.updated_at,p_title:'   '})).error);
   assert.ok((await owner.rpc('edit_class_assignment',{...args,p_expected_updated_at:saved.updated_at,p_due_date:'2000-01-01'})).error);
   assert.equal((await owner.rpc('edit_class_assignment',{...args,p_title:saved.title})).error,null,'Same-payload retry must not create another edit');
+  const editRace=await Promise.all(['First reviewed description','Second reviewed description'].map(description=>owner.rpc('edit_class_assignment',{...args,p_title:saved.title,p_expected_updated_at:saved.updated_at,p_description:description})));
+  assert.equal(editRace.filter(result=>!result.error).length,1,'Concurrent stale edits must permit exactly one content change');
   await go(parent.page,'parent','homework');await parent.page.locator('.child-switcher select').selectOption(f.students[0].id);await parent.page.getByText(revisedTitle,{exact:true}).waitFor();
   console.log('Homework browser create/edit and author-only/stale/validation/idempotent retry checks passed.');
   await go(teacher.page,'teacher','students');await teacher.page.getByRole('button',{name:'Grade 7A',exact:true}).click();await teacher.page.getByRole('button',{name:/Aarav Deshmukh/}).first().click();
@@ -97,7 +99,7 @@ try {
     await page.getByLabel('Email').fill(f.accounts[role].email);await page.getByLabel('Password',{exact:true}).fill(f.accounts[role].password);await page.getByRole('button',{name:'Sign in securely'}).click();await page.locator(`.role-${role}`).waitFor({timeout:60000});
     const nav=Date.now();await page.locator(`nav a[href="/${role}/${role==='parent'?'updates':'attendance'}"]`).click();await page.locator(role==='parent'?'.parent-updates .update-card':'.teacher-attendance-register .roster-row').first().waitFor({timeout:60000});
     measurements.push({role,mode:'Next development server; cold browser cache; 150ms latency, 1Mbps down/512Kbps up',initialLoginFormMs:initialMs,keyNavigationMs:Date.now()-nav,encodedBytesDuringLoadLoginNavigation:bytes});
-    await context.setOffline(true);await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.role-parent,.role-teacher'));assert.equal(await page.locator('.update-card,.roster-row,.student-profile').count(),0,'Private data must disappear on offline logout');await context.setOffline(false);await context.close();
+    await context.setOffline(true);await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.role-parent,.role-teacher'));assert.equal(await page.locator('.update-card,.roster-row,.student-profile').count(),0,'Private data must disappear on offline logout');await page.getByLabel('Email').waitFor({timeout:30000});await context.setOffline(false);await page.reload({waitUntil:'domcontentloaded',timeout:120000});await page.getByLabel('Email').waitFor({timeout:60000});assert.equal(await page.locator('.role-parent,.role-teacher').count(),0,'Reconnecting after logout must not restore private data');await context.close();
   }
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
   writeFileSync(path.join(output,'measurements.json'),JSON.stringify({measurements,audio:'AUDIO NOT VERIFIED',routes:22,widths:4,screenshots:88},null,2));

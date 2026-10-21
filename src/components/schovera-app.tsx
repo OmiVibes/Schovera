@@ -1329,7 +1329,7 @@ function TeacherAssignments({ classId, classLabel, studentsCount, teacherId }: {
   const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [sending, setSending] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('');
   const refresh = async () => {
     if (!classId) { setAssignments([]); return; }
-    setLoading(true);
+    setLoading(assignments.length === 0);
     const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }).order('created_at', { ascending: false });
     setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false);
   };
@@ -1348,7 +1348,7 @@ function TeacherAssignments({ classId, classLabel, studentsCount, teacherId }: {
     else { formElement.reset(); setNote('Homework assigned to the class.'); refresh(); }
   };
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
-  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">CLASS HOMEWORK</p><h2 id="teacher-homework-heading">Homework & assignments</h2><p>{classId && classLabel ? `Grade ${classLabel.grade}${classLabel.division} · ${studentsCount} students` : 'Select an assigned class to create homework.'}</p></div></header>{!classId ? <p className="empty compact-empty">Choose a class in Your classroom to begin assigning homework.</p> : <><form className="assignment-form" onSubmit={create}><label>Subject<input name="subject" required maxLength={80} placeholder="Science" /></label><label>Title<input name="title" required maxLength={140} placeholder="Plant Cell Diagram" /></label><label className="assignment-description-field">Description<textarea name="description" required maxLength={1500} rows={3} placeholder="Explain what students should complete." /></label><label>Due date<input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? 'Assigning…' : 'Assign homework'}</button></form>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<div className="assignment-list-heading"><div><p className="eyebrow">UPCOMING</p><h2>Upcoming assignments</h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label="Loading homework" rows={3} /> : upcoming.length ? upcoming.map((assignment) => <div key={`${assignment.id}:${assignment.updated_at}`}><AssignmentCard assignment={assignment} />{assignment.teacher_id === teacherId && <AssignmentEditor assignment={assignment} onSaved={refresh} />}</div>) : <p className="empty compact-empty">No homework assigned yet.</p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow">EARLIER</p><h2>Past assignments</h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
+  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">CLASS HOMEWORK</p><h2 id="teacher-homework-heading">Homework & assignments</h2><p>{classId && classLabel ? `Grade ${classLabel.grade}${classLabel.division} · ${studentsCount} students` : 'Select an assigned class to create homework.'}</p></div></header>{!classId ? <p className="empty compact-empty">Choose a class in Your classroom to begin assigning homework.</p> : <><form className="assignment-form" onSubmit={create}><label>Subject<input name="subject" required maxLength={80} placeholder="Science" /></label><label>Title<input name="title" required maxLength={140} placeholder="Plant Cell Diagram" /></label><label className="assignment-description-field">Description<textarea name="description" required maxLength={1500} rows={3} placeholder="Explain what students should complete." /></label><label>Due date<input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? 'Assigning…' : 'Assign homework'}</button></form>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<div className="assignment-list-heading"><div><p className="eyebrow">UPCOMING</p><h2>Upcoming assignments</h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label="Loading homework" rows={3} /> : upcoming.length ? upcoming.map((assignment) => <div key={assignment.id}><AssignmentCard assignment={assignment} />{assignment.teacher_id === teacherId && <AssignmentEditor assignment={assignment} onSaved={refresh} />}</div>) : <p className="empty compact-empty">No homework assigned yet.</p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow">EARLIER</p><h2>Past assignments</h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
 }
 
 function ParentHomework({ child, className }: { child?: any; className: string }) {
@@ -1392,7 +1392,7 @@ function ParentTimetableView({ classId, className }: { classId?: string; classNa
   const refresh = async () => {
     const version = ++requestRef.current;
     if (!classId) { setEntries([]); setLoading(false); return; }
-    setLoading(true);
+    setLoading(assignments.length === 0);
     const { data, error: queryError } = await db.from('timetable_entries')
       .select('*').eq('class_id', classId).order('weekday').order('start_time');
     if (version === requestRef.current) {
@@ -1848,7 +1848,7 @@ function StudentOverview({ student, classLabel, role, parentId, speech, schoolNa
   useEffect(() => {
     const version = ++requestRef.current;
     if (!student?.id) { setAttendance([]); setUpdates([]); setAssignments([]); setLoading(false); return; }
-    setLoading(true);
+    setLoading(assignments.length === 0);
     Promise.all([
       db.from('attendance_records').select('id,class_id,student_id,attendance_date,status').eq('student_id', student.id).order('attendance_date', { ascending: false }).limit(10),
       db.from('student_updates').select('*,acknowledgements(acknowledged_at,parent_id)').eq('student_id', student.id).order('sent_at', { ascending: false }).limit(12),
@@ -2264,7 +2264,7 @@ function Announcements({
   const [note, setNote] = useState('');
   const pendingRequestRef = useRef<{ key: string; payload: string } | null>(null);
   const load = async () => {
-    setLoading(true);
+    setLoading(assignments.length === 0);
     const { data, error } = await db
       .from('announcements')
       .select('id,title,body,priority,published_at')
