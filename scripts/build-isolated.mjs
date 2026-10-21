@@ -5,11 +5,14 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hostedBuildFixture, validateHostedDemoEnvironment } from '../src/lib/demo-deployment-policy.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const tempPrefix = 'schovera-build-';
-const publicUrl = 'http://127.0.0.1:54321';
-const publicKey = 'sb_publishable_local_build_only_not_a_credential';
+const hostedPreflight = process.argv.slice(2).includes('--hosted-demo');
+if (process.argv.slice(2).some(arg => arg !== '--hosted-demo')) throw new Error('Unsupported isolated build option');
+const publicUrl = hostedPreflight ? hostedBuildFixture.NEXT_PUBLIC_SUPABASE_URL : 'http://127.0.0.1:54321';
+const publicKey = hostedPreflight ? hostedBuildFixture.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY : 'sb_publishable_local_build_only_not_a_credential';
 const secretSentinels = {
   SUPABASE_SERVICE_ROLE_KEY: 'synthetic_service_role_build_leak_sentinel',
   OPENAI_API_KEY: 'synthetic_ai_build_leak_sentinel',
@@ -63,6 +66,10 @@ function minimalEnvironment({ npm = false, tempPath } = {}) {
   env.NEXT_PUBLIC_SUPABASE_URL = publicUrl;
   env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = publicKey;
   for (const [name, value] of Object.entries(secretSentinels)) env[name] = value;
+  if (hostedPreflight) {
+    Object.assign(env, hostedBuildFixture, { SUPABASE_SERVICE_ROLE_KEY: '', OPENAI_API_KEY: '' });
+    validateHostedDemoEnvironment(env);
+  }
   if (npm) {
     if (!process.env.npm_execpath || !path.isAbsolute(process.env.npm_execpath)) {
       throw new Error('Run with npm run build:isolated so the lockfile installer can be located safely.');
@@ -139,7 +146,7 @@ async function ensureOnlyGeneratedEnvironmentFile(snapshotRoot) {
   }
   const contents = await readFile(path.join(snapshotRoot, '.env.production'), 'utf8');
   if (!contents.includes(publicUrl) || !contents.includes(publicKey)
-      || /https:\/\/[^\s"']+\.supabase\.co/i.test(contents)) {
+      || (!hostedPreflight && /https:\/\/[^\s"']+\.supabase\.co/i.test(contents))) {
     throw new Error('Generated build environment failed the local-only Supabase check.');
   }
 }
@@ -198,6 +205,7 @@ async function main() {
       `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${publicKey}`,
       'SUPABASE_SERVICE_ROLE_KEY=',
       'OPENAI_API_KEY=',
+      ...(hostedPreflight ? Object.entries(hostedBuildFixture).filter(([name]) => !name.startsWith('NEXT_PUBLIC_SUPABASE_')).map(([name,value]) => `${name}=${value}`) : []),
       '',
     ].join('\n');
     await writeFile(path.join(snapshotRoot, '.env.production'), envText, { flag: 'wx' });
@@ -261,7 +269,7 @@ async function main() {
     console.log(`Expected routes verified: ${expectedRoutes.join(', ')}`);
     console.log('Synthetic private-environment sentinels absent from all build output.');
     console.log(`Allowlisted build egress hosts observed: ${observedHosts.join(', ') || '(none)'}. Other requests through the build proxy are denied.`);
-    console.log('The isolated build configures only loopback Supabase; it does not target Supabase or Vercel production.');
+    console.log(hostedPreflight ? 'Hosted preflight used a fixed SYNTHETIC project fixture, not live/approved cloud credentials. No deployment is authorized.' : 'The isolated build configures only loopback Supabase; it does not target Supabase or Vercel production.');
     console.log('Isolated production build passed.');
     succeeded = true;
   } finally {

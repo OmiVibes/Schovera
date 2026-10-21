@@ -10,6 +10,7 @@
 - **Earlier personal QA checklist:** [Task 32P](docs/41_TASK_32P_FINAL_SOFTWARE_TESTING.md). Its two-child example is historical; the presentation fixture has 20 fictional students.
 - **Pilot, impact and business assumptions:** [Task 32O](docs/40_TASK_32O_PILOT_IMPACT_BUSINESS_MODEL.md).
 - **Separate hosted demo proposal:** [release approval guide](docs/42_ISOLATED_ONLINE_DEMO_PREPARATION.md). No deployment is authorized.
+- **Current hosted deployment preflight:** [Task 32S](docs/44_TASK_32S_ONLINE_DEMO_DEPLOYMENT_PREFLIGHT.md). Identity guards, reduced online features, student access and explicit cloud approval gates; no hosted demo has been created.
 
 ## Safe local launch (Windows PowerShell)
 

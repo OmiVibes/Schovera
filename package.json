@@ -6,6 +6,10 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "test:online-demo": "vitest run src/lib/demo-deployment-policy.test.ts src/components/hosted-fallback.test.tsx scripts/online-demo/provisioning.test.mjs",
+    "verify:online-demo": "node --env-file=.env.test.local scripts/verify-online-demo.mjs",
+    "demo:online:export": "node --experimental-strip-types --env-file=.env.test.local scripts/online-demo/export.mjs",
+    "build:isolated:demo": "node scripts/build-isolated.mjs --hosted-demo",
     "test:hosted-demo": "vitest run src/lib/hosted-demo.test.ts",
     "test:homework-editor": "vitest run src/components/assignment-editor.test.tsx",
     "demo:release:preflight": "node scripts/demo-release-preflight.mjs",

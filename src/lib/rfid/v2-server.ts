@@ -13,6 +13,7 @@ export type LocalRfidServer = {
 };
 
 export function localRfidServer(request: Request): LocalRfidServer | null {
+  if (process.env.SCHOVERA_HOSTED_DEMO === 'true') return null;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

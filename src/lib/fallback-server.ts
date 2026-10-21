@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { isLoopbackHostHeader, isLoopbackHttpUrl } from './rfid/server';
 
 export function localFallbackEnabled(request: Request, env: Record<string, string | undefined> = process.env): boolean {
-  return env.SCHOVERA_FALLBACK_MODE === 'local' && env.SCHOVERA_TEST_MODE === 'local'
+  return env.SCHOVERA_HOSTED_DEMO !== 'true' && env.SCHOVERA_FALLBACK_MODE === 'local' && env.SCHOVERA_TEST_MODE === 'local'
     && isLoopbackHttpUrl(env.NEXT_PUBLIC_SUPABASE_URL) && isLoopbackHttpUrl(request.url)
     && isLoopbackHostHeader(request.headers.get('host'))
     && Boolean(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY && env.SUPABASE_SERVICE_ROLE_KEY);

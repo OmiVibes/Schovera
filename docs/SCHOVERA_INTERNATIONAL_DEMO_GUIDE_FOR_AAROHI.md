@@ -222,6 +222,25 @@ Do not type long paragraphs live. Do not read passwords aloud. Do not pretend a 
 
 ## Part F — Practice and quick recovery
 
+### How to Practice Schovera on Your Own Laptop or Mobile
+
+**A future private online demo is planned. It is not live or approved yet. There is no new link to use today.** Your trainer will tell you when it has passed its checks.
+
+1. Ask your trainer privately for the approved demo link and **your own** email/password. Never post them in a group, screenshot or this handbook. Do not use the existing production website for practice.
+2. Open the private link in an up-to-date browser. The trainer must check that it works without a Vercel account. If a hosting sign-in screen blocks you, ask the trainer; do not change security settings.
+3. Check that **Demo Environment** and **Schovera Model School — Demo Campus** appear. All people and records are fictional. Stop if you see another school.
+4. Sign in with the role your trainer assigned. Use a separate browser profile for another role. Ordinary tabs usually share the same login.
+5. Parent practice: choose the correct child, read a prepared message, choose an approved language, view the original and acknowledge the exact message. Then check homework and timetable.
+6. Teacher practice: choose the assigned class, inspect the roster, practise an agreed fictional attendance/homework change and send a short prepared update. Principal practice: review the draft translation and the acknowledgement. Do not change another presenter's work unexpectedly.
+7. On a phone, use the top navigation to move between sections. Check the school, role and selected child before each action. Ask your trainer if a control is unclear.
+8. Listening works only if your browser/device has the right voice. Marathi may be unavailable. Check volume and output; use visible text if silent. Do not claim audio was tested unless you actually heard it.
+9. Online AI generation will be disabled: the trainer's local Ollama model is not an internet service. The basic spreadsheet editor can still work in your browser with a tiny fictional file.
+10. Entry records will be prepared fictional observations. No physical RFID reader or live offline-gateway synchronization is provided remotely. SMS/IVR examples are clearly labelled illustrations—not your delivery history, and no real message or call is sent.
+11. Internet is needed for new online records. If it drops, do not promise fresh remote updates or press Send repeatedly. Tell the trainer and use the agreed backup explanation.
+12. Sign out when finished, especially on a shared device. The accounts and access link will expire or be removed on the trainer's schedule. Ask privately for help if access stops; never share someone else's password.
+
+For an online-only talk, skip trainer terminal/gateway actions in Part C. Explain that those are separate local software tests. Show only available web features and labelled examples. A recorded demonstration must be described as recorded, not live. The developer's approval checklist is in [Task 32S](44_TASK_32S_ONLINE_DEMO_DEPLOYMENT_PREFLIGHT.md).
+
 ### Rehearsal checklist
 
 - [ ] Both presenters can explain the problem in one short sentence.

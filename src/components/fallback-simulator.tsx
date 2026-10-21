@@ -28,7 +28,19 @@ function useLocalApi() {
   }, [db]);
 }
 
-export function ParentFallbackPreferences() { return <LocalOnly><Preferences /></LocalOnly>; }
+export function ParentFallbackPreferences() {
+  return process.env.NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO === 'true'
+    ? <HostedFallbackExample /> : <LocalOnly><Preferences /></LocalOnly>;
+}
+function HostedFallbackExample() {
+  const { language } = useI18n();
+  const copy = {
+    en: ['SMS / IVR — illustrative simulation', 'Example only, not your delivery history: SMS delivered; IVR unavailable. No message or call was sent. Consent and dispatch controls are available only in the trainer’s local simulator.'],
+    hi: ['SMS / IVR — उदाहरण अनुकरण', 'यह केवल उदाहरण है, आपका वितरण इतिहास नहीं: SMS वितरित; IVR अनुपलब्ध। कोई संदेश या कॉल नहीं भेजा गया। सहमति और भेजने के नियंत्रण केवल प्रशिक्षक के स्थानीय सिम्युलेटर में उपलब्ध हैं।'],
+    mr: ['SMS / IVR — उदाहरण अनुकरण', 'हे फक्त उदाहरण आहे, तुमचा वितरण इतिहास नाही: SMS वितरित; IVR अनुपलब्ध. कोणताही संदेश किंवा कॉल पाठवलेला नाही. संमती आणि पाठवण्याची नियंत्रणे फक्त प्रशिक्षकाच्या स्थानिक सिम्युलेटरमध्ये उपलब्ध आहेत.'],
+  }[language];
+  return <section className="fallback-panel" data-testid="hosted-fallback-example"><h3>{copy[0]}</h3><p>{copy[1]}</p></section>;
+}
 function Preferences() {
   const { t } = useI18n();
   const api = useLocalApi(); const id = useId();

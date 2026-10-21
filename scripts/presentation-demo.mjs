@@ -8,13 +8,9 @@ import { prepareManualFixture, manualPaths, readManualFixture, actorClient } fro
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import { LocalSupabaseV2Transport } from './rfid-gateway/local-v2-transport.mjs';
 import { schoolToday, shiftSchoolDate } from '../src/lib/school-date.mjs';
+import { fictionalNames } from './online-demo/dataset.mjs';
 
-export const fictionalNames = [
-  'Aarav Deshmukh', 'Siya Kulkarni', 'Rohan Patil', 'Ananya Joshi', 'Vedant Jadhav',
-  'Myra Shah', 'Kabir More', 'Ishita Nair', 'Aditya Pawar', 'Sara Khan',
-  'Vihaan Shinde', 'Aditi Chavan', 'Reyansh Salunkhe', 'Riya Mehta', 'Omkar Gaikwad',
-  'Sanvi Bhosale', 'Arjun Kadam', 'Meera Desai', 'Yash Malhotra', 'Fatima Shaikh',
-];
+export { fictionalNames };
 const root = fileURLToPath(new URL('../', import.meta.url));
 const must = async (query) => { const { data, error } = await query; if (error) throw new Error(error.message); return data; };
 function adminClient() {

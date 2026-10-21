@@ -6,5 +6,7 @@ export function createClient() {
     // Real authentication/data requests still require the project-specific values.
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? 'placeholder-anon-key',
+    process.env.NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO === 'true'
+      ? { cookieOptions: { secure: true, sameSite: 'lax' } } : undefined,
   );
 }
