@@ -14,6 +14,7 @@ import { useParentSpeech } from '@/components/parent-speech-controls';
 import { NoticeContent, TranslationManager } from '@/components/notice-translations';
 import { FallbackDispatch, ParentFallbackPreferences } from '@/components/fallback-simulator';
 import { AttendanceInsights } from '@/components/attendance-insights';
+import { AssignmentEditor } from '@/components/assignment-editor';
 import type { ParentSpeechController } from '@/lib/parent-speech';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
@@ -25,7 +26,7 @@ const TeacherAIWorkspace = dynamic(
 
 type Role = 'teacher' | 'parent' | 'principal';
 type Status = 'present' | 'absent' | 'late';
-type Profile = { id: string; school_id: string; role: Role; full_name: string };
+type Profile = { id: string; school_id: string; role: Role; full_name: string; school_name?: string };
 type Update = {
   id: string;
   student_id: string;
@@ -61,7 +62,7 @@ type Attendance = {
   students?: any;
 };
 type Assignment = {
-  id: string; class_id: string; subject: string; title: string; description: string;
+  id: string; class_id: string; teacher_id: string; updated_at: string; subject: string; title: string; description: string;
   due_date: string; created_at: string;
   classes?: { grade: string; division: string }; profiles?: { full_name: string };
 };
@@ -256,7 +257,7 @@ export function SchoveraApp() {
       }
       const { data, error: profileError } = await db
         .from('profiles')
-        .select('id,school_id,role,full_name')
+        .select('id,school_id,role,full_name,schools(name)')
         .eq('id', user.id)
         .maybeSingle();
       if (version !== authLoadVersionRef.current) return;
@@ -268,7 +269,7 @@ export function SchoveraApp() {
         setCanRetryProfileLoad(false);
         return;
       }
-      profileRef.current = data as Profile;
+      profileRef.current = { ...data, school_name: (data as any).schools?.name || 'Your school' } as Profile;
       setProfile(profileRef.current);
       setError('');
       setCanRetryProfileLoad(false);
@@ -424,7 +425,7 @@ export function SchoveraApp() {
             <div className="logo small" aria-hidden="true">S</div>
             <div>
               <strong>Schovera</strong>
-              <span>Schovera International School</span>
+              <span>{profile.school_name || 'Your school'}</span>
             </div>
           </div>
           <div className="account-actions">
@@ -461,7 +462,7 @@ export function SchoveraApp() {
       {profile.role !== 'parent' && currentPage.slug === 'home' && (
         <section className="dashboard-hero">
           <div>
-            <p className="eyebrow">{nice(profile.role)} workspace · Schovera International School</p>
+            <p className="eyebrow">{nice(profile.role)} workspace · {profile.school_name || 'Your school'}</p>
             <h1>
               {profile.role === 'teacher'
                 ? `Good morning, ${profile.full_name.split(' ')[0]}.`
@@ -488,7 +489,7 @@ export function SchoveraApp() {
                   : currentPage.slug === 'notices' ? t('parent.noticeContext')
                     : currentPage.slug === 'profile' ? t('parent.profileOverview')
                       : t('parent.child')
-          : 'Schovera International School · Your school workspace'}</p>
+          : `${profile.school_name || 'Your school'} · Your school workspace`}</p>
       </section>}
       <div className="dashboard-content">
           {profile.role === 'teacher' ? (
@@ -1166,7 +1167,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
           )}
         </div>
       ) : mode === 'profile' ? (
-        <div className="teacher-profile-panel"><StudentOverview student={student} classLabel={classes.find((row) => row.id === classId)} role="teacher" /></div>
+        <div className="teacher-profile-panel"><StudentOverview schoolName={profile.school_name} student={student} classLabel={classes.find((row) => row.id === classId)} role="teacher" /></div>
       ) : mode === 'attendance' ? (
         <div id="teacher-attendance" className="teacher-attendance-panel"><AttendanceMarker
           classId={classId}
@@ -1190,7 +1191,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
           onSave={saveAttendance}
         />{classId && <AttendanceInsights role="teacher" profileId={profile.id} schoolId={profile.school_id} classId={classId} revision={attendanceNote} />}</div>
       ) : mode === 'homework' ? (
-        <div id="teacher-homework"><TeacherAssignments classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
+        <div id="teacher-homework"><TeacherAssignments key={classId} teacherId={profile.id} classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
       ) : mode === 'timetable' ? (
         <TimetableView classId={classId} className={classes.find((row) => row.id === classId) ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Your class'} profile={profile} />
       ) : (
@@ -1323,7 +1324,7 @@ function AssignmentCard({ assignment, showClass = false, language = 'en' }: { as
   </article>;
 }
 
-function TeacherAssignments({ classId, classLabel, studentsCount }: { classId: string; classLabel?: any; studentsCount: number }) {
+function TeacherAssignments({ classId, classLabel, studentsCount, teacherId }: { classId: string; classLabel?: any; studentsCount: number; teacherId: string }) {
   const db = useMemo(() => createClient(), []);
   const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [sending, setSending] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('');
   const refresh = async () => {
@@ -1334,7 +1335,7 @@ function TeacherAssignments({ classId, classLabel, studentsCount }: { classId: s
   };
   const { onChannelStatus } = useRealtimeResync(refresh);
   useEffect(() => { refresh(); }, [classId]);
-  useEffect(() => { const channel = db.channel(`teacher-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
+  useEffect(() => { const channel = db.channel(`teacher-homework-${classId || 'none'}`).on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
   const create = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); if (!classId || sending) return;
     const formElement = event.currentTarget;
@@ -1347,7 +1348,7 @@ function TeacherAssignments({ classId, classLabel, studentsCount }: { classId: s
     else { formElement.reset(); setNote('Homework assigned to the class.'); refresh(); }
   };
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
-  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">CLASS HOMEWORK</p><h2 id="teacher-homework-heading">Homework & assignments</h2><p>{classId && classLabel ? `Grade ${classLabel.grade}${classLabel.division} · ${studentsCount} students` : 'Select an assigned class to create homework.'}</p></div></header>{!classId ? <p className="empty compact-empty">Choose a class in Your classroom to begin assigning homework.</p> : <><form className="assignment-form" onSubmit={create}><label>Subject<input name="subject" required maxLength={80} placeholder="Science" /></label><label>Title<input name="title" required maxLength={140} placeholder="Plant Cell Diagram" /></label><label className="assignment-description-field">Description<textarea name="description" required maxLength={1500} rows={3} placeholder="Explain what students should complete." /></label><label>Due date<input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? 'Assigning…' : 'Assign homework'}</button></form>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<div className="assignment-list-heading"><div><p className="eyebrow">UPCOMING</p><h2>Upcoming assignments</h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label="Loading homework" rows={3} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />) : <p className="empty compact-empty">No homework assigned yet.</p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow">EARLIER</p><h2>Past assignments</h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
+  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">CLASS HOMEWORK</p><h2 id="teacher-homework-heading">Homework & assignments</h2><p>{classId && classLabel ? `Grade ${classLabel.grade}${classLabel.division} · ${studentsCount} students` : 'Select an assigned class to create homework.'}</p></div></header>{!classId ? <p className="empty compact-empty">Choose a class in Your classroom to begin assigning homework.</p> : <><form className="assignment-form" onSubmit={create}><label>Subject<input name="subject" required maxLength={80} placeholder="Science" /></label><label>Title<input name="title" required maxLength={140} placeholder="Plant Cell Diagram" /></label><label className="assignment-description-field">Description<textarea name="description" required maxLength={1500} rows={3} placeholder="Explain what students should complete." /></label><label>Due date<input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? 'Assigning…' : 'Assign homework'}</button></form>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<div className="assignment-list-heading"><div><p className="eyebrow">UPCOMING</p><h2>Upcoming assignments</h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label="Loading homework" rows={3} /> : upcoming.length ? upcoming.map((assignment) => <div key={`${assignment.id}:${assignment.updated_at}`}><AssignmentCard assignment={assignment} />{assignment.teacher_id === teacherId && <AssignmentEditor assignment={assignment} onSaved={refresh} />}</div>) : <p className="empty compact-empty">No homework assigned yet.</p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow">EARLIER</p><h2>Past assignments</h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
 }
 
 function ParentHomework({ child, className }: { child?: any; className: string }) {
@@ -1356,7 +1357,7 @@ function ParentHomework({ child, className }: { child?: any; className: string }
   const refresh = async () => { const version = ++requestRef.current; if (!classId) { setAssignments([]); return; } setLoading(true); const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }); if (version === requestRef.current) { setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false); } };
   const { onChannelStatus } = useRealtimeResync(refresh);
   useEffect(() => { refresh(); }, [classId]);
-  useEffect(() => { const channel = db.channel(`parent-homework-${classId || 'none'}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
+  useEffect(() => { const channel = db.channel(`parent-homework-${classId || 'none'}`).on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
   const childName = child?.full_name?.split(' ')[0] || t('parent.childFallback');
   return <section className="parent-homework" id="parent-homework" aria-labelledby="parent-homework-heading"><div className="section-heading"><p className="eyebrow">{t('parent.homework')}</p><h2 id="parent-homework-heading">{t('parent.homeworkFor', { name: childName })}</h2><p className="hint">{t('parent.classAssignments', { className })}</p></div>{error ? <p className="error" role="alert">{t('parent.homeworkError')}</p> : loading ? <Skeleton label={t('parent.loadingHomework')} rows={2} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} language={language} />) : <p className="empty compact-empty">{t('parent.noHomework', { name: childName })}</p>}{past.length > 0 && <details className="assignment-past-details"><summary>{t('parent.earlierHomework', { count: past.length })}</summary>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} language={language} />)}</details>}</section>;
@@ -1449,7 +1450,7 @@ function PrincipalTimetable({ profile }: { profile: Profile }) {
 
 function PrincipalHomework({ profile }: { profile: Profile }) {
   const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]); const refresh = async () => { const { data } = await db.from('class_assignments').select('*,classes(grade,division)').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(8); setAssignments(data || []); }; const { onChannelStatus } = useRealtimeResync(refresh);
-  useEffect(() => { refresh(); const channel = db.channel('principal-homework').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'class_assignments' }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, profile.school_id, onChannelStatus]);
+  useEffect(() => { refresh(); const channel = db.channel('principal-homework').on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments' }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, profile.school_id, onChannelStatus]);
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today());
   return <section className="card principal-homework" id="principal-homework"><div className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">LEARNING ACTIVITY</p><h2>Homework activity</h2><p>Recent class assignments across your school.</p></div><b>{upcoming.length} upcoming</b></div>{assignments.length ? assignments.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} showClass />) : <p className="empty compact-empty">No assignments to show yet.</p>}</section>;
 }
@@ -1684,7 +1685,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
         )}
       </section>}
       </div>}
-      {page === 'profile' && <StudentOverview student={child} classLabel={child?.classes} role="parent" parentId={profile.id} speech={speech} />}
+      {page === 'profile' && <StudentOverview schoolName={profile.school_name} student={child} classLabel={child?.classes} role="parent" parentId={profile.id} speech={speech} />}
       {page === 'home' && <section className="right-now" aria-labelledby="right-now-heading">
         <div className="section-heading"><p className="eyebrow">{t('parent.rightNow')}</p><h2 id="right-now-heading">{t('parent.atAGlance')}</h2></div>
         <div className="right-now-grid">
@@ -1830,7 +1831,7 @@ function AttendanceSummary({
   );
 }
 
-function StudentOverview({ student, classLabel, role, parentId, speech }: { student: any; classLabel?: any; role: Role; parentId?: string; speech?: { controller: ParentSpeechController; state: ReturnType<ParentSpeechController['getSnapshot']> } }) {
+function StudentOverview({ student, classLabel, role, parentId, speech, schoolName }: { schoolName?: string; student: any; classLabel?: any; role: Role; parentId?: string; speech?: { controller: ParentSpeechController; state: ReturnType<ParentSpeechController['getSnapshot']> } }) {
   const { language, t } = useI18n();
   const text = (key: string, fallback: string) => role === 'parent' ? t(key) : fallback;
   const db = useMemo(() => createClient(), []);
@@ -1885,7 +1886,7 @@ function StudentOverview({ student, classLabel, role, parentId, speech }: { stud
   const upcoming = assignments.filter((item) => item.due_date >= today()); const next = upcoming[0];
   const grade = classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : student.classes ? `Grade ${student.classes.grade}${student.classes.division}` : text('parent.classFallback', 'Class');
   return <section className="student-profile" id={`${role}-profile`} aria-labelledby={`${role}-profile-heading`}>
-    <header className="student-profile-identity"><span className="student-avatar" aria-hidden="true">{initials(student.full_name)}</span><div><p className="eyebrow">{text('parent.profileOverview', 'STUDENT OVERVIEW')}</p><h1 id={`${role}-profile-heading`}>{student.full_name}</h1><p>{grade} · {text('parent.roll', `Roll number ${student.roll_number || '—'}`).replace('{number}', String(student.roll_number || '—'))}</p><small>Schovera International School</small></div></header>
+    <header className="student-profile-identity"><span className="student-avatar" aria-hidden="true">{initials(student.full_name)}</span><div><p className="eyebrow">{text('parent.profileOverview', 'STUDENT OVERVIEW')}</p><h1 id={`${role}-profile-heading`}>{student.full_name}</h1><p>{grade} · {text('parent.roll', `Roll number ${student.roll_number || '—'}`).replace('{number}', String(student.roll_number || '—'))}</p><small>{schoolName || 'Your school'}</small></div></header>
     {loading ? <Skeleton label={text('parent.loadingProfile', 'Loading student profile')} rows={4} /> : <>
       <div className="student-profile-summary" aria-label={text('parent.profileAtGlance', 'Student profile at a glance')}><article><Icon name="attendance" /><span><small>{text('parent.attendance', 'Attendance')}</small><b>{attendance.length ? localizedStatus(attendance[0].status, t) : text('parent.attendanceNotRecorded', 'Not recorded')}</b></span></article><article><Icon name="updates" /><span><small>{text('parent.profileCommunication', 'Communication')}</small><b>{awaiting ? text('parent.communicationSummaryAwaiting', '{count} awaiting').replace('{count}', String(awaiting)) : latest ? text('parent.communicationUpToDate', 'Up to date') : text('parent.noUpdates', 'No updates')}</b></span></article><article><Icon name="homework" /><span><small>{text('parent.homework', 'Homework')}</small><b>{upcoming.length ? `${upcoming.length} upcoming` : text('parent.homeworkNoneUpcoming', 'None upcoming')}</b></span></article></div>
       <div className="student-profile-grid">
@@ -1902,7 +1903,7 @@ function PrincipalStudentOverview({ profile }: { profile: Profile }) {
   const [query, setQuery] = useState(''); const [students, setStudents] = useState<any[]>([]); const [selected, setSelected] = useState<any>(null);
   useEffect(() => { const version = ++requestRef.current; db.from('students').select('*,classes(grade,division)').eq('school_id', profile.school_id).eq('active', true).order('full_name').then(({ data }) => { if (version === requestRef.current) setStudents(data || []); }); }, [db, profile.school_id]);
   const normalized = query.trim().toLocaleLowerCase(); const results = normalized ? students.filter((student) => student.full_name.toLocaleLowerCase().includes(normalized) || String(student.roll_number || '').toLocaleLowerCase().includes(normalized)) : students.slice(0, 8);
-  return <section className="principal-students" id="principal-students"><div className="section-heading"><p className="eyebrow">STUDENT OVERVIEW</p><h2>Find a student</h2><p className="hint">Search students in your school by name or roll number.</p></div><label className="teacher-roster-search"><span className="sr-only">Search students</span><Icon name="search" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or roll number" /></label><div className="principal-student-results">{results.map((student) => <button type="button" key={student.id} className={selected?.id === student.id ? 'student active' : 'student'} onClick={() => setSelected(student)}><span className="student-name"><i>{initials(student.full_name)}</i><span>{student.full_name}<small>Grade {student.classes?.grade}{student.classes?.division} · Roll {student.roll_number}</small></span></span><span className="student-chevron">›</span></button>)}{normalized && !results.length && <p className="empty compact-empty">No students found.</p>}</div><StudentOverview student={selected} classLabel={selected?.classes} role="principal" /></section>;
+  return <section className="principal-students" id="principal-students"><div className="section-heading"><p className="eyebrow">STUDENT OVERVIEW</p><h2>Find a student</h2><p className="hint">Search students in your school by name or roll number.</p></div><label className="teacher-roster-search"><span className="sr-only">Search students</span><Icon name="search" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or roll number" /></label><div className="principal-student-results">{results.map((student) => <button type="button" key={student.id} className={selected?.id === student.id ? 'student active' : 'student'} onClick={() => setSelected(student)}><span className="student-name"><i>{initials(student.full_name)}</i><span>{student.full_name}<small>Grade {student.classes?.grade}{student.classes?.division} · Roll {student.roll_number}</small></span></span><span className="student-chevron">›</span></button>)}{normalized && !results.length && <p className="empty compact-empty">No students found.</p>}</div><StudentOverview schoolName={profile.school_name} student={selected} classLabel={selected?.classes} role="principal" /></section>;
 }
 
 function Principal({ profile, page }: { profile: Profile; page: string }) {
@@ -2387,7 +2388,7 @@ function Announcements({
               {profile.role === 'principal' && announcement.priority === 'important' && <FallbackDispatch kind="announcement" sourceId={announcement.id} />}
               <footer>
                 <Icon name="school" />
-                <span>Schovera International School</span>
+                <span>{profile.school_name || 'Your school'}</span>
                 <span aria-hidden="true">•</span>
                 <time dateTime={announcement.published_at}>{parentView ? t('parent.published', { date: displayDate(announcement.published_at, language) }) : `Published ${displayDate(announcement.published_at)}`}</time>
               </footer>
