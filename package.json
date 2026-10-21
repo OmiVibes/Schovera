@@ -6,6 +6,8 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "verify:presentation": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/verify-presentation.mjs",
+    "verify:task32r": "node --env-file=.env.test.local scripts/verify-task32r.mjs",
     "demo:isolated:prepare": "node scripts/prepare-isolated-demo.mjs",
     "presentation:prepare": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/presentation-demo.mjs",
     "verify:final-journeys": "node --env-file=.env.test.local scripts/verify-final-journeys.mjs",
@@ -100,6 +102,7 @@
     "vitest": "^4.1.11"
   },
   "overrides": {
+    "vite": "7.3.7",
     "brace-expansion@^1.1.7": "1.1.21",
     "brace-expansion@^5.0.8": "5.0.12",
     "sharp": "0.35.5",
