@@ -3,6 +3,10 @@ const reference = /^[a-z]{20}$/;
 const projectId = /^prj_[A-Za-z0-9_-]+$/;
 const publicNames = new Set(['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
   'NEXT_PUBLIC_SCHOVERA_DEMO', 'NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO', 'NEXT_PUBLIC_SCHOVERA_FALLBACK_MODE']);
+// Exact documented platform metadata, not an open NEXT_PUBLIC_VERCEL_* exception.
+const platformNames = new Set(['ENV','TARGET_ENV','URL','BRANCH_URL','PROJECT_PRODUCTION_URL','HASH_SALT',
+  'GIT_PROVIDER','GIT_REPO_SLUG','GIT_REPO_OWNER','GIT_REPO_ID','GIT_COMMIT_REF','GIT_COMMIT_SHA',
+  'GIT_COMMIT_MESSAGE','GIT_COMMIT_AUTHOR_LOGIN','GIT_COMMIT_AUTHOR_NAME','GIT_PULL_REQUEST_ID'].map(k=>`NEXT_PUBLIC_VERCEL_${k}`));
 
 function list(value, pattern) {
   const entries = typeof value === 'string' ? value.split(',').map(s => s.trim()) : [];
@@ -35,7 +39,10 @@ export function validateHostedDemoEnvironment(env) {
     if (env[name]) throw new Error(`Hosted demo forbids ${name}`);
   }
   if (env.TEACHER_AI_PROVIDER !== 'disabled') throw new Error('Hosted AI must be disabled');
-  if (Object.keys(env).some(name => name.startsWith('NEXT_PUBLIC_') && env[name] && !publicNames.has(name))) throw new Error('Unexpected public build variable');
+  for (const name of Object.keys(env).filter(k=>k.startsWith('NEXT_PUBLIC_') && env[k] && !publicNames.has(k))) {
+    const source = name.replace(/^NEXT_PUBLIC_/,'');
+    if (!platformNames.has(name) || env.VERCEL !== '1' || !env[source] || env[name] !== env[source]) throw new Error('Unexpected or mismatched public build variable');
+  }
   return { enabled: true, appOrigin: app.origin, demoProjectRef: demoRef, deploymentAuthorized: false };
 }
 
@@ -48,5 +55,7 @@ export const hostedBuildFixture = Object.freeze({
   SCHOVERA_DEMO_APP_ORIGIN: 'https://schovera-preflight-fixture.vercel.app',
   SCHOVERA_DEMO_VERCEL_PROJECT_ID: 'prj_synthetic_demo', SCHOVERA_PRODUCTION_VERCEL_PROJECT_IDS: 'prj_synthetic_production',
   VERCEL_PROJECT_ID: 'prj_synthetic_demo',
+  VERCEL:'1', VERCEL_ENV:'preview', VERCEL_URL:'schovera-preflight-fixture.vercel.app',
+  NEXT_PUBLIC_VERCEL_ENV:'preview', NEXT_PUBLIC_VERCEL_URL:'schovera-preflight-fixture.vercel.app',
   TEACHER_AI_PROVIDER: 'disabled',
 });
