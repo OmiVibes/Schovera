@@ -1392,7 +1392,7 @@ function ParentTimetableView({ classId, className }: { classId?: string; classNa
   const refresh = async () => {
     const version = ++requestRef.current;
     if (!classId) { setEntries([]); setLoading(false); return; }
-    setLoading(assignments.length === 0);
+    setLoading(true);
     const { data, error: queryError } = await db.from('timetable_entries')
       .select('*').eq('class_id', classId).order('weekday').order('start_time');
     if (version === requestRef.current) {
@@ -1848,7 +1848,7 @@ function StudentOverview({ student, classLabel, role, parentId, speech, schoolNa
   useEffect(() => {
     const version = ++requestRef.current;
     if (!student?.id) { setAttendance([]); setUpdates([]); setAssignments([]); setLoading(false); return; }
-    setLoading(assignments.length === 0);
+    setLoading(true);
     Promise.all([
       db.from('attendance_records').select('id,class_id,student_id,attendance_date,status').eq('student_id', student.id).order('attendance_date', { ascending: false }).limit(10),
       db.from('student_updates').select('*,acknowledgements(acknowledged_at,parent_id)').eq('student_id', student.id).order('sent_at', { ascending: false }).limit(12),
@@ -2264,7 +2264,7 @@ function Announcements({
   const [note, setNote] = useState('');
   const pendingRequestRef = useRef<{ key: string; payload: string } | null>(null);
   const load = async () => {
-    setLoading(assignments.length === 0);
+    setLoading(true);
     const { data, error } = await db
       .from('announcements')
       .select('id,title,body,priority,published_at')
