@@ -1,18 +1,17 @@
 // Read-only local export. No remote adapter, Auth export, migration or reset.
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { assertLocalTestEnvironment } from '../lib/local-test-env.mjs';
 import { columns, makeDataset, datasetDigest } from './dataset.mjs';
+import { readPresentationSource } from './source.mjs';
 
 assertLocalTestEnvironment();
 if (existsSync('.env.local')) throw new Error('Use a clean isolated checkout; private environment file was not opened');
 const args = process.argv.slice(2);
 if (args.length && (args.length !== 2 || args[0] !== '--source-worktree')) throw new Error('Only --source-worktree <owned fictional fixture checkout> is supported');
 const source = path.resolve(args[1] ?? '.');
-if (existsSync(path.join(source,'.env.local'))) throw new Error('Source must also exclude production environment files');
-const f = JSON.parse(readFileSync(path.join(source,'.local/schovera-manual-demo/current.json'),'utf8'));
-if (f.presentation?.ready !== true || f.presentation?.fictional !== true || !/^[0-9a-f-]{36}$/i.test(f.runId)) throw new Error('Completed fictional fixture journal required');
+const f = readPresentationSource(source);
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const must = async query => { const r = await query; if(r.error) throw new Error('Local allowlisted export query failed; no data or credentials printed'); return r.data; };
 const school = await must(db.from('schools').select('id,code').eq('id',f.schoolId).single());

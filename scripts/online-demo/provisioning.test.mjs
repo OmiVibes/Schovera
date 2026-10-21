@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { hostedBuildFixture } from '../../src/lib/demo-deployment-policy.mjs';
 import { fictionalNames, columns, makeDataset, validateDataset } from './dataset.mjs';
 import { planProvisioning, proveProvisioning } from './provisioning.mjs';
+import { readPresentationSource } from './source.mjs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 function fixture() {
   const raw=Object.fromEntries(Object.keys(columns).map(t=>[t,[]]));
@@ -27,6 +31,10 @@ function adapter(plan) {
     async complete(id){rows.get(id).complete=true;},async removeOwned(id){rows.delete(id);},async rotateOwned(){this.rotations++;}};
 }
 describe('controlled provisioning offline proof — no network adapter',()=>{
+  it('resolves the existing pointer/manifest layout and rejects traversal without opening private env',()=>{
+    const root=mkdtempSync(path.join(tmpdir(),'schovera-source-test-'));const dir=path.join(root,'.local/schovera-manual-demo');const run=options.runId;
+    try{mkdirSync(path.join(dir,run),{recursive:true});writeFileSync(path.join(dir,'current.json'),JSON.stringify({runId:run}));writeFileSync(path.join(dir,run,'manifest.json'),JSON.stringify({runId:run,presentation:{ready:true,fictional:true},students:Array(20).fill({})}));expect(readPresentationSource(root).runId).toBe(run);writeFileSync(path.join(dir,'current.json'),JSON.stringify({runId:'../not-owned'}));expect(()=>readPresentationSource(root)).toThrow('pointer');writeFileSync(path.join(root,'.env.local'),'synthetic sentinel; must not be read');expect(()=>readPresentationSource(root)).toThrow('not opened');}finally{rmSync(root,{recursive:true,force:true});}
+  });
   it('exports allowlisted connected records without previous credentials or Auth identities',()=>{const b=fixture();expect(b.tables.students).toHaveLength(20);expect(JSON.stringify(b)).not.toContain('NEVER_EXPORT');expect(JSON.stringify(b)).not.toContain('person1');expect(JSON.stringify(b)).not.toContain('never-export@');});
   it('is idempotent and cleans/rotates only the journal-owned run',async()=>{const b=fixture(),p=planProvisioning(hostedBuildFixture,b,options),a=adapter(p);await proveProvisioning(p,b,a,'prepare',1001);expect((await proveProvisioning(p,b,a,'prepare',1001)).duplicate).toBe(true);expect(a.writes).toBe(1);await proveProvisioning(p,b,a,'rotate',1001);expect(a.rotations).toBe(1);a.rows.set('unrelated',{preserved:true});await proveProvisioning(p,b,a,'cleanup',1001);expect([...a.rows.keys()]).toEqual(['unrelated']);});
   it('resumes a reserved incomplete journal after failure',async()=>{const b=fixture(),p=planProvisioning(hostedBuildFixture,b,options),a=adapter(p);await a.reserve(p);await proveProvisioning(p,b,a,'prepare',1001);expect(a.rows.get(p.runId).complete).toBe(true);});

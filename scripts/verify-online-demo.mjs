@@ -9,15 +9,14 @@ import { createServer as httpsServer } from 'node:https';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import { hostedBuildFixture, validateHostedDemoEnvironment } from '../src/lib/demo-deployment-policy.mjs';
+import { readPresentationSource } from './online-demo/source.mjs';
 
 assertLocalTestEnvironment();
 if(existsSync('.env.local')) throw new Error('Clean isolated checkout required; private environment file not opened');
 const args=process.argv.slice(2);
 if(args.length!==2 || args[0]!=='--source-worktree') throw new Error('Supply the owned fictional presentation checkout with --source-worktree');
 const source=path.resolve(args[1]);
-if(existsSync(path.join(source,'.env.local'))) throw new Error('Source checkout must exclude production env files');
-const fixture=JSON.parse(readFileSync(path.join(source,'.local/schovera-manual-demo/current.json'),'utf8'));
-if(fixture.presentation?.ready!==true || fixture.presentation?.fictional!==true || fixture.students.length!==20) throw new Error('Completed 20-student fictional presentation fixture required');
+const fixture=readPresentationSource(source);
 const openssl=process.env.SCHOVERA_TEST_OPENSSL || 'C:/Program Files/Git/usr/bin/openssl.exe';
 if(!existsSync(openssl)) throw new Error('Local HTTPS test requires an installed OpenSSL binary; no installation attempted');
 const directory=mkdtempSync(path.join(tmpdir(),'schovera-https-preflight-'));
