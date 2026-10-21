@@ -1,0 +1,2916 @@
+{
+  "version": 1,
+  "fictional": true,
+  "template": "task32r-20",
+  "tables": {
+    "schools": [
+      {
+        "id": "schools:1",
+        "name": "Schovera Model School â€” Demo Campus",
+        "timezone": "Asia/Kolkata"
+      }
+    ],
+    "profiles": [
+      {
+        "id": "profiles:1",
+        "full_name": "Suresh Jadhav",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:2",
+        "full_name": "Seema Kulkarni",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:3",
+        "full_name": "Dr Meera Rao",
+        "role": "principal"
+      },
+      {
+        "id": "profiles:4",
+        "full_name": "Farah Pawar",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:5",
+        "full_name": "Pooja Shah",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:6",
+        "full_name": "Sameer Khan",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:7",
+        "full_name": "Rajesh Patil",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:8",
+        "full_name": "Kavita Joshi",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:9",
+        "full_name": "Anjali Deshmukh",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:10",
+        "full_name": "Maya Kulkarni",
+        "role": "teacher"
+      },
+      {
+        "id": "profiles:11",
+        "full_name": "Neha Nair",
+        "role": "parent"
+      },
+      {
+        "id": "profiles:12",
+        "full_name": "Vikram Shah",
+        "role": "teacher"
+      },
+      {
+        "id": "profiles:13",
+        "full_name": "Amit More",
+        "role": "parent"
+      }
+    ],
+    "classes": [
+      {
+        "id": "classes:1",
+        "grade": "7",
+        "division": "B",
+        "academic_year": "2026â€“27 Demo"
+      },
+      {
+        "id": "classes:2",
+        "grade": "7",
+        "division": "A",
+        "academic_year": "2026â€“27 Demo"
+      }
+    ],
+    "students": [
+      {
+        "id": "students:1",
+        "class_id": "classes:1",
+        "full_name": "Reyansh Salunkhe",
+        "roll_number": "03",
+        "active": true
+      },
+      {
+        "id": "students:2",
+        "class_id": "classes:2",
+        "full_name": "Kabir More",
+        "roll_number": "07",
+        "active": true
+      },
+      {
+        "id": "students:3",
+        "class_id": "classes:2",
+        "full_name": "Rohan Patil",
+        "roll_number": "03",
+        "active": true
+      },
+      {
+        "id": "students:4",
+        "class_id": "classes:2",
+        "full_name": "Vedant Jadhav",
+        "roll_number": "05",
+        "active": true
+      },
+      {
+        "id": "students:5",
+        "class_id": "classes:1",
+        "full_name": "Yash Malhotra",
+        "roll_number": "09",
+        "active": true
+      },
+      {
+        "id": "students:6",
+        "class_id": "classes:2",
+        "full_name": "Sara Khan",
+        "roll_number": "10",
+        "active": true
+      },
+      {
+        "id": "students:7",
+        "class_id": "classes:1",
+        "full_name": "Vihaan Shinde",
+        "roll_number": "01",
+        "active": true
+      },
+      {
+        "id": "students:8",
+        "class_id": "classes:1",
+        "full_name": "Riya Mehta",
+        "roll_number": "04",
+        "active": true
+      },
+      {
+        "id": "students:9",
+        "class_id": "classes:2",
+        "full_name": "Siya Kulkarni",
+        "roll_number": "02",
+        "active": true
+      },
+      {
+        "id": "students:10",
+        "class_id": "classes:1",
+        "full_name": "Omkar Gaikwad",
+        "roll_number": "05",
+        "active": true
+      },
+      {
+        "id": "students:11",
+        "class_id": "classes:2",
+        "full_name": "Ishita Nair",
+        "roll_number": "08",
+        "active": true
+      },
+      {
+        "id": "students:12",
+        "class_id": "classes:1",
+        "full_name": "Arjun Kadam",
+        "roll_number": "07",
+        "active": true
+      },
+      {
+        "id": "students:13",
+        "class_id": "classes:1",
+        "full_name": "Fatima Shaikh",
+        "roll_number": "10",
+        "active": true
+      },
+      {
+        "id": "students:14",
+        "class_id": "classes:2",
+        "full_name": "Myra Shah",
+        "roll_number": "06",
+        "active": true
+      },
+      {
+        "id": "students:15",
+        "class_id": "classes:1",
+        "full_name": "Meera Desai",
+        "roll_number": "08",
+        "active": true
+      },
+      {
+        "id": "students:16",
+        "class_id": "classes:2",
+        "full_name": "Aarav Deshmukh",
+        "roll_number": "01",
+        "active": true
+      },
+      {
+        "id": "students:17",
+        "class_id": "classes:1",
+        "full_name": "Sanvi Bhosale",
+        "roll_number": "06",
+        "active": true
+      },
+      {
+        "id": "students:18",
+        "class_id": "classes:2",
+        "full_name": "Aditya Pawar",
+        "roll_number": "09",
+        "active": true
+      },
+      {
+        "id": "students:19",
+        "class_id": "classes:1",
+        "full_name": "Aditi Chavan",
+        "roll_number": "02",
+        "active": true
+      },
+      {
+        "id": "students:20",
+        "class_id": "classes:2",
+        "full_name": "Ananya Joshi",
+        "roll_number": "04",
+        "active": true
+      }
+    ],
+    "teacher_class_assignments": [
+      {
+        "id": "teacher_class_assignments:1",
+        "teacher_id": "profiles:10",
+        "class_id": "classes:2"
+      },
+      {
+        "id": "teacher_class_assignments:2",
+        "teacher_id": "profiles:12",
+        "class_id": "classes:1"
+      },
+      {
+        "id": "teacher_class_assignments:3",
+        "teacher_id": "profiles:10",
+        "class_id": "classes:1"
+      }
+    ],
+    "parent_student_links": [
+      {
+        "id": "parent_student_links:1",
+        "parent_id": "profiles:4",
+        "student_id": "students:5",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:2",
+        "parent_id": "profiles:5",
+        "student_id": "students:17",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:3",
+        "parent_id": "profiles:13",
+        "student_id": "students:12",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:4",
+        "parent_id": "profiles:1",
+        "student_id": "students:10",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:5",
+        "parent_id": "profiles:8",
+        "student_id": "students:8",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:6",
+        "parent_id": "profiles:2",
+        "student_id": "students:9",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:7",
+        "parent_id": "profiles:8",
+        "student_id": "students:20",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:8",
+        "parent_id": "profiles:11",
+        "student_id": "students:11",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:9",
+        "parent_id": "profiles:9",
+        "student_id": "students:16",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:10",
+        "parent_id": "profiles:7",
+        "student_id": "students:3",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:11",
+        "parent_id": "profiles:11",
+        "student_id": "students:15",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:12",
+        "parent_id": "profiles:7",
+        "student_id": "students:1",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:13",
+        "parent_id": "profiles:6",
+        "student_id": "students:13",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:14",
+        "parent_id": "profiles:1",
+        "student_id": "students:4",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:15",
+        "parent_id": "profiles:9",
+        "student_id": "students:7",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:16",
+        "parent_id": "profiles:4",
+        "student_id": "students:18",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:17",
+        "parent_id": "profiles:6",
+        "student_id": "students:6",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:18",
+        "parent_id": "profiles:5",
+        "student_id": "students:14",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:19",
+        "parent_id": "profiles:2",
+        "student_id": "students:19",
+        "status": "active"
+      },
+      {
+        "id": "parent_student_links:20",
+        "parent_id": "profiles:13",
+        "student_id": "students:2",
+        "status": "active"
+      }
+    ],
+    "attendance_records": [
+      {
+        "id": "attendance_records:1",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:2",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:3",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:4",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:5",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:6",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:7",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:8",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:9",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:10",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:11",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:12",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:13",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:14",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:15",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:16",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:17",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:18",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:19",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:20",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:21",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:22",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:23",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:24",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:25",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:26",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:27",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:28",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:29",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:30",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:31",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:32",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:33",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:34",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:35",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:36",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:37",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:38",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:39",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:40",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:41",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:42",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:43",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:44",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:45",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:46",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:47",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:48",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:49",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:50",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:51",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:52",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:53",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:54",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:55",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:56",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:57",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:58",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:59",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:60",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:61",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:62",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:63",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:64",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:65",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:66",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:67",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:68",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:69",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:70",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:71",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:72",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:73",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:74",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:75",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "late"
+      },
+      {
+        "id": "attendance_records:76",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:77",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:78",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:79",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:80",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:81",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:82",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:83",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:84",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:85",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:86",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:87",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:88",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:89",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:90",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:91",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:92",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:93",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:94",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:95",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:96",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:97",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:98",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:99",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:100",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:101",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:102",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:103",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:104",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:105",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:106",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:107",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:108",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:109",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:110",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:111",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:112",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:113",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:114",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:115",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:116",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:117",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:118",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:119",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:120",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:121",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:122",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:123",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:124",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:125",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:126",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:127",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:128",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:129",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:130",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:131",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:132",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:133",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:134",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:135",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:136",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:137",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:138",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:139",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:140",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:141",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:142",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:143",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:144",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:145",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:146",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:147",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:148",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "late"
+      },
+      {
+        "id": "attendance_records:149",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:150",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:151",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:152",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:153",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:154",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:155",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:156",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:157",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:158",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:159",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:160",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:161",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:162",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:163",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:164",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:165",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:166",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:167",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:168",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:169",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:170",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:171",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:172",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:173",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:174",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:175",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-19",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:176",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:177",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:178",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-11",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:179",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:180",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:181",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:182",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:183",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "absent"
+      },
+      {
+        "id": "attendance_records:184",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-20",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:185",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:186",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:187",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-13",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:188",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:189",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:190",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:191",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:192",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-16",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:193",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-17",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:194",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:195",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:196",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:197",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-18",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:198",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-12",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:199",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-15",
+        "status": "present"
+      },
+      {
+        "id": "attendance_records:200",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "marked_by": "profiles:10",
+        "attendance_date": "2026-10-14",
+        "status": "present"
+      }
+    ],
+    "class_assignments": [
+      {
+        "id": "class_assignments:1",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "subject": "English",
+        "title": "Reading journal",
+        "description": "Read a short story and write three sentences about it.",
+        "due_date": "2026-10-25"
+      },
+      {
+        "id": "class_assignments:2",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "subject": "Science",
+        "title": "Simple machines around us",
+        "description": "Draw two simple machines and explain their use.",
+        "due_date": "2026-10-23"
+      },
+      {
+        "id": "class_assignments:3",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "subject": "Mathematics",
+        "title": "Fractions practice",
+        "description": "Complete exercises 1â€“5 and show your working.",
+        "due_date": "2026-10-24"
+      },
+      {
+        "id": "class_assignments:4",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:10",
+        "subject": "Science",
+        "title": "Simple machines around us",
+        "description": "Draw two simple machines and explain their use.",
+        "due_date": "2026-10-23"
+      },
+      {
+        "id": "class_assignments:5",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:10",
+        "subject": "English",
+        "title": "Reading journal",
+        "description": "Read a short story and write three sentences about it.",
+        "due_date": "2026-10-25"
+      },
+      {
+        "id": "class_assignments:6",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:10",
+        "subject": "Mathematics",
+        "title": "Fractions practice",
+        "description": "Complete exercises 1â€“5 and show your working.",
+        "due_date": "2026-10-24"
+      }
+    ],
+    "timetable_entries": [
+      {
+        "id": "timetable_entries:1",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 1,
+        "period_number": 3,
+        "start_time": "11:00:00",
+        "end_time": "11:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:2",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 5,
+        "period_number": 3,
+        "start_time": "11:00:00",
+        "end_time": "11:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:3",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 5,
+        "period_number": 1,
+        "start_time": "09:00:00",
+        "end_time": "09:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:4",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 6,
+        "period_number": 2,
+        "start_time": "14:00:00",
+        "end_time": "14:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:5",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 1,
+        "period_number": 1,
+        "start_time": "13:00:00",
+        "end_time": "13:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:6",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 3,
+        "period_number": 2,
+        "start_time": "14:00:00",
+        "end_time": "14:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:7",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 4,
+        "period_number": 2,
+        "start_time": "14:00:00",
+        "end_time": "14:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:8",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 4,
+        "period_number": 1,
+        "start_time": "13:00:00",
+        "end_time": "13:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:9",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 5,
+        "period_number": 2,
+        "start_time": "10:00:00",
+        "end_time": "10:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:10",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 2,
+        "period_number": 1,
+        "start_time": "13:00:00",
+        "end_time": "13:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:11",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 3,
+        "period_number": 1,
+        "start_time": "09:00:00",
+        "end_time": "09:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:12",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 2,
+        "period_number": 3,
+        "start_time": "11:00:00",
+        "end_time": "11:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:13",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 3,
+        "period_number": 1,
+        "start_time": "13:00:00",
+        "end_time": "13:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:14",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 6,
+        "period_number": 3,
+        "start_time": "11:00:00",
+        "end_time": "11:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:15",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 2,
+        "period_number": 2,
+        "start_time": "14:00:00",
+        "end_time": "14:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:16",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 4,
+        "period_number": 3,
+        "start_time": "11:00:00",
+        "end_time": "11:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:17",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 1,
+        "period_number": 1,
+        "start_time": "09:00:00",
+        "end_time": "09:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:18",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 5,
+        "period_number": 2,
+        "start_time": "14:00:00",
+        "end_time": "14:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:19",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 2,
+        "period_number": 2,
+        "start_time": "10:00:00",
+        "end_time": "10:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:20",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 2,
+        "period_number": 3,
+        "start_time": "15:00:00",
+        "end_time": "15:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:21",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 4,
+        "period_number": 1,
+        "start_time": "09:00:00",
+        "end_time": "09:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:22",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 3,
+        "period_number": 3,
+        "start_time": "15:00:00",
+        "end_time": "15:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:23",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 6,
+        "period_number": 1,
+        "start_time": "09:00:00",
+        "end_time": "09:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:24",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 3,
+        "period_number": 2,
+        "start_time": "10:00:00",
+        "end_time": "10:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:25",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 1,
+        "period_number": 2,
+        "start_time": "10:00:00",
+        "end_time": "10:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:26",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 5,
+        "period_number": 1,
+        "start_time": "13:00:00",
+        "end_time": "13:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:27",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 5,
+        "period_number": 3,
+        "start_time": "15:00:00",
+        "end_time": "15:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:28",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 2,
+        "period_number": 1,
+        "start_time": "09:00:00",
+        "end_time": "09:40:00",
+        "subject": "Science"
+      },
+      {
+        "id": "timetable_entries:29",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 1,
+        "period_number": 2,
+        "start_time": "14:00:00",
+        "end_time": "14:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:30",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 4,
+        "period_number": 3,
+        "start_time": "15:00:00",
+        "end_time": "15:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:31",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 3,
+        "period_number": 3,
+        "start_time": "11:00:00",
+        "end_time": "11:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:32",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 1,
+        "period_number": 3,
+        "start_time": "15:00:00",
+        "end_time": "15:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:33",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 6,
+        "period_number": 2,
+        "start_time": "10:00:00",
+        "end_time": "10:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:34",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 6,
+        "period_number": 3,
+        "start_time": "15:00:00",
+        "end_time": "15:40:00",
+        "subject": "English"
+      },
+      {
+        "id": "timetable_entries:35",
+        "class_id": "classes:2",
+        "teacher_id": "profiles:10",
+        "weekday": 4,
+        "period_number": 2,
+        "start_time": "10:00:00",
+        "end_time": "10:40:00",
+        "subject": "Mathematics"
+      },
+      {
+        "id": "timetable_entries:36",
+        "class_id": "classes:1",
+        "teacher_id": "profiles:12",
+        "weekday": 6,
+        "period_number": 1,
+        "start_time": "13:00:00",
+        "end_time": "13:40:00",
+        "subject": "Science"
+      }
+    ],
+    "student_updates": [
+      {
+        "id": "student_updates:1",
+        "class_id": "classes:1",
+        "student_id": "students:10",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.781503+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:2",
+        "class_id": "classes:2",
+        "student_id": "students:6",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "important",
+        "sent_at": "2026-10-21T17:49:11.455774+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:3",
+        "class_id": "classes:1",
+        "student_id": "students:15",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.831093+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:4",
+        "class_id": "classes:2",
+        "student_id": "students:11",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.422449+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:5",
+        "class_id": "classes:1",
+        "student_id": "students:19",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.498218+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:6",
+        "class_id": "classes:2",
+        "student_id": "students:2",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "important",
+        "sent_at": "2026-10-21T17:49:11.181043+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:7",
+        "class_id": "classes:1",
+        "student_id": "students:13",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:12.157717+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:8",
+        "class_id": "classes:2",
+        "student_id": "students:20",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "important",
+        "sent_at": "2026-10-21T17:49:11.119197+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:9",
+        "class_id": "classes:2",
+        "student_id": "students:14",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.162094+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:10",
+        "class_id": "classes:2",
+        "student_id": "students:9",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.081691+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:11",
+        "class_id": "classes:1",
+        "student_id": "students:12",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.815881+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:12",
+        "class_id": "classes:2",
+        "student_id": "students:4",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.138711+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:13",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "teacher_id": "profiles:10",
+        "category": "general",
+        "title": "Library notebook reminder",
+        "message": "Please bring your library notebook tomorrow at 09:00. This is a fictional demonstration notice.",
+        "importance": "important",
+        "sent_at": "2026-10-21T17:49:10.509965+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:14",
+        "class_id": "classes:1",
+        "student_id": "students:7",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.481842+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:15",
+        "class_id": "classes:1",
+        "student_id": "students:5",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "important",
+        "sent_at": "2026-10-21T17:49:11.846401+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:16",
+        "class_id": "classes:1",
+        "student_id": "students:17",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "important",
+        "sent_at": "2026-10-21T17:49:11.795331+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:17",
+        "class_id": "classes:2",
+        "student_id": "students:16",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "important",
+        "sent_at": "2026-10-21T17:49:10.784803+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:18",
+        "class_id": "classes:2",
+        "student_id": "students:3",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.099083+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:19",
+        "class_id": "classes:1",
+        "student_id": "students:8",
+        "teacher_id": "profiles:10",
+        "category": "achievement",
+        "title": "Thoughtful classroom participation",
+        "message": "Your child shared a clear explanation during our group activity. Thank you for encouraging regular reading.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.765649+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:20",
+        "class_id": "classes:1",
+        "student_id": "students:1",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "important",
+        "sent_at": "2026-10-21T17:49:11.516387+00:00",
+        "corrects_update_id": null
+      },
+      {
+        "id": "student_updates:21",
+        "class_id": "classes:2",
+        "student_id": "students:18",
+        "teacher_id": "profiles:10",
+        "category": "academic",
+        "title": "Science practice for this week",
+        "message": "Please revise simple machines and bring the completed practice sheet. Contact the class teacher if support is needed.",
+        "importance": "normal",
+        "sent_at": "2026-10-21T17:49:11.441608+00:00",
+        "corrects_update_id": null
+      }
+    ],
+    "acknowledgements": [
+      {
+        "id": "acknowledgements:1",
+        "update_id": "student_updates:17",
+        "parent_id": "profiles:9",
+        "acknowledged_at": "2026-10-21T17:49:11.061625+00:00"
+      },
+      {
+        "id": "acknowledgements:2",
+        "update_id": "student_updates:15",
+        "parent_id": "profiles:4",
+        "acknowledged_at": "2026-10-21T17:49:12.137027+00:00"
+      },
+      {
+        "id": "acknowledgements:3",
+        "update_id": "student_updates:6",
+        "parent_id": "profiles:13",
+        "acknowledged_at": "2026-10-21T17:49:11.406764+00:00"
+      },
+      {
+        "id": "acknowledgements:4",
+        "update_id": "student_updates:20",
+        "parent_id": "profiles:7",
+        "acknowledged_at": "2026-10-21T17:49:11.747195+00:00"
+      }
+    ],
+    "announcements": [
+      {
+        "id": "announcements:1",
+        "created_by": "profiles:3",
+        "title": "Welcome to the reading week",
+        "body": "Our fictional campus is celebrating reading, teamwork and respectful communication. This is a demonstration, not an actual school announcement.",
+        "priority": "important",
+        "created_at": "2026-10-21T17:49:12.203241+00:00"
+      },
+      {
+        "id": "announcements:2",
+        "created_by": "profiles:3",
+        "title": "Bring a reusable water bottle",
+        "body": "Please carry a labelled water bottle for the classroom activities in this demo.",
+        "priority": "normal",
+        "created_at": "2026-10-21T17:49:12.231098+00:00"
+      }
+    ],
+    "communication_translations": [
+      {
+        "id": "communication_translations:1",
+        "student_update_id": "student_updates:13",
+        "announcement_id": null,
+        "language": "mr",
+        "title": "à¤µà¤¾à¤šà¤¨à¤¾à¤²à¤¯à¤¾à¤šà¥à¤¯à¤¾ à¤µà¤¹à¥€à¤šà¥€ à¤¸à¥‚à¤šà¤¨à¤¾",
+        "body": "à¤•à¥ƒà¤ªà¤¯à¤¾ à¤‰à¤¦à¥à¤¯à¤¾ 09:00 à¤µà¤¾à¤œà¤¤à¤¾ à¤µà¤¾à¤šà¤¨à¤¾à¤²à¤¯à¤¾à¤šà¥€ à¤µà¤¹à¥€ à¤†à¤£à¤¾. à¤¹à¥€ à¤•à¤¾à¤²à¥à¤ªà¤¨à¤¿à¤• à¤ªà¥à¤°à¤¾à¤¤à¥à¤¯à¤•à¥à¤·à¤¿à¤•à¤¾à¤šà¥€ à¤¸à¥‚à¤šà¤¨à¤¾ à¤†à¤¹à¥‡.",
+        "status": "approved",
+        "source_hash": "eb9135a901b9c362cba032247d960c1692c32ade2cb64a2e866343d920897b75",
+        "authored_by": "profiles:10",
+        "approved_by": "profiles:3",
+        "approved_at": "2026-10-21T17:49:10.76542+00:00"
+      },
+      {
+        "id": "communication_translations:2",
+        "student_update_id": "student_updates:13",
+        "announcement_id": null,
+        "language": "hi",
+        "title": "à¤ªà¥à¤¸à¥à¤¤à¤•à¤¾à¤²à¤¯ à¤•à¥€ à¤•à¥‰à¤ªà¥€ à¤•à¥€ à¤¸à¥‚à¤šà¤¨à¤¾",
+        "body": "à¤•à¥ƒà¤ªà¤¯à¤¾ à¤•à¤² 09:00 à¤¬à¤œà¥‡ à¤…à¤ªà¤¨à¥€ à¤ªà¥à¤¸à¥à¤¤à¤•à¤¾à¤²à¤¯ à¤•à¥€ à¤•à¥‰à¤ªà¥€ à¤²à¤¾à¤à¤à¥¤ à¤¯à¤¹ à¤•à¤¾à¤²à¥à¤ªà¤¨à¤¿à¤• à¤ªà¥à¤°à¤¦à¤°à¥à¤¶à¤¨ à¤•à¥€ à¤¸à¥‚à¤šà¤¨à¤¾ à¤¹à¥ˆà¥¤",
+        "status": "approved",
+        "source_hash": "eb9135a901b9c362cba032247d960c1692c32ade2cb64a2e866343d920897b75",
+        "authored_by": "profiles:10",
+        "approved_by": "profiles:3",
+        "approved_at": "2026-10-21T17:49:10.647171+00:00"
+      }
+    ],
+    "school_entry_events": [
+      {
+        "id": "school_entry_events:1",
+        "student_id": "students:19",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:15.756+00:00",
+        "received_at": "2026-10-21T17:49:15.845452+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:2",
+        "student_id": "students:6",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:15.411+00:00",
+        "received_at": "2026-10-21T17:49:15.55163+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:3",
+        "student_id": "students:8",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:16.039+00:00",
+        "received_at": "2026-10-21T17:49:16.125099+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:4",
+        "student_id": "students:16",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:13.564+00:00",
+        "received_at": "2026-10-21T17:49:13.799705+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:5",
+        "student_id": "students:2",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:14.872+00:00",
+        "received_at": "2026-10-21T17:49:14.981144+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:6",
+        "student_id": "students:10",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:16.19+00:00",
+        "received_at": "2026-10-21T17:49:16.275581+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:7",
+        "student_id": "students:17",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:16.346+00:00",
+        "received_at": "2026-10-21T17:49:16.400879+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:8",
+        "student_id": "students:20",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:14.354+00:00",
+        "received_at": "2026-10-21T17:49:14.456043+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:9",
+        "student_id": "students:12",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:16.5+00:00",
+        "received_at": "2026-10-21T17:49:16.544529+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:10",
+        "student_id": "students:7",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:15.605+00:00",
+        "received_at": "2026-10-21T17:49:15.691749+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:11",
+        "student_id": "students:4",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:14.533+00:00",
+        "received_at": "2026-10-21T17:49:14.634144+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:12",
+        "student_id": "students:11",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:15.043+00:00",
+        "received_at": "2026-10-21T17:49:15.152357+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:13",
+        "student_id": "students:9",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:13.925+00:00",
+        "received_at": "2026-10-21T17:49:14.068248+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:14",
+        "student_id": "students:18",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:15.214+00:00",
+        "received_at": "2026-10-21T17:49:15.33894+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:15",
+        "student_id": "students:15",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:16.637+00:00",
+        "received_at": "2026-10-21T17:49:16.685034+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:16",
+        "student_id": "students:3",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:14.166+00:00",
+        "received_at": "2026-10-21T17:49:14.274375+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:17",
+        "student_id": "students:5",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:16.775+00:00",
+        "received_at": "2026-10-21T17:49:16.819843+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:18",
+        "student_id": "students:13",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:16.919+00:00",
+        "received_at": "2026-10-21T17:49:16.980313+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:19",
+        "student_id": "students:1",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:15.905+00:00",
+        "received_at": "2026-10-21T17:49:15.989299+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      },
+      {
+        "id": "school_entry_events:20",
+        "student_id": "students:14",
+        "event_type": "check_in",
+        "observed_at": "2026-10-21T17:49:14.708+00:00",
+        "received_at": "2026-10-21T17:49:14.805911+00:00",
+        "sequence_state": "in_order",
+        "timestamp_quality": "within_tolerance"
+      }
+    ]
+  },
+  "fallbackExamples": [
+    {
+      "channel": "sms",
+      "status": "delivered",
+      "simulated": true
+    },
+    {
+      "channel": "ivr",
+      "status": "delivered",
+      "simulated": true
+    }
+  ]
+}

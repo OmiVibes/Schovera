@@ -16,6 +16,7 @@
 /test-results
 /.local/schovera-rfid-gateway/
 /.local/schovera-manual-demo/
+/.local/schovera-hosted-demo/
 
 # next.js
 /.next/
