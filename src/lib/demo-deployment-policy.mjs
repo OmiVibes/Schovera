@@ -27,7 +27,7 @@ export function validateHostedDemoEnvironment(env) {
   if (env.NEXT_PUBLIC_SUPABASE_URL !== `https://${demoRef}.supabase.co`) throw new Error('Demo database URL/identity mismatch');
   const demoId = env.SCHOVERA_DEMO_VERCEL_PROJECT_ID;
   if (!projectId.test(demoId ?? '') || list(env.SCHOVERA_PRODUCTION_VERCEL_PROJECT_IDS, projectId).includes(demoId)
-    || env.VERCEL === '1' && env.VERCEL_PROJECT_ID !== demoId) throw new Error('Separate Vercel project identity required');
+    || env.VERCEL_PROJECT_ID !== demoId) throw new Error('Separate Vercel project identity required');
   if (!/^sb_publishable_[A-Za-z0-9_-]{16,}$/.test(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '')) throw new Error('Use the demo publishable key, never a privileged key');
   for (const name of ['SUPABASE_SERVICE_ROLE_KEY', 'OPENAI_API_KEY', 'SCHOVERA_RFID_CAPABILITY_PRIVATE_KEY',
     'SCHOVERA_RFID_CAPABILITY_KEY_ID', 'SCHOVERA_TEST_MODE', 'SCHOVERA_RFID_API_MODE', 'SCHOVERA_FALLBACK_MODE',
@@ -47,5 +47,6 @@ export const hostedBuildFixture = Object.freeze({
   SCHOVERA_DEMO_PROJECT_REF: 'abcdefghijklmnopqrst', SCHOVERA_PRODUCTION_PROJECT_REFS: 'uvwxyzabcdefghijklmn',
   SCHOVERA_DEMO_APP_ORIGIN: 'https://schovera-preflight-fixture.vercel.app',
   SCHOVERA_DEMO_VERCEL_PROJECT_ID: 'prj_synthetic_demo', SCHOVERA_PRODUCTION_VERCEL_PROJECT_IDS: 'prj_synthetic_production',
+  VERCEL_PROJECT_ID: 'prj_synthetic_demo',
   TEACHER_AI_PROVIDER: 'disabled',
 });

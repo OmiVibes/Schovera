@@ -25,6 +25,7 @@ describe('hosted configuration fails closed', () => {
     { SCHOVERA_DEMO_APP_ORIGIN: 'synthetic-private-not-a-url' },
     { SCHOVERA_HOSTED_DEMO:'1', NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO:'1' },
     { SCHOVERA_HOSTED_DEMO:'typo', NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO:'' },
+    { VERCEL_PROJECT_ID:'' },
   ])('rejects unsafe config %#', override => expect(() => validateHostedDemoEnvironment({ ...hostedBuildFixture, ...override })).toThrow());
   it('checks the actual Vercel project identity when supplied by Vercel', () => expect(validateHostedDemoEnvironment({ ...hostedBuildFixture, VERCEL: '1', VERCEL_PROJECT_ID: 'prj_synthetic_demo' }).enabled).toBe(true));
 });
