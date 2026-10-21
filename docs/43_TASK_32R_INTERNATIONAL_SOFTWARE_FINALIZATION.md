@@ -106,7 +106,7 @@ Both throttled roles signed out while browser-offline: private cards/register/pr
 - Integration cases retain Parent linked/unlinked-child, Teacher assigned/unassigned-class, Principal same/cross-school and anonymous denial. Browser roles still cannot access device credentials/receipts or write raw entry events. No RLS policy was widened.
 - New homework tests deny Parent, Principal and non-author Teachers; reject invalid title/past due date/stale edits; verify retry/concurrency. No classroom attendance is derived from an RFID observation.
 - Hosted preflight tests validate HTTPS/distinct owner-supplied project references but authorize neither seeding nor deployment. Hosted service/issuer/provider keys remain absent. No public ingestion or telephony route was enabled.
-- Presentation browser contexts rejected external destinations; tests scan for local service-role leakage without printing it. Isolated build uses synthetic leakage sentinels, not production-secret values. These checks are not a comprehensive penetration test or OS-level network sandbox.
+- Primary three-role presentation browser contexts rejected external destinations; separate throttled contexts measured traffic but did not install that route blocker. Integration tests scan for local service-role leakage without printing it. Isolated build uses synthetic leakage sentinels, not production-secret values. These checks are not a comprehensive penetration test or OS-level network sandbox.
 - Fresh audit initially found six high findings, including a new Vite Windows editor-launch issue. Vite was pinned to compatible **7.3.7** using an override; see the [primary advisory](https://github.com/advisories/GHSA-587h-7wmj-h5pm). No major upgrade/downgrade or new dependency was added. Related optional Rollup lockfile entries updated with the resolution.
 - Final `npm audit`: **five high, zero critical**; `npm audit --omit=dev`: **zero findings**. Remaining high chain: `braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `eslint-config-next`. Registry inspection still reported braces 3.0.3, with no compatible patched release selected. The audit's suggested Next lint-config major downgrade was not applied. This residual tooling risk remains documented, not declared resolved. Next stays 16.3.8; zero production audit findings do not certify its runtime or future advisories.
 
@@ -146,6 +146,8 @@ The fictional presentation completed 22 destinations × 390/768/1024/1440 px = *
 - `C:\Users\Om\AppData\Local\Temp\schovera-role-visuals-2026-10-21T17-44-15.814Z\` — final full role visual audit.
 - `C:\Users\Om\AppData\Local\Temp\schovera-accessibility-i18n\` — accessibility/i18n browser captures.
 
+The 88 presentation images, measurements and both command-result JSON files were also copied to ignored `.local/schovera-rfid-gateway/task32r-evidence/` in the original repository before removing the owned screenshot worktree. No credential manifest or private key was copied into that evidence directory.
+
 Representative Parent desktop home, Teacher desktop homework and Principal 390px student views were visually opened after the complete automated overflow checks. Not all 88 captures were manually inspected. Captures contain fictional QA additions and development tooling; they are evidence, not polished public promotional screenshots. Temporary OS paths are not durable release artifacts and may be cleaned by Windows.
 
 ## Repository organization and cleanup log
@@ -153,6 +155,15 @@ Representative Parent desktop home, Teacher desktop homework and Principal 390px
 `START_HERE.md` is the current repository map; README and safe-development documentation point to it. `docs/SCHOVERA_INTERNATIONAL_DEMO_GUIDE_FOR_AAROHI.md` is the mandatory student-friendly handbook (every role, two-presenter/backup scripts, 27 judge questions, glossary and troubleshooting). Older numbered plans remain historical evidence, not current feature acceptance.
 
 No repository files were removed or archived: package-script and source/reference inspection did not establish that old migrations, fixtures or reports were unused. Protected pre-existing `AGENTS.md`, `CLAUDE.md`, `local-dev.err`, `local-dev.out`, `review/`, private guide and personal-demo worktree were preserved. Only Task 32R generated fixtures/temporary build snapshots may be cleaned by their exact ownership guards. No broad reset, stash or overwrite was used.
+
+Changed paths, grouped for review (28 files; no pre-existing untracked files added):
+
+| Group | Paths |
+|---|---|
+| Entry points and evidence | `README.md`, `START_HERE.md`, `docs/25_SAFE_SUPABASE_DEVELOPMENT.md`, `docs/42_ISOLATED_ONLINE_DEMO_PREPARATION.md`, this report, `docs/SCHOVERA_INTERNATIONAL_DEMO_GUIDE_FOR_AAROHI.md`, `docs/templates/demo-online.env.example` |
+| Scripts | `scripts/demo-release-preflight.mjs`, `scripts/demo-release-preflight.test.mjs`, `scripts/dev-rfid-local.mjs`, `scripts/manual-entry.mjs`, `scripts/prepare-isolated-demo.mjs`, `scripts/presentation-demo.mjs`, `scripts/verify-presentation.mjs`, `scripts/verify-task32r.mjs` |
+| Application | `src/app/api/teacher-ai/route.ts`, `src/app/globals.css`, `src/app/layout.tsx`, `src/components/assignment-editor.tsx`, `src/components/assignment-editor.test.tsx`, `src/components/schovera-app.tsx`, `src/components/teacher-ai-workspace.tsx`, `src/lib/hosted-demo.test.ts`, `src/lib/parent-speech.ts`, `src/lib/parent-speech.test.ts` |
+| Local schema and dependencies | `supabase/migrations/20261021100000_edit_class_homework.sql`, `package.json`, `package-lock.json` |
 
 ## Reproduction and release decision
 
@@ -176,4 +187,14 @@ For independent QA, use a second disposable checkout and another port, as this r
 
 ### Final gate/build/cleanup record
 
-Pending final process completion at this documentation checkpoint; replace this paragraph with observed results before final handoff. No pending test is represented as passed above.
+Final `verify:task32r`: **37/37 commands exited 0**, including both Phase 1 invocations, Marathi reconnect, the repaired connected attendance journey, typecheck and lint. All **152 focused unit/helper tests** and **three Vitest integration scenario tests** passed; script-driven integration/browser checks also passed. The initial run's three failures remain in `task32r-gate-initial.json`, separately from `task32r-gate.json`. `verify:presentation` independently completed all functional stages, 88 captures and two throttled offline-logout journeys. Fresh local `supabase db lint --local` found no schema errors; local migration listing showed all 31 applied. A destructive reset/replay was not run, preserving existing local data.
+
+The QA-mutated school in `schovera-international-K6IMn1` was removed using its journal-checked `demo:clean`, and that exact generated worktree was removed after validating its temporary path and copying non-secret evidence. Removal is not recoverable as the same test accounts; the fictional school can be reprovisioned. A fresh coherent 20-student presentation school was provisioned in retained `C:\Users\Om\AppData\Local\Temp\schovera-international-Vi1zAS`, using port **3101**. It retains generated credentials privately; no passwords appear in this report. The existing user personal-demo school/worktree was not cleaned.
+
+Owned Next servers and the temporary Ollama service were stopped. Local Supabase was stopped only after all database checks, **without `--no-backup`**, retaining its data volumes to free memory for compilation. To use the retained school, restart Docker/local Supabase with the documented `schovera-local` network and start `npm run dev:simulators-local -- --port 3101` from that retained worktree; use `demo:credentials` there privately. Future new worktrees can use the START_HERE default port 3100. Model/voice availability still requires its separate checks.
+
+`npm run build:isolated` **passed** at committed snapshot `fbc704270ed8ae8024f604ca2e124d4fa101d042`; later changes are documentation/evidence only. The snapshot installed 478 lockfile packages offline inside itself. Next 16.3.8 reported only `.env.production`, compiled in 21.5 seconds, completed TypeScript in 21.9 seconds, generated all static pages and verified all nine expected app/API manifest entries (plus framework not-found output). Synthetic service-role/AI/private-env sentinels were absent from output bundles. Observed proxy egress was only `fonts.googleapis.com` and `fonts.gstatic.com`; this proxy is not an OS firewall. Original `.env.local` was never read/copied/loaded or modified. The exact temporary build directory was successfully removed in `finally`.
+
+Final tracked diff/secret review checks only committed changes, without reading production-secret values. No private env file, generated credential journal, PEM key, database or screenshot is committed. `git diff --check` passed. Main remains at `3b7ab555ad5e27b7b35c3334403c4d9c943d807c`; all work is on `feat/task32r-international-software-finalization`. No push, merge, deploy or hosted operation occurred. The final commit is reported in the handoff rather than embedding a self-referential hash here.
+
+**Task 32R completion: PARTIAL at the full CEO-product level; the authorized local implementation and final automated gate are complete.** No final supported regression remains failing. Outstanding capabilities are explicitly blocked or partial: actual audible voice/device rehearsal; reliable automatic translation/model capacity and fluent review; full legacy UI localization; production slow-link acceptance; five residual development-tool audit findings; approved hosted-demo provisioning/preview; real telephony/provider consent/cost controls; physical hardware and real-school/privacy/pilot approval. Do not call the full international product production-ready from these local results. Stop here for review—no deployment or next task is started.
