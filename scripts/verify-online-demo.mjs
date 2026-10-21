@@ -23,6 +23,7 @@ const directory=mkdtempSync(path.join(tmpdir(),'schovera-https-preflight-'));
 const key=path.join(directory,'localhost.key'),cert=path.join(directory,'localhost.pem');
 let server,child,browser;let phase='initialization';
 const errors=[],external=[],leaks=[],routes={teacher:['home','students','profile','attendance','homework','timetable','ai','notices'],parent:['home','profile','updates','attendance','homework','timetable','notices'],principal:['home','students','communication','attendance','homework','timetable','notices']};
+const diagnostics=[],pages=[];
 const screenshots=path.resolve('.local/schovera-rfid-gateway/task32s-browser');mkdirSync(screenshots,{recursive:true});
 try {
   const signed=spawnSync(openssl,['req','-x509','-newkey','rsa:2048','-nodes','-keyout',key,'-out',cert,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{windowsHide:true,stdio:'ignore'});
@@ -49,17 +50,17 @@ try {
     // it is intercepted BEFORE delivery and fulfilled only by local Supabase.
     await context.route('**/*',async route=>{
       const url=new URL(route.request().url());
-      if(url.origin===hostedBuildFixture.NEXT_PUBLIC_SUPABASE_URL){const local=new URL(url.pathname+url.search,process.env.NEXT_PUBLIC_SUPABASE_URL);const response=await route.fetch({url:local.href,maxRedirects:0});return route.fulfill({response,headers:{...response.headers(),'access-control-allow-origin':base,'access-control-allow-credentials':'true'}});}
+      if(url.origin===hostedBuildFixture.NEXT_PUBLIC_SUPABASE_URL){const local=new URL(url.pathname+url.search,process.env.NEXT_PUBLIC_SUPABASE_URL);const response=await route.fetch({url:local.href,maxRedirects:0});diagnostics.push({path:url.pathname,method:route.request().method(),status:response.status()});return route.fulfill({response,headers:{...response.headers(),'access-control-allow-origin':base,'access-control-allow-credentials':'true'}});}
       if(url.origin===base || ['data:','blob:','about:'].includes(url.protocol))return route.continue();
       external.push(url.hostname);return route.abort();
     });
     // Do not let a synthetic hostname open a real remote WebSocket. This test
     // uses persisted reads/manual refresh; Realtime is covered by local suites.
     await context.routeWebSocket('**/*',ws=>ws.close());
-    const scans=[];const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+    const scans=[];const page=await context.newPage();pages.push(page);page.on('pageerror',e=>errors.push(e.message));
     page.on('response',response=>{if(response.request().resourceType()==='script')scans.push(response.body().then(b=>{if([process.env.SUPABASE_SERVICE_ROLE_KEY,'synthetic_hosted_private_sentinel'].some(v=>v&&b.includes(Buffer.from(v))))leaks.push('private material in script');}).catch(()=>{}));});
     const initial=await page.goto(base,{waitUntil:'networkidle'});assert.equal(initial.headers()['x-robots-tag'],'noindex, nofollow, noarchive');assert.equal(initial.headers()['referrer-policy'],'no-referrer');assert.equal(initial.headers()['x-frame-options'],'DENY');
-    await page.getByLabel('Email').fill(fixture.accounts[role].email);await page.getByLabel('Password',{exact:true}).fill(fixture.accounts[role].password);await page.getByRole('button',{name:'Sign in securely'}).click();await page.locator(`.role-${role}`).waitFor({timeout:45000});
+    phase=`${role} login form`;await page.getByLabel('Email').fill(fixture.accounts[role].email);await page.getByLabel('Password',{exact:true}).fill(fixture.accounts[role].password);await page.getByRole('button',{name:'Sign in securely'}).click();phase=`${role} authenticated workspace`;await page.locator(`.role-${role}`).waitFor({timeout:45000});
     await page.getByText('Schovera Model School — Demo Campus',{exact:true}).first().waitFor();
     const cookies=(await context.cookies()).filter(c=>c.name.includes('auth-token'));assert.ok(cookies.length);assert.ok(cookies.every(c=>c.secure&&c.sameSite==='Lax'),'Hosted auth cookies must be Secure/SameSite');
     await page.reload({waitUntil:'networkidle'});await page.locator(`.role-${role}`).waitFor();
@@ -80,6 +81,8 @@ try {
   writeFileSync(path.join(screenshots,'result.json'),JSON.stringify({passed:true,localSelfSignedHttps:true,cloudVerified:false,routes:22,widths:4,audio:'NOT VERIFIED',secretScan:'passed',realtime:'blocked here; independently tested locally'},null,2));
   console.log('Hosted-mode rehearsal passed: loopback HTTPS proxy + intercepted synthetic database origin only; no remote acceptance claimed.');
 } catch(error) {
+  console.error(JSON.stringify({phase,requests:diagnostics,external,errors}));
+  for(const page of pages)if(!page.isClosed())console.error(JSON.stringify(await page.evaluate(()=>({path:location.pathname,headings:[...document.querySelectorAll('h1,h2')].map(n=>n.textContent),alerts:[...document.querySelectorAll('[role=alert],.error')].map(n=>n.textContent)})).catch(()=>({unavailable:true}))));
   throw new Error(`Local hosted rehearsal failed at ${phase} (${error.name}); credential-bearing Playwright call logs suppressed.`);
 } finally {
   await browser?.close();if(server)await new Promise(r=>server.close(r));
