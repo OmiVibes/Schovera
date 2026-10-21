@@ -52,6 +52,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Check the subject, grade, topic, and instructions, then try again.' }, { status: 400 });
   }
   const { kind, grade, subject, topic, details } = parsed.data;
+  if (process.env.SCHOVERA_HOSTED_DEMO === 'true') {
+    return Response.json({ error: 'Live AI drafting runs on the trainer’s local laptop. No hosted AI backend is enabled for this demo.' }, { status: 503 });
+  }
   const task = {
     syllabus: 'Create a topic-based syllabus outline with learning objectives, sequence, suggested pacing, and a short review checklist.',
     exam: 'Create a balanced draft exam paper with sections, marks per question, total marks, and a separate answer key. Ensure the mark totals add up.',

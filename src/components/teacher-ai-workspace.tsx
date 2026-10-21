@@ -14,6 +14,7 @@ const normalizeGrid = (value: unknown[][]) => value.slice(0, MAX_ROWS).map((row)
 );
 
 export function TeacherAIWorkspace() {
+  const hostedDemo = process.env.NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO === 'true';
   const supabase = useMemo(() => createClient(), []);
   const [kind, setKind] = useState<Kind>('syllabus');
   const [grade, setGrade] = useState('');
@@ -89,8 +90,9 @@ export function TeacherAIWorkspace() {
           <div className="teacher-ai-form-row"><label>Grade / level<input required maxLength={40} value={grade} onChange={(event) => setGrade(event.target.value)} placeholder="Grade 7" /></label><label>Subject<input required minLength={2} maxLength={80} value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Science" /></label></div>
           <label>Topic or unit<input required minLength={3} maxLength={500} value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="Forces and motion" /></label>
           <label>Teacher notes <span className="hint">(optional; no student data)</span><textarea maxLength={1200} rows={3} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Time available, learning goals, marks, or materials…" /></label>
-          <button className="primary" disabled={loading}>{loading ? 'Preparing a draft…' : 'Generate a draft'}</button>
+          <button className="primary" disabled={loading || hostedDemo}>{loading ? 'Preparing a draft…' : 'Generate a draft'}</button>
         </form>
+        {hostedDemo && <p role="status">Live drafting is unavailable in the hosted demo. It runs with a local model on the trainer’s laptop. Spreadsheet editing below still works locally in your browser.</p>}
         <p className="teacher-ai-provider-note">Use the configured model for a first draft. With Ollama, prompts run on this computer and are not sent to a cloud AI provider. Schovera does not save prompts or generated drafts.</p>
         {error && <p className="error" role="alert">{error}</p>}{notice && <p className="success" role="status">{notice}</p>}
         {draft && <section className="teacher-ai-output" aria-labelledby="draft-output-heading"><div className="teacher-ai-output-heading"><div><h4 id="draft-output-heading">Editable draft</h4><p className="teacher-ai-model-label">Generated with {providerLabel}</p></div><button type="button" className="secondary" onClick={() => navigator.clipboard.writeText(draft).then(() => setNotice('Draft copied to clipboard.')).catch(() => setError('Clipboard access was blocked by your browser.'))}>Copy draft</button></div><textarea aria-label="Generated editable teaching draft" rows={18} value={draft} onChange={(event) => setDraft(event.target.value)} /><p>Teacher review required · Not published or shared</p></section>}

@@ -6,6 +6,8 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "demo:release:preflight": "node scripts/demo-release-preflight.mjs",
+    "test:release-preflight": "vitest run scripts/demo-release-preflight.test.mjs",
     "verify:presentation": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/verify-presentation.mjs",
     "verify:task32r": "node --env-file=.env.test.local scripts/verify-task32r.mjs",
     "demo:isolated:prepare": "node scripts/prepare-isolated-demo.mjs",
