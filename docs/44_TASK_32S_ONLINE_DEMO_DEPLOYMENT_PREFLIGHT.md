@@ -156,6 +156,57 @@ For UI regressions, restore a known-good approved commit **in the new demo proje
 - [ ] Browser bundles/logs contain no privileged credentials; no production requests or remote real-child data.
 - [ ] Expiry, monitoring, budget, stop contact, rollback and teardown rehearsal recorded.
 
-## 13. Final record and decision
+## 13. Final record and decision (2026-10-22)
 
-Pending local verification at this checkpoint. No cloud resource, remote credential, migration, seed, push or deployment has been created or changed. Actual project identities, seed-adapter approval, access protection and remote acceptance remain external gates. Do not start deployment automatically.
+### Observed checks
+
+| Check | Observed result |
+|---|---|
+| `npm run test:online-demo` | **50 passed**, four files: deployment policy/adapter refusal/cookie options, three-language illustrative panel, provisioning/source/dataset proof, and dotenv-isolation sentinel |
+| Existing focused suites in `verify:task32r` | **154 passed**: preflight 10, editor 1, hosted API 4, RFID 22, gateway 43, attribution 20, polling 4, voice 17, translation 2, fallback 10, insights 21 |
+| Full `npm run verify:task32r` batch | **36/37 initially passed**; correction Realtime preflight timed out. All other commands passed, including both Phase 1 invocations, connected final journeys, role/session/reconnect, translation/fallback/insights and 22-route visual checks |
+| Independent `npm run verify:corrections` | **Passed**, including Realtime, immutable history, concurrent correction, acknowledgement, audit and role denial. Initial timeout is retained, not relabelled a pass; its transport timing cause was not conclusively isolated |
+| Vitest database/integration scenarios | **3 passed**: RFID v2, durable gateway/local sync, attendance insights. Additional shell-driven DB/browser suites passed; not counted as invented individual unit totals |
+| `npm run verify:online-demo -- --source-worktree ...` | **Passed** for Teacher, Parent and Principal: loopback self-signed HTTPS, Secure/SameSite cookies, login/refresh/logout, linked-child switching, six disabled API responses, hosted AI disabled UI, static fallback example, script scan, 22 destinations × four widths |
+| `npm run demo:online:export -- --source-worktree ...` | **Passed and repeated**; identical validated logical-ID artifact hash reused, no database mutation or credentials exported |
+| `npm run typecheck`, `npm run lint`, `git diff --check` | **Passed** on the final implementation; later final-report edits are documentation only |
+| `npx supabase db lint --local` | **Passed**, no schema errors; existing 31-migration local database used. No reset or fresh replay, no Task 32S migration |
+| `npm audit` | **5 high / 0 critical**, all development lint chain: braces → micromatch → fast-glob → Next ESLint plugin/config. Suggested forced major downgrade not applied |
+| `npm audit --omit=dev` | **0 findings**. This is not a penetration test or assurance against future advisories |
+| `npm run build:isolated` | **Passed** at `f5070d380103e7a3c8aad792c66b22b33d737e55`: compile 7.5 s, TypeScript 8.5 s, expected routes/static generation, sentinel scan and cleanup |
+| `npm run build:isolated:demo` | **Passed**, including a final rerun at `c3a03f859e8dd9b147fb503e3099ad68b4fcbf0e` with public platform metadata fixture: compile 6.9 s, TypeScript 9.0 s, all expected routes/static pages, sentinel scan and cleanup |
+
+Focused tests total **204** (154 existing + 50 new), plus **3** separate Vitest integration scenarios. Do not add repeated runs or the Phase 1 npm alias to claim extra unique tests. The latest policy changes after the HTTPS browser rehearsal were configuration-only hardening and were independently covered by the final unit/type/lint/hosted build checks. No deployed browser, real mobile device, real Vercel protection, paid phone provider or audible speech was tested. Teacher AI generation was deliberately not invoked in this task; its unavailable hosted behavior and normal workbook/authorization workflow were tested. Real voice inventory remained zero in the automated browser; **AUDIO NOT VERIFIED**.
+
+### Failures, environment findings and evidence
+
+- Export/browser source preparation initially failed because the new code read the pointer as the manifest. Fixed with an ownership/path-checked pointer resolver and regression; successful export repeated with no duplicates.
+- HTTPS rehearsal initially stayed on Loading because the test closed Next's bootstrap WebSocket. The bridge now forwards only loopback Next HMR while suppressing the synthetic cloud socket; all three role journeys then passed. This was a harness defect, not proof of a hosted application outage. Parent screenshots intentionally show reconnecting because hosted Realtime is blocked in that bounded test.
+- The correction verifier's first Realtime timeout is retained. Its independent rerun passed without weakening assertions. Other missed-event/reconnect/refetch scenarios passed.
+- Vite default dotenv discovery was a genuine isolation defect. The synthetic control established that discovery would load a harmless `.env.local` when enabled; `envDir: false` prevents it. Early original-checkout unit invocations cannot be retroactively certified as zero production-file access. See the security correction above; no actual production values were inspected to investigate it.
+- Local Supabase first needed a restart retry; core DB/Auth/REST/Realtime services then worked. Vector's log collector kept restarting because Docker's host endpoint resolved to an unreachable IPv6 address. It was not disabled and no unauthenticated Docker TCP endpoint was enabled. Local log collection is **not healthy/verified**; managed-cloud logging/monitoring needs its own acceptance. This is an environment limitation, not an authorization-test pass.
+
+Evidence retained privately under ignored `.local/schovera-rfid-gateway/task32s-evidence/` in the repository:
+
+- `regression-initial.json`: all 37 command exits/durations, including the one initial failure.
+- `task32s-browser/result.json`: passed loopback hosted rehearsal, explicitly `cloudVerified: false`; three representative desktop role screenshots and an initial failure image. Parent and Teacher images were visually opened; responsive checks covered four widths without claiming manual inspection of every page.
+- `online-demo/<sha256>.json`: allowlisted fictional bundle; verified digest `ac5db776b7d53974693a10cd888d69ae619ac90b5b35fb7597e9e365676ccb2a`. No original Auth IDs, emails/passwords, credentials, keys, receipts or private journal copied.
+- Full normal role-visual captures: `C:\Users\Om\AppData\Local\Temp\schovera-role-visuals-2026-10-21T18-49-34.671Z` (22 destinations × four widths). This OS-temporary location is not durable deployment evidence.
+
+Both build modes installed 478 lockfile packages offline inside disposable snapshots and reported only generated `.env.production`. Observed proxy egress was Google Fonts hosts only; private production environment files were excluded from those builds. Their exact temporary directories were removed. HTTPS test certificates were also removed and owned child servers stopped. Local Supabase was stopped **with backup enabled**, retaining local data volumes. The new QA worktree was removed only after its exact temporary path, clean tracked state and absence of an active owned fixture were checked and non-secret evidence copied. Pre-existing personal/presentation worktrees, private guide, protected untracked files and their school records were preserved. No repository source files were removed or archived.
+
+### Changed paths
+
+30 files: `START_HERE.md`; `docs/25_SAFE_SUPABASE_DEVELOPMENT.md`; `docs/43_TASK_32R_INTERNATIONAL_SOFTWARE_FINALIZATION.md` (historical claim qualification); this report; Aarohi's handbook; placeholder template; `next.config.ts`; `package.json`; `vitest.config.ts`; isolated-build wrapper; release-plan validator/tests; five `scripts/online-demo/` source/export/dataset/provisioning/proof files; presentation name-list reuse; HTTPS verifier; dotenv sentinel test; Teacher AI/v1 device routes; fallback component/hosted component tests; deployment-policy module/tests; fallback server; hosted API tests; v2 server gate; browser Supabase client. No dependency/lockfile change and no migration.
+
+### Decision: BLOCKED
+
+**Local preflight package delivered; full Task 32S deployment/provisioning readiness remains PARTIAL.** No final supported regression remains failing, but passing local tests do not close these gates:
+
+1. Owner verification of actual production denylist IDs and approval/identity of independent new demo projects. No remote identities were invented or queried using production credentials.
+2. A concrete hosted provisioning/cleanup/rotation adapter remains **unimplemented and unverified**. The validated dataset, bound plan and offline lifecycle proof are ready inputs, not an executable remote seeder. Separate reviewed implementation/acceptance is required before any authorized hosted data write.
+3. Approval of the protection option, quota/budget and no-Vercel-account access check; actual HTTPS/Auth/signup/session/alias acceptance.
+4. Owner security review of the early dotenv-discovery caveat. The production file was not intentionally accessed or modified, but **NO automatic access cannot be certified**. No credential exposure or production mutation was observed; do not infer that this disproves all exposure.
+5. Residual development-tool advisories, local logging limitation and actual managed-cloud monitoring/rollback checks.
+
+Resource creation can be considered separately after review, but this report is **not deployment permission**. No cloud project, remote credential, migration, seed, push, merge or deployment was created or changed. Main remains unchanged at `3b7ab555ad5e27b7b35c3334403c4d9c943d807c`. All changes stay on `feat/task32s-online-demo-preflight`; final commit is in the handoff. Stop after Task 32S and await explicit direction.
