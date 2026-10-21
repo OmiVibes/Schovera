@@ -11,13 +11,17 @@ function list(value, pattern) {
 }
 
 export function validateHostedDemoEnvironment(env) {
-  if (env.SCHOVERA_HOSTED_DEMO !== 'true' && env.NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO !== 'true') return { enabled: false };
+  if (env.SCHOVERA_HOSTED_DEMO !== 'true' && env.NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO !== 'true') {
+    if ([env.SCHOVERA_HOSTED_DEMO,env.NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO].some(v=>v && v !== 'false')) throw new Error('Invalid hosted demo flag; use explicit boolean text');
+    return { enabled: false };
+  }
   if (env.SCHOVERA_HOSTED_DEMO !== 'true' || env.NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO !== 'true'
     || env.NEXT_PUBLIC_SCHOVERA_DEMO !== 'true') throw new Error('Hosted demo flags must agree');
   const demoRef = env.SCHOVERA_DEMO_PROJECT_REF;
   const productionRefs = list(env.SCHOVERA_PRODUCTION_PROJECT_REFS, reference);
   if (!reference.test(demoRef ?? '') || productionRefs.includes(demoRef)) throw new Error('Separate verified demo database identity required');
-  const app = new URL(env.SCHOVERA_DEMO_APP_ORIGIN ?? '');
+  let app;
+  try { app = new URL(env.SCHOVERA_DEMO_APP_ORIGIN ?? ''); } catch { throw new Error('Invalid demo app origin; value withheld'); }
   if (app.protocol !== 'https:' || app.port || app.username || app.password || app.search || app.hash || app.pathname !== '/'
     || !app.hostname.endsWith('.vercel.app') || app.hostname === 'schovera.vercel.app') throw new Error('Separate HTTPS Vercel demo origin required');
   if (env.NEXT_PUBLIC_SUPABASE_URL !== `https://${demoRef}.supabase.co`) throw new Error('Demo database URL/identity mismatch');

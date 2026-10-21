@@ -22,6 +22,9 @@ describe('hosted configuration fails closed', () => {
     { SCHOVERA_RFID_CAPABILITY_PRIVATE_KEY: 'synthetic-private' }, { SCHOVERA_RFID_API_MODE: 'local' },
     { SCHOVERA_TEST_MODE: 'local' }, { SCHOVERA_FALLBACK_MODE: 'local' }, { NEXT_PUBLIC_SCHOVERA_FALLBACK_MODE: 'local' },
     { OLLAMA_BASE_URL: 'http://127.0.0.1:11434' }, { TEACHER_AI_PROVIDER: 'ollama' }, { NEXT_PUBLIC_UNAPPROVED: 'synthetic-private' },
+    { SCHOVERA_DEMO_APP_ORIGIN: 'synthetic-private-not-a-url' },
+    { SCHOVERA_HOSTED_DEMO:'1', NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO:'1' },
+    { SCHOVERA_HOSTED_DEMO:'typo', NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO:'' },
   ])('rejects unsafe config %#', override => expect(() => validateHostedDemoEnvironment({ ...hostedBuildFixture, ...override })).toThrow());
   it('checks the actual Vercel project identity when supplied by Vercel', () => expect(validateHostedDemoEnvironment({ ...hostedBuildFixture, VERCEL: '1', VERCEL_PROJECT_ID: 'prj_synthetic_demo' }).enabled).toBe(true));
 });

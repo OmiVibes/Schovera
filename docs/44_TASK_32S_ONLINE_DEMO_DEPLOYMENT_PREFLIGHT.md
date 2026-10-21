@@ -102,6 +102,22 @@ Set Node 22.x for consistent tool/build compatibility, install exact `package-lo
 
 Planned safe checks: new identity/provisioning/hosted-panel unit tests, existing hosted-API tests, existing regression batch, controlled read-only bundle export, local self-signed HTTPS hosted-mode browser rehearsal, typecheck, lint, audit and normal/hosted isolated builds. The HTTPS rehearsal intercepts the fixed synthetic Supabase origin before any request reaches it and serves it from local Supabase; all other external browser requests/WebSockets are blocked. It checks Secure/SameSite cookies, refresh persistence, logout, disabled API responses, secret-free JS and 22 routes at four widths. This is **not a deployed TLS certificate, real Vercel protection, remote mobile-device or hosted Realtime test**. Realtime/reconnect remain independently covered by normal local regression suites.
 
+The HTTPS bridge permits only its loopback Next development bootstrap WebSocket; the synthetic Supabase WebSocket is closed before delivery. Its temporary self-signed certificate/key are generated with already-installed Git OpenSSL, never installed in the Windows trust store, and removed after the run. Run it from an isolated checkout with local test env files:
+
+```powershell
+npm run verify:online-demo -- --source-worktree '<owned presentation checkout>'
+npm run build:isolated
+npm run build:isolated:demo
+```
+
+The hosted isolated build uses only a fixed, explicitly synthetic project configuration. Its public-looking reference/key are **not owned or usable cloud credentials**, not evidence of an online demo and not values to copy into Vercel. Both build modes exclude private env files, install dependencies inside their disposable snapshot, scan synthetic secret sentinels and clean up; allowlisted font downloads are not an OS-level network sandbox.
+
+### Important correction: test-runner dotenv discovery
+
+Early Task 32S unit runs were launched from the original checkout. Inspection later established that Vite, unlike Next's test-mode loader, discovers `.env.local` by default; the prior Vitest config did not disable that discovery. **Automatic parsing of the original production file cannot be excluded for those early runs.** It was not manually opened, inspected, copied, printed or modified, and its actual contents have not been read to investigate this. No production endpoint was deliberately targeted and no production-secret values were printed. However, a claim of verified zero file access would be unjustified; no filesystem access trace was captured to retroactively certify it.
+
+`vitest.config.ts` now sets `envDir: false`. A regression uses a separate temporary directory and a harmless `.env.local` sentinel: the isolated configuration does not load it, while the synthetic control demonstrates Vite's default would. It never reads the original file. Integration commands continue receiving only explicit `.env.test.local`; later browser/database tests run from clean worktrees. This discovery also qualifies Task 32R's earlier blanket zero-access claims for root Vitest runs, not the separately verified isolated-build exclusion. Owner review is required before making an assurance of zero credential exposure; do not silently convert this caveat into “NO access.”
+
 ## 9. Cost and usage controls
 
 Owner must check current Vercel/Supabase project quotas, inactivity/pausing behavior, region, Auth/email limits, egress, logs, build/function usage, database size and the available protection option. No free-plan capacity or always-on availability is guaranteed. Keep one small fictional school, bounded polling, signup off and a short scheduled demo lifetime. No paid AI, translation, SMS, IVR, hardware purchase or background GPU service is authorized. Define a spending cap/alerts and trainer availability before the event; maintain labelled recorded backup evidence if a free service pauses.

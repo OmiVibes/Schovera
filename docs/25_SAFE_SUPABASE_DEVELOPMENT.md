@@ -1,5 +1,7 @@
 # Safe Supabase development setup (Task 32B-1)
 
+Task 32S additionally sets `envDir: false` in Vitest: Vite's default dotenv discovery differs from Next test-mode behavior. Keep unit/browser/database verification in clean isolated checkouts and use explicit local test variables. Earlier original-checkout test runs cannot be certified as zero `.env.local` access; see [the security correction](44_TASK_32S_ONLINE_DEMO_DEPLOYMENT_PREFLIGHT.md#important-correction-test-runner-dotenv-discovery). Do not inspect the production file to check this.
+
 Current presentation entry point: [START_HERE](../START_HERE.md) and [Task 32R finalization evidence](43_TASK_32R_INTERNATIONAL_SOFTWARE_FINALIZATION.md). They add an isolated 20-fictional-student school without replacing the historical records below. Use `presentation:prepare` in its own clean worktree, not the older two-child provisioning command. Production `.env.local` exclusion and loopback-only mutation guards remain mandatory.
 
 **Current full-software testing runbook:** [Task 32P](41_TASK_32P_FINAL_SOFTWARE_TESTING.md) provides disposable-worktree startup, fresh synthetic role credentials, an owned-fixture reset, the durable offline entry demonstration and a personal checklist. Use that clean-worktree procedure for HTTP/browser tests; do not start Next in the original checkout containing production `.env.local`. Earlier dated run records below remain historical evidence, not permission to load production configuration.

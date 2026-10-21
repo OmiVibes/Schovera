@@ -1,5 +1,7 @@
 # Task 32R — International software finalization
 
+**Task 32S security addendum:** later inspection found that the earlier Vitest configuration allowed Vite dotenv discovery. Automatic `.env.local` parsing during original-checkout unit runs cannot be excluded; the historical blanket zero-access wording below must not be treated as a forensic guarantee. Isolated-build exclusion was checked separately. Task 32S disables discovery and adds a synthetic-sentinel regression; see [the detailed correction](44_TASK_32S_ONLINE_DEMO_DEPLOYMENT_PREFLIGHT.md#important-correction-test-runner-dotenv-discovery). The production file was not manually inspected or modified to investigate this.
+
 ## Baseline and initial gap analysis (2026-10-21)
 
 Initial branch `test/task32p-final-software-audit`, HEAD `af61329db694cf49533047fc4823d5a87b3b0546`; tracked state clean. Protected untracked instructions/logs/review and the ignored private credential guide are preserved. Task 32P is an ancestor. No Task 32Q branch, matching commit or implementation was found locally; its safe local preparation/online isolation design is included here, **not cloud deployment**. Branch: `feat/task32r-international-software-finalization`.
