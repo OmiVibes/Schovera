@@ -43,7 +43,13 @@ try {
   await teacher.page.getByRole('button',{name:'Grade 7A',exact:true}).click();assert.equal(await reg.locator('.roster-row').count(),10);
   await reg.getByLabel('Date',{exact:true}).fill(f.dates.at(-1));
   const row=reg.locator('.roster-row').filter({hasText:'Aarav Deshmukh'});await row.locator('button[aria-pressed=true]').filter({hasText:'Absent'}).waitFor();
-  await row.getByRole('button',{name:'Present',exact:true}).click();await teacher.page.getByRole('button',{name:'Grade 7A',exact:true}).click();assert.equal(await row.getByRole('button',{name:'Present',exact:true}).getAttribute('aria-pressed'),'true');
+  // Hold a real stale attendance refetch, then edit before delivering its response.
+  let releaseRead, capturedRead; const gateRead=new Promise(resolve=>{releaseRead=resolve;});const captured=new Promise(resolve=>{capturedRead=resolve;});let held=false;
+  const oldRead=async route=>{const url=new URL(route.request().url());if(!held&&route.request().method()==='GET'&&url.searchParams.get('class_id')===`eq.${f.classes[0].id}`&&url.searchParams.get('attendance_date')===`eq.${f.dates.at(-1)}`){held=true;const response=await route.fetch();capturedRead();await gateRead;await route.fulfill({response});}else await route.continue();};
+  await teacher.page.route('**/rest/v1/attendance_records*',oldRead);await teacher.page.bringToFront();await teacher.page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await Promise.race([captured,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Controlled attendance refetch was not observed')),15000))]);
+  await row.getByRole('button',{name:'Present',exact:true}).click();const finished=teacher.page.waitForEvent('requestfinished',{predicate:request=>request.url().includes('/rest/v1/attendance_records')&&new URL(request.url()).searchParams.get('attendance_date')===`eq.${f.dates.at(-1)}`});releaseRead();await finished;await teacher.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await teacher.page.unroute('**/rest/v1/attendance_records*',oldRead);
+  await teacher.page.getByRole('button',{name:'Grade 7A',exact:true}).click();assert.equal(await row.getByRole('button',{name:'Present',exact:true}).getAttribute('aria-pressed'),'true','Stale refetch must not replace unsaved attendance');
   await reg.getByRole('button',{name:/Save attendance|Save changes/}).click();await teacher.page.getByText('Attendance saved',{exact:false}).waitFor();await teacher.page.getByTestId('attendance-insights').getByText('No follow-up pattern under these rules.',{exact:false}).waitFor();
   console.log('20-person demo: 10-student class switching, repeated active selection, attendance correction and insights passed.');
   await go(teacher.page,'teacher','homework'); const form=teacher.page.locator('.assignment-form').first();

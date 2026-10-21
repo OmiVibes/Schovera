@@ -533,6 +533,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     [pendingSend, setPendingSend] = useState<PendingTeacherSend | null>(null),
     [note, setNote] = useState('');
   const pendingSendStorageKey = `schovera:pending-teacher-update:${profile.id}`;
+  const attendanceDirtyRef = useRef(false);
   const clearPendingSend = () => {
     sessionStorage.removeItem(pendingSendStorageKey);
     setPendingSend(null);
@@ -672,7 +673,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     roster: any[],
     requestVersion: number,
   ) => {
-    if (!targetClassId || !roster.length) return;
+    if (!targetClassId || !roster.length || attendanceDirtyRef.current) return;
     const { data, error } = await db
       .from('attendance_records')
       .select('student_id,status')
@@ -681,7 +682,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     const context = `${targetClassId}:${targetDate}`;
     if (
       context !== activeAttendanceContextRef.current ||
-      requestVersion !== attendanceRequestVersionRef.current
+      requestVersion !== attendanceRequestVersionRef.current || attendanceDirtyRef.current
     )
       return;
     if (error) {
@@ -719,6 +720,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
   );
   useEffect(() => {
     if (mode !== 'attendance') return;
+    attendanceDirtyRef.current = false;
     const context = `${classId}:${date}`;
     activeAttendanceContextRef.current = context;
     const requestVersion = attendanceRequestVersionRef.current + 1;
@@ -877,6 +879,10 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
       p_records,
     });
     setAttendanceSaving(false);
+    if (!error && targetContext === activeAttendanceContextRef.current) {
+      attendanceDirtyRef.current = false;
+      void refreshTeacherContext();
+    }
     if (targetContext === activeAttendanceContextRef.current)
       setAttendanceNote(
         error
@@ -1185,9 +1191,11 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
             setRecords({});
             setAttendanceNote('');
           }}
-          onStatus={(studentId: string, status: Status) =>
-            setRecords({ ...records, [studentId]: status })
-          }
+          onStatus={(studentId: string, status: Status) => {
+            attendanceDirtyRef.current = true;
+            attendanceRequestVersionRef.current += 1;
+            setRecords((current) => ({ ...current, [studentId]: status }));
+          }}
           onSave={saveAttendance}
         />{classId && <AttendanceInsights role="teacher" profileId={profile.id} schoolId={profile.school_id} classId={classId} revision={attendanceNote} />}</div>
       ) : mode === 'homework' ? (
