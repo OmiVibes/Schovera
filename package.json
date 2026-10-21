@@ -9,6 +9,7 @@
     "demo:online": "node scripts/online-demo/cli.mjs",
     "test:provisioner": "vitest run scripts/online-demo/target.test.mjs",
     "test:provisioner:integration": "node --experimental-strip-types --env-file=.env.test.local scripts/online-demo/integration.mjs",
+    "verify:provisioner:browser": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/verify-presentation.mjs --provisioner",
     "test:online-demo": "vitest run src/lib/demo-deployment-policy.test.ts src/components/hosted-fallback.test.tsx scripts/online-demo/provisioning.test.mjs scripts/test/environment-isolation.test.ts",
     "verify:online-demo": "node --env-file=.env.test.local scripts/verify-online-demo.mjs",
     "demo:online:export": "node --experimental-strip-types --env-file=.env.test.local scripts/online-demo/export.mjs",

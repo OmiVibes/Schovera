@@ -6,11 +6,13 @@ import { preparePresentation } from './presentation-demo.mjs';
 import { actorClient } from './manual-demo.mjs';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import { shiftSchoolDate, schoolToday } from '../src/lib/school-date.mjs';
+import { provisionBrowserFixture } from './online-demo/browser-fixture.mjs';
 
 assertLocalTestEnvironment();
 const base = process.env.SCHOVERA_TEST_URL || 'http://127.0.0.1:3000';
-const f = await preparePresentation();
-assert.equal((await preparePresentation()).runId, f.runId);
+const provisioned = process.argv.includes('--provisioner') ? await provisionBrowserFixture() : null;
+const f = provisioned?.fixture ?? await preparePresentation();
+if(!provisioned)assert.equal((await preparePresentation()).runId, f.runId);
 const output = path.resolve('.local/schovera-rfid-gateway/task32r-presentation'); mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const contexts = [], errors = [], external = [], measurements = [];
@@ -97,6 +99,7 @@ try {
     }
   }
   console.log('Presentation visual coverage passed: all 22 destinations × 4 widths; 88 real screenshots.');
+  if(provisioned)await provisioned.checkSessions(parent);
   for(const role of ['parent','teacher']){
     const context=await browser.newContext();contexts.push(context);const page=await context.newPage();
     const cdp=await context.newCDPSession(page);let bytes=0;cdp.on('Network.loadingFinished',e=>{bytes+=e.encodedDataLength;});await cdp.send('Network.enable');await cdp.send('Network.setCacheDisabled',{cacheDisabled:true});
@@ -110,4 +113,4 @@ try {
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
   writeFileSync(path.join(output,'measurements.json'),JSON.stringify({measurements,audio:'AUDIO NOT VERIFIED',routes:22,widths:4,screenshots:88},null,2));
   console.log(JSON.stringify(measurements));console.log(`Presentation evidence: ${output}`);
-} finally {await browser.close();}
+} finally {await browser.close();if(provisioned)await provisioned.cleanup();}
