@@ -41,6 +41,17 @@ try {
     const upstream=httpRequest({hostname:'127.0.0.1',port,path:req.url,method:req.method,headers:{...req.headers,host:`127.0.0.1:${port}`}},response=>{res.writeHead(response.statusCode,response.headers);response.pipe(res);});
     upstream.on('error',()=>{res.writeHead(502);res.end();});req.pipe(upstream);
   });
+  // Preserve Next's development bootstrap/HMR connection through the HTTPS
+  // bridge. Closing every WebSocket can prevent a dev page from hydrating.
+  server.on('upgrade',(req,socket,head)=>{
+    const upstream=httpRequest({hostname:'127.0.0.1',port,path:req.url,headers:{...req.headers,host:`127.0.0.1:${port}`}});
+    upstream.on('upgrade',(response,remote,remoteHead)=>{
+      socket.write(`HTTP/1.1 101 Switching Protocols\r\n${response.rawHeaders.reduce((s,v,i)=>s+(i%2?`${v}\r\n`:`${v}: `),'')}\r\n`);
+      if(remoteHead.length)socket.write(remoteHead);if(head.length)remote.write(head);socket.pipe(remote).pipe(socket);
+      socket.on('error',()=>remote.destroy());remote.on('error',()=>socket.destroy());socket.on('close',()=>remote.destroy());
+    });
+    upstream.on('error',()=>socket.destroy());upstream.end();
+  });
   await new Promise(r=>server.listen(0,'127.0.0.1',r));const base=`https://127.0.0.1:${server.address().port}`;
   browser=await chromium.launch({headless:true});
   for(const role of ['teacher','parent','principal']) {
@@ -56,7 +67,7 @@ try {
     });
     // Do not let a synthetic hostname open a real remote WebSocket. This test
     // uses persisted reads/manual refresh; Realtime is covered by local suites.
-    await context.routeWebSocket('**/*',ws=>ws.close());
+    await context.routeWebSocket('wss://abcdefghijklmnopqrst.supabase.co/**',ws=>ws.close());
     const scans=[];const page=await context.newPage();pages.push(page);page.on('pageerror',e=>errors.push(e.message));
     page.on('requestfailed',request=>diagnostics.push({path:new URL(request.url()).pathname,failed:request.failure()?.errorText}));
     page.on('console',message=>{if(message.type()==='error')diagnostics.push({consoleError:message.text().split('?')[0].replace(/eyJ[A-Za-z0-9_.-]+/g,'[REDACTED]').slice(0,300)});});
