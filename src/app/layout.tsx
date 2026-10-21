@@ -26,6 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {process.env.NEXT_PUBLIC_SCHOVERA_DEMO === 'true' && <aside className="demo-environment" aria-label="Demonstration environment" data-testid="demo-environment">Demo Environment <span>· Fictional school records · No real SMS or calls</span></aside>}
         <AppEntry />
         {children}
       </body>

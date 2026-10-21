@@ -19,7 +19,7 @@ try {
   store = openGatewayDatabase(path.join(runDirectory, 'manual-outbox.sqlite'));
   if (!store.getReader(enrollment.readerId)) store.registerReader({ readerId: enrollment.readerId, deviceId: enrollment.deviceId, tokenHash: hashReaderKey(enrollment.readerKey), now: new Date().toISOString() });
   if (command === 'queue') {
-    const event = { schema_version: 2, event_id: randomUUID(), device_id: enrollment.deviceId, credential_ref: enrollment.credentialRef, credential_assignment_id: enrollment.assignmentId, credential_assignment_version: 1, assignment_capability: enrollment.capability, event_type: 'check_in', observed_at: new Date().toISOString(), device_sequence: Number(store.sequenceMaximum(enrollment.readerId)) + 1, gateway_receipt_id: randomUUID() };
+    const event = { schema_version: 2, event_id: randomUUID(), device_id: enrollment.deviceId, credential_ref: enrollment.credentialRef, credential_assignment_id: enrollment.assignmentId, credential_assignment_version: 1, assignment_capability: enrollment.capability, event_type: 'check_in', observed_at: new Date().toISOString(), device_sequence: Math.max(Number(store.sequenceMaximum(enrollment.readerId)), enrollment.initialSequence ?? 0) + 1, gateway_receipt_id: randomUUID() };
     const ack = ingestReaderSubmission(store, { ...signReaderSubmission(event, { readerId: enrollment.readerId, key: enrollment.readerKey }), readerKey: enrollment.readerKey });
     console.log(JSON.stringify({ synthetic: true, localAcknowledgement: ack.outcome, queue: store.summary() }));
   } else if (command === 'offline' || command === 'sync') {

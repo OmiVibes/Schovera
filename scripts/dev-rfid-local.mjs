@@ -47,6 +47,7 @@ process.env.SCHOVERA_TEST_MODE = 'local';
 process.env.SCHOVERA_RFID_API_MODE = 'local';
 process.env.SCHOVERA_FALLBACK_MODE = 'local';
 process.env.NEXT_PUBLIC_SCHOVERA_FALLBACK_MODE = 'local';
+process.env.NEXT_PUBLIC_SCHOVERA_DEMO = 'true';
 // Never inherit an arbitrary issuer key from the developer shell. V2 is enabled
 // only by the explicit, ignored local keypair created by the local key command.
 delete process.env.SCHOVERA_RFID_CAPABILITY_PRIVATE_KEY;

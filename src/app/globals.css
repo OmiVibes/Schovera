@@ -2078,3 +2078,5 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
 .insights-classes, .insights-students { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,260px),1fr)); gap: 12px; margin-block: 14px; }
 .insights-classes article, .insights-students article { border: 1px solid var(--line); padding: 12px; border-radius: 10px; min-width: 0; }
 .attendance-insights nav { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.demo-environment { padding: .45rem 1rem; text-align: center; font-size: .8rem; line-height: 1.6; color: #334155; background: #eef3f8; border-bottom: 1px solid #d5deea; font-weight: 600; }
+.demo-environment span { font-weight: 400; }

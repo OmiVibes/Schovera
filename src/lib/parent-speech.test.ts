@@ -34,6 +34,40 @@ function mockEnvironment(voices: SpeechVoice[] = [{ lang: 'en-IN', name: 'Indian
 afterEach(() => vi.useRealTimers());
 
 describe('parent notice speech policy and controller', () => {
+  it('fails a stalled start and ignores a late start after timeout', async () => {
+    vi.useFakeTimers();
+    const { controller, synthesis } = mockEnvironment();
+    await controller.play('stalled', 'A notice', 'en');
+    await vi.advanceTimersByTimeAsync(8000);
+    expect(controller.getSnapshot().phase).toBe('error');
+    synthesis.utterances[0].onstart?.();
+    expect(controller.getSnapshot().phase).toBe('error');
+    expect(synthesis.cancel).toHaveBeenCalled();
+  });
+
+  it('clears the start timer on actual start and cancels error callbacks', async () => {
+    vi.useFakeTimers();
+    const { controller, synthesis } = mockEnvironment();
+    await controller.play('started', 'A notice', 'en');
+    synthesis.utterances[0].onstart?.();
+    await vi.advanceTimersByTimeAsync(9000);
+    expect(controller.getSnapshot().phase).toBe('speaking');
+    synthesis.utterances[0].onerror?.();
+    synthesis.utterances[0].onstart?.();
+    expect(controller.getSnapshot().phase).toBe('error');
+    controller.stop();
+  });
+
+  it.each(['pause', 'resume'] as const)('handles a throwing browser %s without a false state', async (operation) => {
+    const { controller, synthesis } = mockEnvironment();
+    await controller.play('notice', 'A notice', 'en');
+    synthesis.utterances[0].onstart?.();
+    if (operation === 'resume') controller.pause();
+    synthesis[operation].mockImplementation(() => { throw new Error('engine failed'); });
+    controller[operation]();
+    expect(controller.getSnapshot().messageKey).toBe('speech.failed');
+  });
+
   it('detects Latin English but never guesses Hindi versus Marathi from Devanagari', () => {
     expect(detectNoticeLanguage('School will remain closed tomorrow.')).toBe('en');
     expect(detectNoticeLanguage('कल विद्यालय बंद रहेगा')).toBeNull();

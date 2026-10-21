@@ -6,6 +6,8 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "demo:isolated:prepare": "node scripts/prepare-isolated-demo.mjs",
+    "presentation:prepare": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/presentation-demo.mjs",
     "verify:final-journeys": "node --env-file=.env.test.local scripts/verify-final-journeys.mjs",
     "demo:prepare": "node --env-file=.env.test.local scripts/manual-demo.mjs prepare",
     "demo:credentials": "node scripts/manual-demo.mjs credentials",

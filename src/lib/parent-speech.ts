@@ -82,6 +82,7 @@ export class ParentSpeechController {
   private listeners = new Set<() => void>();
   private currentEnvironment: SpeechEnvironment | null = null;
   private cancelVoiceWait: (() => void) | null = null;
+  private startTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly getEnvironment: () => SpeechEnvironment | null) {}
 
@@ -99,11 +100,18 @@ export class ParentSpeechController {
 
   private invalidate(andCancel = true) {
     this.generation += 1;
+    if (this.startTimer) clearTimeout(this.startTimer);
+    this.startTimer = null;
     this.cancelVoiceWait?.();
     this.cancelVoiceWait = null;
-    if (andCancel) this.currentEnvironment?.synthesis.cancel();
+    if (andCancel) { try { this.currentEnvironment?.synthesis.cancel(); } catch { /* text fallback remains available */ } }
     this.currentEnvironment = null;
     return this.generation;
+  }
+
+  private fail(noticeId: string) {
+    this.invalidate();
+    this.update({ noticeId, phase: 'error', messageKey: 'speech.failed' });
   }
 
   async play(noticeId: string, text: string, choice: NoticeLanguageChoice) {
@@ -138,39 +146,50 @@ export class ParentSpeechController {
       utterance.lang = voice.lang;
       utterance.voice = voice;
       utterance.onstart = () => {
-        if (generation === this.generation) this.update({ noticeId, phase: 'speaking', messageKey: 'speech.playing' });
+        if (generation === this.generation) {
+          if (this.startTimer) clearTimeout(this.startTimer);
+          this.startTimer = null;
+          this.update({ noticeId, phase: 'speaking', messageKey: 'speech.playing' });
+        }
       };
       utterance.onend = () => {
         if (generation === this.generation) {
+          if (this.startTimer) clearTimeout(this.startTimer);
+          this.startTimer = null;
           this.currentEnvironment = null;
           this.update(emptyState);
         }
       };
       utterance.onerror = () => {
-        if (generation === this.generation) {
-          this.currentEnvironment = null;
-          this.update({ noticeId, phase: 'error', messageKey: 'speech.failed' });
-        }
+        if (generation === this.generation) this.fail(noticeId);
       };
+      // Some engines neither start nor emit an error. Never leave families
+      // looking at an indefinite starting state; late callbacks are invalidated.
+      this.startTimer = setTimeout(() => {
+        if (generation === this.generation) this.fail(noticeId);
+      }, 8000);
       environment.synthesis.speak(utterance);
     } catch {
       if (generation === this.generation) {
-        this.currentEnvironment = null;
-        this.update({ noticeId, phase: 'error', messageKey: 'speech.failed' });
+        this.fail(noticeId);
       }
     }
   }
 
   pause() {
     if (this.state.phase !== 'speaking' || !this.currentEnvironment) return;
-    this.currentEnvironment.synthesis.pause();
-    this.update({ ...this.state, phase: 'paused', messageKey: 'speech.paused' });
+    try {
+      this.currentEnvironment.synthesis.pause();
+      this.update({ ...this.state, phase: 'paused', messageKey: 'speech.paused' });
+    } catch { this.fail(this.state.noticeId!); }
   }
 
   resume() {
     if (this.state.phase !== 'paused' || !this.currentEnvironment) return;
-    this.currentEnvironment.synthesis.resume();
-    this.update({ ...this.state, phase: 'speaking', messageKey: 'speech.playing' });
+    try {
+      this.currentEnvironment.synthesis.resume();
+      this.update({ ...this.state, phase: 'speaking', messageKey: 'speech.playing' });
+    } catch { this.fail(this.state.noticeId!); }
   }
 
   stop() {
