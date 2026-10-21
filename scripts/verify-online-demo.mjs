@@ -58,6 +58,8 @@ try {
     // uses persisted reads/manual refresh; Realtime is covered by local suites.
     await context.routeWebSocket('**/*',ws=>ws.close());
     const scans=[];const page=await context.newPage();pages.push(page);page.on('pageerror',e=>errors.push(e.message));
+    page.on('requestfailed',request=>diagnostics.push({path:new URL(request.url()).pathname,failed:request.failure()?.errorText}));
+    page.on('console',message=>{if(message.type()==='error')diagnostics.push({consoleError:message.text().split('?')[0].replace(/eyJ[A-Za-z0-9_.-]+/g,'[REDACTED]').slice(0,300)});});
     page.on('response',response=>{if(response.request().resourceType()==='script')scans.push(response.body().then(b=>{if([process.env.SUPABASE_SERVICE_ROLE_KEY,'synthetic_hosted_private_sentinel'].some(v=>v&&b.includes(Buffer.from(v))))leaks.push('private material in script');}).catch(()=>{}));});
     const initial=await page.goto(base,{waitUntil:'networkidle'});assert.equal(initial.headers()['x-robots-tag'],'noindex, nofollow, noarchive');assert.equal(initial.headers()['referrer-policy'],'no-referrer');assert.equal(initial.headers()['x-frame-options'],'DENY');
     phase=`${role} login form`;await page.getByLabel('Email').fill(fixture.accounts[role].email);await page.getByLabel('Password',{exact:true}).fill(fixture.accounts[role].password);await page.getByRole('button',{name:'Sign in securely'}).click();phase=`${role} authenticated workspace`;await page.locator(`.role-${role}`).waitFor({timeout:45000});
@@ -82,7 +84,10 @@ try {
   console.log('Hosted-mode rehearsal passed: loopback HTTPS proxy + intercepted synthetic database origin only; no remote acceptance claimed.');
 } catch(error) {
   console.error(JSON.stringify({phase,requests:diagnostics,external,errors}));
-  for(const page of pages)if(!page.isClosed())console.error(JSON.stringify(await page.evaluate(()=>({path:location.pathname,headings:[...document.querySelectorAll('h1,h2')].map(n=>n.textContent),alerts:[...document.querySelectorAll('[role=alert],.error')].map(n=>n.textContent)})).catch(()=>({unavailable:true}))));
+  for(const page of pages)if(!page.isClosed()){
+    await page.screenshot({path:path.join(screenshots,'failure.png')}).catch(()=>{});
+    console.error(JSON.stringify(await page.evaluate(()=>({path:location.pathname,ready:document.readyState,title:document.title,bodyText:document.body.innerText.slice(0,400),scripts:document.scripts.length,headings:[...document.querySelectorAll('h1,h2')].map(n=>n.textContent),alerts:[...document.querySelectorAll('[role=alert],.error')].map(n=>n.textContent)})).catch(()=>({unavailable:true}))));
+  }
   throw new Error(`Local hosted rehearsal failed at ${phase} (${error.name}); credential-bearing Playwright call logs suppressed.`);
 } finally {
   await browser?.close();if(server)await new Promise(r=>server.close(r));

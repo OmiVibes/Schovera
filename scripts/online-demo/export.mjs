@@ -1,5 +1,5 @@
 // Read-only local export. No remote adapter, Auth export, migration or reset.
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { assertLocalTestEnvironment } from '../lib/local-test-env.mjs';
@@ -32,6 +32,8 @@ const dataset = makeDataset(raw), digest = datasetDigest(dataset);
 const directory = path.resolve('.local/schovera-rfid-gateway/online-demo');
 mkdirSync(directory,{recursive:true,mode:0o700});
 const file = path.join(directory,`${digest}.json`);
-if (!existsSync(file)) writeFileSync(file,JSON.stringify(dataset,null,2),{flag:'wx',mode:0o600});
+if (existsSync(file)) {
+  if(datasetDigest(JSON.parse(readFileSync(file,'utf8'))) !== digest) throw new Error('Existing export artifact changed; preserved for review');
+} else writeFileSync(file,JSON.stringify(dataset,null,2),{flag:'wx',mode:0o600});
 console.log(`Fictional dataset export verified: 20 students, 13 role accounts, logical IDs only; SHA-256 ${digest}`);
 console.log(`Ignored artifact: ${file}. No cloud action, credential export or database mutation.`);
