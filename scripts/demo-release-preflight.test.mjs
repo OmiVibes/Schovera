@@ -10,5 +10,6 @@ describe('non-mutating demo release preflight', () => {
     {supabaseUrl:'https://uvwxyzabcdefghijklmn.supabase.co'}, {productionProjectRef:plan.demoProjectRef},
     {supabaseUrl:'https://user:password@abcdefghijklmnopqrst.supabase.co'}, {appUrl:'https://demo.vercel.app/?token=x'},
     {demoProjectRef:'PLACEHOLDER'},
+    {appUrl:'https://fictional-school-demo.vercel.app:8443'}, {supabaseUrl:'https://abcdefghijklmnopqrst.supabase.co:8443'},
   ])('refuses unsafe or unverified plan %j', override => expect(()=>validateDemoReleasePlan({...plan,...override})).toThrow());
 });
