@@ -53,7 +53,8 @@ try {
   assert.ok((await adapter.actor().auth.signInWithPassword({email:j.accounts[parentKey].email,password:oldPassword})).error);
   const old=adapter.actor();await old.auth.setSession({access_token:oldSession.access_token,refresh_token:oldSession.refresh_token});
   const denied=await old.from('students').select('id');assert.ok(denied.error||denied.data.length===0);
-  const fresh=adapter.actor();await must(fresh.auth.signInWithPassword({email:j.accounts[parentKey].email,password:j.accounts[parentKey].password}));assert.equal((await must(fresh.from('students').select('id'))).length,2);passed('rotation: old password, refresh session and old access token invalid; new login works');
+  const rotated=adapter.journal.accounts[parentKey];
+  const fresh=adapter.actor();await must(fresh.auth.signInWithPassword({email:rotated.email,password:rotated.password}));assert.equal((await must(fresh.from('students').select('id'))).length,2);passed('rotation: old password, refresh session and old access token invalid; new login works');
   await adapter.run(dataset,{...options,operation:'disable',account:parentKey,confirm:confirm('disable')});
   const disabled=await fresh.from('students').select('id');assert.ok(disabled.error||disabled.data.length===0);passed('compromised demo account disabled including issued access');
   const report=JSON.stringify(adapter.report());assert.ok(!report.includes(credentials.key)&&!Object.values(j.accounts).some(a=>report.includes(a.password)||report.includes(a.email)));passed('operational report excludes passwords, emails and privileged keys');

@@ -20,7 +20,7 @@ export async function provisionBrowserFixture() {
   await adapter.run(dataset,{...options,confirm:`prepare:local-Schovera:${runId}`});
   const j=adapter.journal,t=j.rows;
   const accountByName=name=>j.accounts[dataset.tables.profiles.find(p=>p.full_name===name).id];
-  const accounts={principal:accountByName('Dr Meera Rao'),teacher:accountByName('Maya Kulkarni')};
+  const accounts={principal:accountByName('Dr Meera Rao'),teacher:accountByName('Maya Kulkarni'),teacherB:accountByName('Vikram Shah')};
   const students=fictionalNames.map(name=>t.students.find(s=>s.full_name===name));
   accounts.parent=Object.values(j.accounts).find(a=>a.id===t.parent_student_links.find(l=>l.student_id===students[0].id).parent_id);
   const fixture={runId,schoolId:j.schoolId,accounts,students,classes:[...t.classes].sort((a,b)=>a.division.localeCompare(b.division)),dates:[...new Set(t.attendance_records.map(r=>r.attendance_date))].sort()};
@@ -29,6 +29,7 @@ export async function provisionBrowserFixture() {
       // The currently-open browser has the OLD access/refresh session.
       const logical=Object.keys(j.accounts).find(k=>j.accounts[k].id===accounts.parent.id);
       await adapter.run(dataset,{...options,operation:'rotate',account:logical,confirm:`rotate:local-Schovera:${runId}`});
+      Object.assign(accounts.parent,adapter.journal.accounts[logical]);
       await parent.page.reload({waitUntil:'networkidle'});
       await parent.page.waitForFunction(()=>!document.querySelector('.parent-updates .update-card,.school-entry-event'));
       await parent.page.getByRole('button',{name:'Sign out',exact:true}).click();
