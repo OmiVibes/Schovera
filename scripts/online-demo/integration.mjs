@@ -36,7 +36,11 @@ try {
   const accounts=Object.entries(j.accounts), clients={};
   for(const [logical,a]of accounts){const c=adapter.actor();await must(c.auth.signInWithPassword({email:a.email,password:a.password}));clients[logical]=c;}
   passed('all 13 owned role accounts log in');
-  const parentKey=accounts.find(([,a])=>a.role==='parent')[0],principalKey=accounts.find(([,a])=>a.role==='principal')[0];
+  // Export order is UUID order, not family order. Choose the guardian of the
+  // prepared translated notice, rather than assuming the first Parent owns it.
+  const translatedUpdate=t.student_updates.find(u=>u.title==='Library notebook reminder');
+  const guardian=t.parent_student_links.find(l=>l.student_id===translatedUpdate.student_id).parent_id;
+  const parentKey=accounts.find(([,a])=>a.id===guardian)[0],principalKey=accounts.find(([,a])=>a.role==='principal')[0];
   const p=clients[parentKey],linked=t.parent_student_links.filter(l=>l.parent_id===j.accounts[parentKey].id).map(l=>l.student_id);
   const visible=await must(p.from('students').select('id'));assert.deepEqual(new Set(visible.map(s=>s.id)),new Set(linked));
   const entries=await must(p.from('school_entry_events').select('student_id'));assert.ok(entries.length&&entries.every(r=>linked.includes(r.student_id)));passed('Parent sees only linked children and entry history');

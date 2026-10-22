@@ -87,11 +87,24 @@ export class DemoAdapter {
   }
   async ownership() {
     const j=this.journal, school=await must(this.db.from('schools').select('id,code').eq('id',j.schoolId).maybeSingle());
+    if(j.schoolId!==stableId(j.runId,'schools:1'))throw new Error('Journal school identity changed');
     if(school && school.code!==`ONLINE-DEMO-${j.runId}`)throw new Error('School ownership ambiguous');
-    for(const a of Object.values(j.accounts)) {
+    for(const [logical,a] of Object.entries(j.accounts)) {
+      if(a.id!==stableId(j.runId,logical))throw new Error('Journal account identity changed');
       const r=await this.db.auth.admin.getUserById(a.id);
       if(r.error && r.error.status!==404)throw new Error('Auth ownership lookup failed');
       if(r.data?.user && (r.data.user.app_metadata?.schovera_demo_run!==j.runId || r.data.user.email!==a.email))throw new Error('Auth ownership ambiguous');
+    }
+    const actors=new Set(Object.values(j.accounts).map(a=>a.id));
+    for(const [table,rows]of Object.entries(j.rows)) {
+      if(table==='schools'||!rows.length)continue;
+      const actual=await must(this.db.from(table).select('*').in('id',rows.map(r=>r.id)).limit(2001));
+      for(const r of actual) {
+        if(r.school_id && r.school_id!==j.schoolId)throw new Error('Cross-school row blocks operation');
+        for(const key of ['teacher_id','parent_id','created_by','marked_by','authored_by','approved_by','actor_id'])if(r[key]&&!actors.has(r[key]))throw new Error('Unowned actor blocks operation');
+        if(r.class_id&&!j.rows.classes.some(c=>c.id===r.class_id))throw new Error('Cross-class row blocks operation');
+        if(r.student_id&&!j.rows.students.some(s=>s.id===r.student_id))throw new Error('Cross-child row blocks operation');
+      }
     }
   }
   async prepare() {
