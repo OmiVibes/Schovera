@@ -37,6 +37,12 @@ try {
   const preparationTeacher = await actorClient(f.accounts.teacher);
   await must(preparationTeacher.rpc('save_class_attendance',{p_class_id:f.classes[0].id,p_attendance_date:f.dates.at(-1),p_records:f.students.slice(0,10).map((s,i)=>({student_id:s.id,status:i===0?'absent':'present'}))}));
   const teacher=await login(f.accounts.teacher), principal=await login(f.accounts.principal), parent=await login(f.accounts.parent,true);
+  for(const [view,deniedRole]of [[teacher,'principal'],[parent,'teacher'],[principal,'teacher']]) {
+    await view.page.goto(`${base}/${deniedRole}/home`,{waitUntil:'networkidle'});
+    await view.page.getByRole('heading',{name:'That workspace is not available to this account.'}).waitFor();
+    assert.equal(await view.page.locator(`.role-${deniedRole}`).count(),0);
+  }
+  await go(principal.page,'principal','home');await go(parent.page,'parent','home');
   await go(teacher.page,'teacher','students');await teacher.page.getByRole('button',{name:'Grade 7A',exact:true}).click();await teacher.page.locator('button.student').filter({hasText:'Aarav Deshmukh'}).waitFor();
   assert.equal(await teacher.page.locator('button.student').count(),10);
   await teacher.page.getByRole('button',{name:'Grade 7B',exact:true}).click();await teacher.page.locator('button.student').filter({hasText:'Vihaan Shinde'}).waitFor();assert.equal(await teacher.page.locator('button.student').count(),10);
@@ -107,6 +113,7 @@ try {
   }
   console.log('Presentation visual coverage passed: all 22 destinations × 4 widths; 88 real screenshots.');
   if(provisioned)await provisioned.checkSessions(parent);
+  await principal.page.getByRole('button',{name:'Sign out',exact:true}).click();await principal.page.getByLabel('Email').waitFor();await principal.page.reload({waitUntil:'networkidle'});await principal.page.getByLabel('Email').waitFor();assert.equal(await principal.page.locator('.role-principal').count(),0);
   for(const role of ['parent','teacher']){
     const context=await browser.newContext();contexts.push(context);const page=await context.newPage();
     const cdp=await context.newCDPSession(page);let bytes=0;cdp.on('Network.loadingFinished',e=>{bytes+=e.encodedDataLength;});await cdp.send('Network.enable');await cdp.send('Network.setCacheDisabled',{cacheDisabled:true});

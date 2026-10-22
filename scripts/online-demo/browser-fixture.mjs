@@ -95,10 +95,7 @@ export async function provisionBrowserFixture() {
       Object.assign(accounts.parent, adapter.journal.accounts[logical]);
       await parent.page.reload({ waitUntil: 'networkidle' });
       await parent.page.waitForFunction(
-        () =>
-          !document.querySelector(
-            '.parent-updates .update-card,.school-entry-event',
-          ),
+        () => !document.querySelector('.role-parent'),
       );
       if (
         await parent.page
