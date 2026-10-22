@@ -22,8 +22,10 @@ const adapter=new DemoAdapter({approval,credentials,directory,
   fault:stage=>{if(authFail&&stage==='auth-response'){authFail=false;throw new Error('synthetic Auth lost response');}if(fail&&stage==='row-response'){fail=false;throw new Error('synthetic lost response');}}});
 const other=new DemoAdapter({approval,credentials,directory,localTestClock:()=>otherClock});
 const must=async q=>{const r=await q;if(r.error)throw new Error('Local integration query failed');return r.data;};
-const results=[]; const passed=name=>{results.push(name);console.log(`PASS: ${name}`);};
+const results=[]; const passed=name=>{results.push(name);console.log(`PASS: ${name}`);};let unexpectedSignup;
 try {
+  const signup=await adapter.actor().auth.signUp({email:`refused-${runId}@example.invalid`,password:'Synthetic-Refused-2026!aA1'});unexpectedSignup=signup.data?.user?.id;
+  assert.ok(signup.error&&!unexpectedSignup,'Local demo public signup must be disabled');passed('public signup refused by Auth server; admin provisioning remains available');
   const dry=await adapter.run(dataset,options);assert.equal(dry.dryRun,true);assert.equal(existsSync(path.join(directory,`${runId}.json`)),false);passed('default dry-run performs no provisioning');
   await assert.rejects(adapter.run(dataset,{...options,confirm:confirm('prepare')}),/synthetic Auth lost response/);passed('Auth accepted but response lost: PRE-journaled identity retained');
   await assert.rejects(adapter.run(dataset,{...options,confirm:confirm('prepare')}),/Bound demo operation failed/);passed('connection loss after server acceptance is recoverable, not acknowledged complete');
@@ -87,6 +89,7 @@ try {
   await other.run(dataset,{runId:otherRun,expiresAt,operation:'remove-expired',confirm:`remove-expired:local-Schovera:${otherRun}`});
   assert.equal(await must(adapter.db.from('schools').select('id').eq('id',other.journal.schoolId).maybeSingle()),null);passed('scheduled expired fixture cleanup with local test clock');
 } finally {
+  if(unexpectedSignup)await must(adapter.db.auth.admin.deleteUser(unexpectedSignup));
   for(const [a,id]of [[adapter,runId],[other,otherRun]]) {
     if(existsSync(path.join(directory,`${id}.json`)))await a.run(dataset,{runId:id,expiresAt,operation:'reset',confirm:`reset:local-Schovera:${id}`});
   }
