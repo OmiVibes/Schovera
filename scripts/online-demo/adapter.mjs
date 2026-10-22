@@ -494,6 +494,7 @@ export class DemoAdapter {
         ban_duration: operation === 'disable' ? '876000h' : 'none',
       }),
     );
+    if (operation === 'rotate') this.fault('rotation-response', a.id);
     if (operation === 'rotate') {
       a.password = a.nextPassword;
       delete a.nextPassword;
@@ -561,8 +562,10 @@ export class DemoAdapter {
         table === 'student_updates'
           ? [...j.rows[table]].reverse()
           : j.rows[table];
-      for (const row of rows)
+      for (const row of rows) {
         await must(this.db.from(table).delete().eq('id', row.id));
+        this.fault('delete-response', row.id);
+      }
     }
     for (const a of Object.values(j.accounts)) {
       const r = await this.db.auth.admin.getUserById(a.id);

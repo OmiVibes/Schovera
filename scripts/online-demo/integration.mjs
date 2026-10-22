@@ -52,6 +52,8 @@ const runId = randomUUID(),
 let fail = true,
   authFail = true,
   networkFail = true,
+  rotateFail = true,
+  resetFail = false,
   otherClock = Date.now();
 const adapter = new DemoAdapter({
   approval,
@@ -70,6 +72,14 @@ const adapter = new DemoAdapter({
     return result;
   },
   fault: (stage) => {
+    if (rotateFail && stage === 'rotation-response') {
+      rotateFail = false;
+      throw new Error('synthetic rotation response lost');
+    }
+    if (resetFail && stage === 'delete-response') {
+      resetFail = false;
+      throw new Error('synthetic cleanup response lost');
+    }
     if (authFail && stage === 'auth-response') {
       authFail = false;
       throw new Error('synthetic Auth lost response');
@@ -98,12 +108,10 @@ const passed = (name) => {
 };
 let unexpectedSignup;
 try {
-  const signup = await adapter
-    .actor()
-    .auth.signUp({
-      email: `refused-${runId}@example.invalid`,
-      password: 'Synthetic-Refused-2026!aA1',
-    });
+  const signup = await adapter.actor().auth.signUp({
+    email: `refused-${runId}@example.invalid`,
+    password: 'Synthetic-Refused-2026!aA1',
+  });
   unexpectedSignup = signup.data?.user?.id;
   assert.ok(
     signup.error && !unexpectedSignup,
@@ -128,6 +136,23 @@ try {
   passed(
     'connection loss after server acceptance is recoverable, not acknowledged complete',
   );
+  await must(
+    adapter.db
+      .from('schools')
+      .update({ name: 'Inconsistent partial fixture' })
+      .eq('id', adapter.journal.schoolId),
+  );
+  await assert.rejects(
+    adapter.run(dataset, { ...options, confirm: confirm('prepare') }),
+    /Inconsistent partial fixture/,
+  );
+  await must(
+    adapter.db
+      .from('schools')
+      .update({ name: dataset.tables.schools[0].name })
+      .eq('id', adapter.journal.schoolId),
+  );
+  passed('inconsistent partial contents rejected, never overwritten');
   await assert.rejects(
     adapter.run(dataset, { ...options, confirm: confirm('prepare') }),
     /synthetic lost response/,
@@ -294,6 +319,18 @@ try {
   passed('Parent authorized approved synthetic Hindi / Marathi fixtures');
   const oldPassword = j.accounts[parentKey].password,
     oldSession = (await p.auth.getSession()).data.session;
+  await assert.rejects(
+    adapter.run(dataset, {
+      ...options,
+      operation: 'rotate',
+      account: parentKey,
+      confirm: confirm('rotate'),
+    }),
+    /synthetic rotation response lost/,
+  );
+  passed(
+    'interrupted rotation keeps replacement credential journaled and profile inactive',
+  );
   await adapter.run(dataset, {
     ...options,
     operation: 'rotate',
@@ -302,12 +339,10 @@ try {
   });
   assert.ok(
     (
-      await adapter
-        .actor()
-        .auth.signInWithPassword({
-          email: j.accounts[parentKey].email,
-          password: oldPassword,
-        })
+      await adapter.actor().auth.signInWithPassword({
+        email: j.accounts[parentKey].email,
+        password: oldPassword,
+      })
     ).error,
   );
   const rawOld = await fetch(`${credentials.url}/rest/v1/students?select=id`, {
@@ -398,6 +433,16 @@ try {
   });
   assert.equal(dryReset.dryRun, true);
   passed('destructive reset defaults to dry-run');
+  resetFail = true;
+  await assert.rejects(
+    adapter.run(dataset, {
+      ...options,
+      operation: 'reset',
+      confirm: confirm('reset'),
+    }),
+    /synthetic cleanup response lost/,
+  );
+  passed('interrupted exact-row cleanup can resume without broad deletion');
   await adapter.run(dataset, {
     ...options,
     operation: 'reset',
