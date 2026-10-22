@@ -192,6 +192,53 @@ try {
   });
   const j = adapter.journal,
     t = j.rows;
+  const extraStudent = randomUUID();
+  await must(
+    adapter.db
+      .from('students')
+      .insert({
+        id: extraStudent,
+        school_id: j.schoolId,
+        class_id: t.classes[0].id,
+        full_name: 'Unexpected synthetic fixture child',
+        roll_number: 'EXTRA',
+        active: true,
+      }),
+  );
+  await assert.rejects(
+    adapter.run(dataset, { ...options, operation: 'verify' }),
+    /Unexpected roster rows/,
+  );
+  await must(adapter.db.from('students').delete().eq('id', extraStudent));
+  passed(
+    'verification refuses extra roster rows rather than reporting an incorrect twenty',
+  );
+  const extraLink = randomUUID(),
+    parentId = t.parent_student_links[0].parent_id;
+  const unrelatedChild = t.students.find(
+    (s) =>
+      !t.parent_student_links.some(
+        (l) => l.parent_id === parentId && l.student_id === s.id,
+      ),
+  );
+  await must(
+    adapter.db
+      .from('parent_student_links')
+      .insert({
+        id: extraLink,
+        parent_id: parentId,
+        student_id: unrelatedChild.id,
+        status: 'active',
+      }),
+  );
+  await assert.rejects(
+    adapter.run(dataset, { ...options, operation: 'verify' }),
+    /Unexpected owned relationships/,
+  );
+  await must(
+    adapter.db.from('parent_student_links').delete().eq('id', extraLink),
+  );
+  passed('verification refuses unexpected guardian relationships');
   assert.equal(
     (
       await must(
