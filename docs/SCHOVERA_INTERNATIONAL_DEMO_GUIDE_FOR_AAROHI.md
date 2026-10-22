@@ -270,4 +270,18 @@ For an online-only talk, skip trainer terminal/gateway actions in Part C. Explai
 | Translation model fails | Use the editable human-reviewed workflow, not an invented automatic output. | “Accuracy matters more than pretending the model worked.” |
 | A test genuinely fails | Note exact role/page/action and ask the trainer. Do not hide it or reset production. | “We found a limitation and will investigate it.” |
 
+### Task 32T — what the future online rehearsal includes
+
+Your original role-by-role walkthrough and judge questions above still apply. The online demonstration is **not deployed by this task**: wait for your trainer's privately shared, approved link and your own account. Never use the current production site as the practice database.
+
+You can demonstrate the fictional 20-student school: ten students in 7A and ten in 7B; the Parent's linked children; Teacher attendance and correction; explainable absence-pattern evidence; homework and author-only edits; timetable; Important notices; a Teacher's manually entered translation draft; Principal review; Parent approved-language/original reading and acknowledgement; schoolwide notices; and prepared fictional entry history. Insights show recorded patterns and their explanation, **not dropout prediction or a child's safety**.
+
+Use separate individual accounts for the two presenters. Your trainer assigns the roles and hands passwords over privately; ordinary tabs share a session, so use separate browser profiles. The trainer can rotate or disable a lost account, and demo access expires on schedule. If login stops, ask for your own replacement access rather than another person's password. The private outer access link must not be posted as a public QR code.
+
+Online AI generation, local Ollama, live RFID readers and gateway synchronization remain disabled. A prepared entry record is software history, not evidence that physical hardware was demonstrated. SMS/IVR is a labelled illustration: “delivered” in a simulator does **not** mean anyone received a real text or call. No paid translation/TTS/phone service is connected.
+
+Translation is a review workflow, not reliable automatic translation. Prepared Hindi/Marathi examples are synthetic workflow fixtures until a fluent reviewer confirms their meaning. Keep “View original” available. Browser listening needs the matching installed voice; some phones/laptops lack Marathi voices. If you cannot actually hear it, use the text and say that audio is not verified—passing mocked controls is not proof of sound.
+
+If internet is slow, wait once and check the selected role/child. Do not repeatedly submit. If connectivity is unavailable, use the clearly labelled recorded/text backup and explain that new remote records cannot be fetched. Do not claim an offline family alert or live cloud sync. Sign out when finished. See [Task 32T's technical acceptance and deployment gates](45_TASK_32T_HOSTED_DEMO_PROVISIONING.md), not a guessed demo URL.
+
 The technical report is the source for actual test counts, timings, failures and final readiness. This handbook is a practice guide, not proof that the presenters or families have completed these human checks.

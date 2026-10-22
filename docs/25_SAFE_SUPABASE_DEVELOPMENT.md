@@ -1,5 +1,7 @@
 # Safe Supabase development setup (Task 32B-1)
 
+**Task 32T update:** normal `npm run dev` now also refuses a checkout containing `.env.local`, matching the simulator launcher. Use an isolated checkout; never move/rename the production file to bypass discovery. The standalone bound demo provisioner, private approval/journal lifecycle and two new local demo-session migrations are documented in [Task 32T](45_TASK_32T_HOSTED_DEMO_PROVISIONING.md). Existing test/seed guards remain loopback-only; the new operator adapter does not authorize hosted writes in this task. Do not put operator keys or journals in Vercel.
+
 Task 32S additionally sets `envDir: false` in Vitest: Vite's default dotenv discovery differs from Next test-mode behavior. Keep unit/browser/database verification in clean isolated checkouts and use explicit local test variables. Earlier original-checkout test runs cannot be certified as zero `.env.local` access; see [the security correction](44_TASK_32S_ONLINE_DEMO_DEPLOYMENT_PREFLIGHT.md#important-correction-test-runner-dotenv-discovery). Do not inspect the production file to check this.
 
 Current presentation entry point: [START_HERE](../START_HERE.md) and [Task 32R finalization evidence](43_TASK_32R_INTERNATIONAL_SOFTWARE_FINALIZATION.md). They add an isolated 20-fictional-student school without replacing the historical records below. Use `presentation:prepare` in its own clean worktree, not the older two-child provisioning command. Production `.env.local` exclusion and loopback-only mutation guards remain mandatory.
