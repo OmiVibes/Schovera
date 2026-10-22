@@ -39,6 +39,8 @@ The journal is committed with file fsync and atomic rename before network mutati
 
 A per-run exclusive lock prevents concurrent operators. A crash may leave `<run>.json.lock`; it records PID/run/start time. Do not remove it automatically by age. First verify the exact run/path, no matching operator process remains, and the journal is intact; then remove **only that exact lock file** and rerun the identical command. Do not delete the journal or `.next` recovery evidence. Physical power-loss/Windows filesystem durability is not established by injected software failures.
 
+Operational counts are explicitly labelled as journal-manifest counts, not an unverified live database count. `prepare/verify` mark live integrity only after their checks succeed. An interrupted credential operation remains separately visible as `pendingOperation`; another prepare/verify cannot quietly declare that run complete. Resume the same account operation, or use the documented emergency disable/reset path.
+
 Cleanup verifies the UUID/code school ownership, server-only Auth ownership tags, every recorded row's school/actor/class/child scope, and absence of unknown profiles. Browser-created classroom activity is reconciled only beneath that exact school, checked for owned actors/relationships, and captured as explicit deletion IDs before deletion. Unknown actors, cross-school rows, cycles, untracked dependencies or capacity overflow block cleanup. It disables profiles/accounts, deletes exact rows in FK order, removes the owned Auth users and verifies the school is gone. Other schools are not a cleanup target. Pending cleanup can be resumed under its original journal. Archive/purge the private removed journal securely under the operator's retention policy; reports do not print its passwords.
 
 Credential rotation pre-journals the next password, disables the profile, globally signs out its sessions, updates Auth, saves the new credential, then re-enables the profile. A lost Auth response can be retried with the journaled old/next password. Disablement bans the account, rotates away the old password and leaves its profile inactive. Re-enabling a disabled account is not an automatic CLI action. Use a reviewed recovery procedure/new fixture rather than removing the ban in a browser. Approval expiry should extend beyond fixture expiry so scheduled teardown is still authorized; expired/mismatched approval or changed operator key requires reviewed recovery, not bypassing the identity check.
@@ -156,6 +158,28 @@ Continuation findings and observed fixes:
 - **Expanded lifecycle acceptance:** the final provisioner integration passed **30 scenario groups**, adding partial-content conflict refusal, extra-student/guardian-link detection, raw old-JWT plus refresh-token denial, interrupted password change and interrupted exact-row cleanup. Expiry is checked by real database authorization using past server-side metadata; scheduled cleanup uses an explicit local-test clock (not a physical wait or hosted scheduler). Both temporary schools/accounts were removed and an unrelated school survived the first cleanup.
 
 Fresh audit initially found five high development lint-chain findings plus **two new moderate Vitest/mocker findings**. Vitest was updated from 4.1.11 to compatible 4.1.12, following the [maintainer Windows traversal advisory](https://github.com/advisories/GHSA-xp26-3454-mjgp) and [manual mock-registration advisory](https://github.com/advisories/GHSA-qxg6-89mg-rqv8). No major downgrade or new dependency was introduced. The first dependency reinstall hit a Windows native-library file lock while the owned Next server was running; that server was stopped and installation retried. Final audit/install/build evidence remains to be appended.
+
+### Final local verification observed so far (2026-10-22)
+
+| Check | Result |
+|---|---|
+| Full `verify:task32r` final gate | **37/37 passed**, including correction Realtime, both Phase 1 invocations, connected journeys, typecheck and lint |
+| Existing focused suites | **154 passed** on Vitest 4.1.12; three additional Vitest DB/integration scenario tests passed |
+| `test:online-demo` | **50 passed**, including hosted policy, static localized fallback, prior export/offline proof and dotenv-discovery sentinel |
+| `test:provisioner` | **22 passed**, including target/key/dataset binding, production/unknown-host refusal, dry-run zero-network/no-journal proof and synthetic private-env launcher/CLI refusal |
+| `test:provisioner:integration` | **30 scenario groups passed** on the final lifecycle implementation, including raw JWT/refresh denial, pending/interrupted rotation, unknown roster/links and exact cleanup; no remaining fixture accounts |
+| `verify:provisioner:browser` | **Passed twice after the draft fix**; final run includes wrong-role route denial, entire revoked Parent workspace removal, fresh login/reload, Principal logout, all classroom/communication flows and 88 screenshots at four widths |
+| Local schema | **33 migrations applied**, `supabase db lint --local` found no errors; no destructive reset or fresh whole-chain replay |
+| Docker bindings | API `127.0.0.1:54321`, DB `127.0.0.1:54322`; no LAN bind |
+| Dependency installation / audit | Final lockfile install succeeded; full audit **5 high / 0 moderate / 0 critical**, all remaining development lint chain; production-only audit **0** |
+| Final standalone lint | **Passed** after the pending-operation journal hardening |
+| Diff / source secret-pattern checks | **Passed**: no added private-key blocks, JWTs or long privileged keys; private journals/env/keys/screenshots are not tracked |
+
+Focused unit/helper tests total **226** (154 + 50 + 22), plus **three** distinct Vitest integration scenarios and the separately counted **30** provisioner scenario groups. Shell/browser command counts overlap those suites; they are not added together as invented unique tests. The 37-command gate's initial failure and later independent failures remain documented above. The final gate and new-fixture browser command returned exit 0.
+
+Final controlled slow-link evidence used the Next **development** server, 150 ms latency and 128 KiB/s down / 64 KiB/s up, cold browser cache: Parent login form 10,358 ms / key navigation 895 ms; Teacher 10,358 ms / 968 ms. These are not hosted optimized-build performance guarantees or measured optimization gains. Offline logout and reconnect left no private workspace. Real browser speech exposed zero voice locales in automated checks: **AUDIO NOT VERIFIED**; fluent language quality and real devices remain human acceptance gates.
+
+Five residual high findings are `braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `eslint-config-next`; no compatible patched resolution was selected. The audit's suggested forced major downgrade was not applied. They remain a documented development-tool risk for owner review, not zero-risk certification. Next remains 16.3.8; the Vitest patch does not resolve future Next/platform advisories.
 
 Changed files include the new CLI/adapter/target/tests/fictional fixture/browser fixture, the two new local migrations, `package.json`/lockfile, `.gitignore`, the normal dev-launcher guard, connected presentation/hosted verifier changes if recorded, this report/template, safe-development notes and the retained Aarohi handbook. The final Git diff is authoritative. Protected untracked instructions/logs/review, private guide, personal fixture and retained presentation school remain out of scope.
 
