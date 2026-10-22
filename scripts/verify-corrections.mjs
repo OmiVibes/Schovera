@@ -22,6 +22,12 @@ async function signIn(email) {
   const client = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const { error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  // Auth event callbacks update Realtime asynchronously. Await the explicit
+  // session handoff before creating a channel; SUBSCRIBED alone does not prove
+  // that an earlier automatic token update has finished.
+  const session=(await client.auth.getSession()).data.session;
+  if(!session)throw new Error('Correction verifier requires an authenticated session');
+  await client.realtime.setAuth(session.access_token);
   clients.push(client);
   return client;
 }
