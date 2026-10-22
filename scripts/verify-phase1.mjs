@@ -229,7 +229,7 @@ try {
   temporary.studentIds.push(unlinkedStudent.id);
   const otherParentAuth = await admin.auth.admin.createUser({
     email: `parent-${suffix}@verification.invalid`,
-    password: randomUUID(),
+    password: `${randomUUID()}!aA1`,
     email_confirm: true,
   });
   if (otherParentAuth.error) throw otherParentAuth.error;

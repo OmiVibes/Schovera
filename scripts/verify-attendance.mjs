@@ -184,7 +184,7 @@ try {
   const otherParentEmail = `attendance-parent-${suffix}@verification.invalid`;
   const otherParentAuth = await admin.auth.admin.createUser({
     email: otherParentEmail,
-    password: randomUUID(),
+    password: `${randomUUID()}!aA1`,
     email_confirm: true,
   });
   if (otherParentAuth.error) throw otherParentAuth.error;

@@ -43,11 +43,18 @@ function realtimeStream(client, table, filter, label) {
     waiter.resolve(payload);
   };
   const ready = new Promise((resolve, reject) => {
+    let joined=false,postgresReady=false;
     const timer = setTimeout(() => reject(new Error(`Realtime subscription timed out for ${label}.`)), 12000);
+    const complete=()=>{if(joined&&postgresReady){clearTimeout(timer);resolve();}};
     channel = client.channel(`correction-${table}-${randomUUID()}`)
+      .on('system',{},payload=>{
+        if(payload.extension!=='postgres_changes')return;
+        if(payload.status==='ok'){postgresReady=true;complete();}
+        else {clearTimeout(timer);reject(new Error(`PostgreSQL subscription not ready for ${label}: ${payload.status}`));}
+      })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table, ...(filter ? { filter } : {}) }, deliver)
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') { clearTimeout(timer); resolve(); }
+        if (status === 'SUBSCRIBED') { joined=true;complete(); }
         if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) { clearTimeout(timer); reject(new Error(`Realtime subscription failed for ${label}: ${status}.`)); }
       });
   });
@@ -134,6 +141,8 @@ try {
   const parentLive = realtimeStream(parent, 'student_updates', `student_id=eq.${student.id}`, 'Teacher-to-parent correction');
   await parentLive.ready;
   const realtimePreflight = await createUpdate(teacher, assignment, student, `Correction subscription preflight ${suffix}`);
+  const persistedPreflight=await must(parent.from('student_updates').select('id').eq('id',realtimePreflight).single());
+  expect(persistedPreflight.id===realtimePreflight,'Controlled correction preflight is not visible through Parent RLS');
   await parentLive.waitFor((payload) => payload.new.id === realtimePreflight, 'Teacher-to-parent correction preflight');
   const parentCorrectionEvent = parentLive.waitFor((payload) => payload.new.corrects_update_id === normalOriginal, 'Teacher-to-parent correction');
   const normalCorrection = await correction(teacher, normalOriginal, `Updated reading progress ${suffix}`);
