@@ -96,6 +96,7 @@ export class DemoAdapter {
     dataset,
     { runId, expiresAt, operation = 'prepare', account, confirm } = {},
   ) {
+    this.liveIntegrityVerified = false;
     validateTarget(this.approval, this.credentials, this.now());
     if (
       !uuid.test(runId ?? '') ||
@@ -198,6 +199,18 @@ export class DemoAdapter {
       await this.authorize();
       if (this.journal.stage === 'removed') return this.report();
       await this.ownership();
+      if (this.journal.pendingOperation) {
+        if (['prepare', 'verify'].includes(operation))
+          throw new Error(
+            'Credential operation incomplete; resume the journaled operation or disable/reset',
+          );
+        if (
+          operation === 'rotate' &&
+          (this.journal.pendingOperation.operation !== 'rotate' ||
+            this.journal.pendingOperation.account !== account)
+        )
+          throw new Error('Different credential operation is pending');
+      }
       if (operation === 'prepare') await this.prepare();
       if (operation === 'rotate' || operation === 'disable')
         await this.credentialsOperation(operation, account);
@@ -485,11 +498,14 @@ export class DemoAdapter {
         throw new Error(`Unexpected owned relationships: ${table}`);
     }
     await this.authorize();
+    this.liveIntegrityVerified = true;
   }
   async credentialsOperation(operation, logical) {
     const j = this.journal,
       a = j.accounts[logical];
     if (!a) throw new Error('Exact owned account logical ID required');
+    j.pendingOperation = { operation, account: logical };
+    this.save();
     // Persist the replacement BEFORE Auth call so uncertain responses are safely retried.
     if (operation === 'rotate' && !a.nextPassword) {
       a.nextPassword = password();
@@ -540,8 +556,11 @@ export class DemoAdapter {
           .eq('id', a.id)
           .eq('school_id', j.schoolId),
       );
+      delete j.pendingOperation;
+      this.save();
     } else {
       a.disabled = true;
+      delete j.pendingOperation;
       this.save();
     }
   }
@@ -689,6 +708,9 @@ export class DemoAdapter {
       runId: j.runId,
       projectRef: j.projectRef,
       stage: j.stage,
+      countsSource: 'owned journal; use verify for live integrity',
+      liveIntegrityVerified: this.liveIntegrityVerified === true,
+      pendingOperation: j.pendingOperation ?? null,
       students: j.rows.students.length,
       classes: j.rows.classes.length,
       accounts: Object.entries(j.accounts).map(([logicalId, a]) => ({
