@@ -10,13 +10,14 @@ import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import { hostedBuildFixture, validateHostedDemoEnvironment } from '../src/lib/demo-deployment-policy.mjs';
 import { readPresentationSource } from './online-demo/source.mjs';
+import { provisionBrowserFixture } from './online-demo/browser-fixture.mjs';
 
 assertLocalTestEnvironment();
 if(existsSync('.env.local')) throw new Error('Clean isolated checkout required; private environment file not opened');
 const args=process.argv.slice(2);
-if(args.length!==2 || args[0]!=='--source-worktree') throw new Error('Supply the owned fictional presentation checkout with --source-worktree');
-const source=path.resolve(args[1]);
-const fixture=readPresentationSource(source);
+const provisioned=args.length===1&&args[0]==='--provisioner'?await provisionBrowserFixture():null;
+if(!provisioned&&(args.length!==2 || args[0]!=='--source-worktree')) throw new Error('Supply --provisioner or the owned presentation checkout with --source-worktree');
+const fixture=provisioned?.fixture ?? readPresentationSource(path.resolve(args[1]));
 const openssl=process.env.SCHOVERA_TEST_OPENSSL || 'C:/Program Files/Git/usr/bin/openssl.exe';
 if(!existsSync(openssl)) throw new Error('Local HTTPS test requires an installed OpenSSL binary; no installation attempted');
 const directory=mkdtempSync(path.join(tmpdir(),'schovera-https-preflight-'));
@@ -106,4 +107,5 @@ try {
   const resolved=path.resolve(directory),parent=path.resolve(tmpdir());
   if(path.dirname(resolved)!==parent||!path.basename(resolved).startsWith('schovera-https-preflight-'))throw new Error('Unsafe generated certificate cleanup path');
   rmSync(resolved,{recursive:true,force:true});
+  if(provisioned)await provisioned.cleanup();
 }

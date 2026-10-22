@@ -2,7 +2,7 @@ import { describe,it,expect } from 'vitest';
 import { validateTarget,fingerprint,targetFetch } from './target.mjs';
 import { stableId } from './adapter.mjs';
 import { DemoAdapter } from './adapter.mjs';
-import { readFileSync,mkdtempSync,existsSync,writeFileSync,rmSync } from 'node:fs';
+import { readFileSync,mkdtempSync,mkdirSync,existsSync,writeFileSync,rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -52,5 +52,15 @@ describe('operator dry-run and dotenv safety',()=>{
      const result=spawnSync(process.execPath,[fileURLToPath(new URL('./cli.mjs',import.meta.url))],{cwd:root,env,encoding:'utf8',windowsHide:true});
      expect(result.status).toBe(1);expect(result.stdout+result.stderr).not.toContain(sentinel);expect(readFileSync(path.join(root,'.env.local'),'utf8')).toContain(sentinel);
    } finally {rmSync(root,{recursive:true,force:true});}
+ });
+ it('normal dev launcher refuses private env before any Next process or dotenv discovery',()=>{
+   const root=mkdtempSync(path.join(tmpdir(),'schovera-dev-env-proof-'));
+   try{
+     mkdirSync(path.join(root,'scripts'));writeFileSync(path.join(root,'scripts/dev-local.mjs'),readFileSync(new URL('../dev-local.mjs',import.meta.url)));
+     writeFileSync(path.join(root,'.env.local'),'NEXT_PUBLIC_PRIVATE_PROBE=harmless_dev_private_probe');
+     const env=Object.fromEntries(['PATH','Path','SystemRoot','WINDIR','TEMP','TMP'].flatMap(k=>process.env[k]?[[k,process.env[k]]]:[]));
+     const r=spawnSync(process.execPath,[path.join(root,'scripts/dev-local.mjs')],{cwd:root,env,encoding:'utf8',windowsHide:true});
+     expect(r.status).toBe(1);expect(r.stderr).toContain('private file was not opened');expect(r.stdout+r.stderr).not.toContain('harmless_dev_private_probe');
+   }finally{rmSync(root,{recursive:true,force:true});}
  });
 });
