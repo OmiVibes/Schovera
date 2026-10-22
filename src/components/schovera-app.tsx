@@ -1335,14 +1335,21 @@ function AssignmentCard({ assignment, showClass = false, language = 'en' }: { as
 function TeacherAssignments({ classId, classLabel, studentsCount, teacherId }: { classId: string; classLabel?: any; studentsCount: number; teacherId: string }) {
   const db = useMemo(() => createClient(), []);
   const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [sending, setSending] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('');
+  // The channel retains its first callback. Read current rows through a ref,
+  // not the initial empty array, so a background event cannot skeleton/remount
+  // an open editor. Ignore older overlapping reads and retain drafts on errors.
+  const assignmentsRef = useRef<Assignment[]>([]), refreshVersionRef = useRef(0);
   const refresh = async () => {
+    const version = ++refreshVersionRef.current;
     if (!classId) { setAssignments([]); return; }
-    setLoading(assignments.length === 0);
+    setLoading(assignmentsRef.current.length === 0);
     const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }).order('created_at', { ascending: false });
-    setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false);
+    if(version !== refreshVersionRef.current)return;
+    if(!loadError){assignmentsRef.current=data || [];setAssignments(assignmentsRef.current);}
+    setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false);
   };
   const { onChannelStatus } = useRealtimeResync(refresh);
-  useEffect(() => { refresh(); }, [classId]);
+  useEffect(() => { refresh(); return () => {refreshVersionRef.current++;}; }, [classId]);
   useEffect(() => { const channel = db.channel(`teacher-homework-${classId || 'none'}`).on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
   const create = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); if (!classId || sending) return;

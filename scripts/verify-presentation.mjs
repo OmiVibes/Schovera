@@ -56,7 +56,14 @@ try {
   console.log('20-person demo: 10-student class switching, repeated active selection, attendance correction and insights passed.');
   await go(teacher.page,'teacher','homework'); const form=teacher.page.locator('.assignment-form').first();
   await form.getByLabel('Subject',{exact:true}).fill('Science');await form.getByLabel('Title',{exact:true}).fill(workTitle);await form.getByLabel('Description',{exact:true}).fill('Explain two simple machines with a labelled drawing.');await form.getByLabel('Due date',{exact:true}).fill(shiftSchoolDate(schoolToday(),4));await form.getByRole('button',{name:'Assign homework',exact:true}).click();
-  const block=teacher.page.locator('.teacher-homework .assignment-card').filter({hasText:workTitle}).locator('..');await block.getByRole('button',{name:'Edit homework',exact:true}).click();await block.getByLabel('Title',{exact:true}).fill(revisedTitle);await block.getByRole('button',{name:'Save homework changes'}).click();await teacher.page.getByText(revisedTitle,{exact:true}).waitFor();
+  const block=teacher.page.locator('.teacher-homework .assignment-card').filter({hasText:workTitle}).locator('..');await block.getByRole('button',{name:'Edit homework',exact:true}).click();await block.getByLabel('Title',{exact:true}).fill(revisedTitle);
+  // A real background INSERT must refresh the list without replacing the
+  // user's open draft. This exercises the channel's retained first callback.
+  const backgroundOwner=await actorClient(f.accounts.teacher),backgroundTitle=`Background refresh ${suffix}`;
+  await must(backgroundOwner.rpc('create_class_assignment',{p_class_id:f.classes[0].id,p_subject:'Science',p_title:backgroundTitle,p_description:'Synthetic background refresh regression',p_due_date:shiftSchoolDate(schoolToday(),5),p_client_request_id:crypto.randomUUID()}));
+  await teacher.page.locator('.teacher-homework').getByText(backgroundTitle,{exact:true}).waitFor();
+  assert.equal(await block.getByLabel('Title',{exact:true}).inputValue(),revisedTitle,'Realtime refresh must not discard the unsaved homework edit');
+  await block.getByRole('button',{name:'Save homework changes'}).click();await teacher.page.getByText(revisedTitle,{exact:true}).waitFor();
   const owner=await actorClient(f.accounts.teacher), guardian=await actorClient(f.accounts.parent), leader=await actorClient(f.accounts.principal), otherTeacher=await actorClient(f.accounts.teacherB);
   const saved=await must(owner.from('class_assignments').select('*').eq('title',revisedTitle).single());
   const args={p_assignment_id:saved.id,p_subject:saved.subject,p_title:'Changed with stale timestamp',p_description:saved.description,p_due_date:saved.due_date,p_expected_updated_at:'2000-01-01T00:00:00Z'};
@@ -113,4 +120,7 @@ try {
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
   writeFileSync(path.join(output,'measurements.json'),JSON.stringify({measurements,audio:'AUDIO NOT VERIFIED',routes:22,widths:4,screenshots:88},null,2));
   console.log(JSON.stringify(measurements));console.log(`Presentation evidence: ${output}`);
+} catch(error) {
+  for(const [index,context]of contexts.entries())for(const page of context.pages())if(!page.isClosed())await page.screenshot({path:path.join(output,`failure-${index}.png`),mask:[page.locator('input[type=password],input[type=email]')]}).catch(()=>{});
+  throw new Error(`Connected presentation failed (${error.name}); credential-bearing browser logs suppressed. Local screenshots retained.`);
 } finally {await browser.close();if(provisioned)await provisioned.cleanup();}
