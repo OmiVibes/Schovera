@@ -5,7 +5,7 @@ export const fingerprint = value => createHash('sha256').update(value).digest('h
 // from env variable names. No cloud discovery or dotenv loading occurs here.
 export function validateTarget(approval, credentials, now = Date.now()) {
   if (approval?.version !== 1 || approval.purpose !== 'schovera-fictional-demo'
-    || !approval.verifiedBy || !approval.verificationEvidence || Date.parse(approval.expiresAt) <= now
+    || !approval.verifiedBy || !approval.verificationEvidence || !/^[0-9a-f]{64}$/.test(approval.datasetSha256 ?? '') || Date.parse(approval.expiresAt) <= now
     || !Number.isFinite(Date.parse(approval.expiresAt))) throw new Error('Current independently verified approval required');
   const { url, key, publishableKey } = credentials;
   let u; try { u = new URL(url); } catch { throw new Error('Target URL refused'); }

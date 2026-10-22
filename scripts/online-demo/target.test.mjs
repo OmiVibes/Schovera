@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { datasetDigest } from './dataset.mjs';
 const credentials={url:'https://abcdefghijklmnopqrst.supabase.co',key:'sb_secret_synthetic_key',publishableKey:'sb_publishable_synthetic_key'};
-const approval={version:1,purpose:'schovera-fictional-demo',verifiedBy:'synthetic operator',verificationEvidence:'synthetic dashboard evidence',expiresAt:'2099-01-01',mode:'hosted',projectRef:'abcdefghijklmnopqrst',url:credentials.url,allowedDemoProjectRefs:['abcdefghijklmnopqrst'],productionProjectRefs:['uvwxyzabcdefghijklmn'],secretKeySha256:fingerprint(credentials.key),publishableKeySha256:fingerprint(credentials.publishableKey)};
+const approval={version:1,purpose:'schovera-fictional-demo',datasetSha256:'ac5db776b7d53974693a10cd888d69ae619ac90b5b35fb7597e9e365676ccb2a',verifiedBy:'synthetic operator',verificationEvidence:'synthetic dashboard evidence',expiresAt:'2099-01-01',mode:'hosted',projectRef:'abcdefghijklmnopqrst',url:credentials.url,allowedDemoProjectRefs:['abcdefghijklmnopqrst'],productionProjectRefs:['uvwxyzabcdefghijklmn'],secretKeySha256:fingerprint(credentials.key),publishableKeySha256:fingerprint(credentials.publishableKey)};
 describe('concrete provisioner fail-closed identity',()=>{
  it('accepts an exact attested endpoint and key fingerprint',()=>expect(validateTarget(approval,credentials).mode).toBe('hosted'));
  it.each(['production','unknown','host','secret','public','expired','evidence','allowlist'])('refuses %s before clients or requests',kind=>{
@@ -33,6 +33,7 @@ describe('operator dry-run and dotenv safety',()=>{
  const data=JSON.parse(readFileSync(new URL('./fixtures/fictional-campus.json',import.meta.url),'utf8'));
  const runId='f10f4d70-1e5a-4b98-9c18-2d30cedc0081';
  it('keeps the exact approved UTF-8 dataset and logical identities',()=>{expect(datasetDigest(data)).toBe('ac5db776b7d53974693a10cd888d69ae619ac90b5b35fb7597e9e365676ccb2a');expect(data.tables.students).toHaveLength(20);});
+ it('refuses changed dataset content even under a fresh run',async()=>{const changed=structuredClone(data);changed.tables.student_updates[0].message='Unreviewed new content';const a=new DemoAdapter({approval,credentials,directory:tmpdir()});await expect(a.run(changed,{runId,expiresAt:new Date(Date.now()+86400000).toISOString()})).rejects.toThrow('approved manifest');});
  it.each(['prepare','rotate','disable','reset','remove-expired'])('%s dry-run cannot send requests or create a journal',async operation=>{
    const directory=path.join(tmpdir(),`schovera-never-created-${operation}-${runId}`);let requests=0;
    const adapter=new DemoAdapter({approval,credentials,directory,fetcher:async()=>{requests++;throw new Error('must not execute');}});

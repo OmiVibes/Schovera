@@ -12,7 +12,7 @@ assertLocalTestEnvironment();
 if(existsSync('.env.local'))throw new Error('Isolated integration checkout required');
 const credentials={url:process.env.NEXT_PUBLIC_SUPABASE_URL,key:process.env.SUPABASE_SERVICE_ROLE_KEY,publishableKey:process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY};
 const expiresAt=new Date(Date.now()+86400000).toISOString();
-const approval={version:1,purpose:'schovera-fictional-demo',mode:'local',projectRef:'local-Schovera',url:credentials.url,verifiedBy:'local CLI rehearsal',verificationEvidence:'loopback Docker Supabase; isolated test env',expiresAt:new Date(Date.now()+3*86400000).toISOString(),secretKeySha256:fingerprint(credentials.key),publishableKeySha256:fingerprint(credentials.publishableKey)};
+const approval={version:1,purpose:'schovera-fictional-demo',datasetSha256:'ac5db776b7d53974693a10cd888d69ae619ac90b5b35fb7597e9e365676ccb2a',mode:'local',projectRef:'local-Schovera',url:credentials.url,verifiedBy:'local CLI rehearsal',verificationEvidence:'loopback Docker Supabase; isolated test env',expiresAt:new Date(Date.now()+3*86400000).toISOString(),secretKeySha256:fingerprint(credentials.key),publishableKeySha256:fingerprint(credentials.publishableKey)};
 const dataset=JSON.parse(readFileSync(new URL('./fixtures/fictional-campus.json',import.meta.url),'utf8'));
 const directory=mkdtempSync(path.join(tmpdir(),'schovera-provisioner-'));
 const runId=randomUUID(),otherRun=randomUUID(),options={runId,expiresAt},confirm=operation=>`${operation}:local-Schovera:${runId}`;

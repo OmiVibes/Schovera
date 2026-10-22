@@ -1,6 +1,13 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+try {
+  await access(new URL('../.env.local', import.meta.url));
+  throw new Error('Local development requires an isolated checkout without .env.local; private file was not opened.');
+} catch(error) {
+  if(error?.code !== 'ENOENT')throw error;
+}
 
 const localEnvPath = fileURLToPath(new URL('../.env.development.local', import.meta.url));
 let localEnvText;

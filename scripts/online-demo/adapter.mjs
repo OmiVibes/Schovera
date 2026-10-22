@@ -34,6 +34,7 @@ export class DemoAdapter {
     validateTarget(this.approval,this.credentials,this.now());
     if (!uuid.test(runId ?? '') || !['prepare','verify','list','report','rotate','disable','reset','remove-expired'].includes(operation)) throw new Error('Exact run / supported operation required');
     const digest = datasetDigest(dataset), identity = this.identity;
+    if(digest!==this.approval.datasetSha256)throw new Error('Dataset differs from independently approved manifest');
     const expiry = Date.parse(expiresAt);
     if (!Number.isFinite(expiry) || expiry > this.now()+14*86400000) throw new Error('Explicit expiry within 14 days required');
     const writes = !['verify','list','report'].includes(operation);

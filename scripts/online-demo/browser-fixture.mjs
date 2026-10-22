@@ -11,7 +11,7 @@ export async function provisionBrowserFixture() {
   assertLocalTestEnvironment();
   const credentials={url:process.env.NEXT_PUBLIC_SUPABASE_URL,key:process.env.SUPABASE_SERVICE_ROLE_KEY,publishableKey:process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY};
   const expiresAt=new Date(Date.now()+86400000).toISOString(),runId=randomUUID();
-  const approval={version:1,purpose:'schovera-fictional-demo',mode:'local',projectRef:'local-Schovera',url:credentials.url,verifiedBy:'local browser acceptance',verificationEvidence:'isolated loopback Supabase configuration',expiresAt,secretKeySha256:fingerprint(credentials.key),publishableKeySha256:fingerprint(credentials.publishableKey)};
+  const approval={version:1,purpose:'schovera-fictional-demo',datasetSha256:'ac5db776b7d53974693a10cd888d69ae619ac90b5b35fb7597e9e365676ccb2a',mode:'local',projectRef:'local-Schovera',url:credentials.url,verifiedBy:'local browser acceptance',verificationEvidence:'isolated loopback Supabase configuration',expiresAt,secretKeySha256:fingerprint(credentials.key),publishableKeySha256:fingerprint(credentials.publishableKey)};
   const directory=mkdtempSync(path.join(tmpdir(),'schovera-provisioner-browser-'));
   const adapter=new DemoAdapter({approval,credentials,directory});
   const dataset=JSON.parse(readFileSync(new URL('./fixtures/fictional-campus.json',import.meta.url),'utf8'));
@@ -32,7 +32,7 @@ export async function provisionBrowserFixture() {
       Object.assign(accounts.parent,adapter.journal.accounts[logical]);
       await parent.page.reload({waitUntil:'networkidle'});
       await parent.page.waitForFunction(()=>!document.querySelector('.parent-updates .update-card,.school-entry-event'));
-      await parent.page.getByRole('button',{name:'Sign out',exact:true}).click();
+      if(await parent.page.getByRole('button',{name:'Sign out',exact:true}).isVisible())await parent.page.getByRole('button',{name:'Sign out',exact:true}).click();
       await parent.page.getByLabel('Email').fill(accounts.parent.email);
       await parent.page.getByLabel('Password',{exact:true}).fill(accounts.parent.password);
       await parent.page.getByRole('button',{name:'Sign in securely'}).click();
