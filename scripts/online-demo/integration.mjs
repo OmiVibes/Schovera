@@ -30,6 +30,9 @@ try {
   await assert.rejects(adapter.run(dataset,{...options,confirm:confirm('prepare')}),/synthetic lost response/);passed('lost response after committed insert leaves recoverable durable journal');
   await adapter.run(dataset,{...options,confirm:confirm('prepare')});passed('first complete provision / partial recovery');
   const original=JSON.stringify(adapter.journal.rows);await adapter.run(dataset,{...options,confirm:confirm('prepare')});assert.equal(JSON.stringify(adapter.journal.rows),original);passed('idempotent rerun: stable IDs, no duplicate writes');
+  await must(adapter.db.from('schools').update({code:`NOT-OWNED-${runId}`}).eq('id',adapter.journal.schoolId));
+  await assert.rejects(adapter.run(dataset,{...options,operation:'report'}),/ownership ambiguous/);
+  await must(adapter.db.from('schools').update({code:`ONLINE-DEMO-${runId}`}).eq('id',adapter.journal.schoolId));passed('ambiguous school ownership refuses operations instead of adopting rows');
   await other.run(dataset,{runId:otherRun,expiresAt,confirm:`prepare:local-Schovera:${otherRun}`});
   const j=adapter.journal,t=j.rows;
   assert.equal((await must(adapter.db.from('students').select('id').eq('school_id',j.schoolId))).length,20);
@@ -60,6 +63,9 @@ try {
   const oldPassword=j.accounts[parentKey].password,oldSession=(await p.auth.getSession()).data.session;
   await adapter.run(dataset,{...options,operation:'rotate',account:parentKey,confirm:confirm('rotate')});
   assert.ok((await adapter.actor().auth.signInWithPassword({email:j.accounts[parentKey].email,password:oldPassword})).error);
+  const rawOld=await fetch(`${credentials.url}/rest/v1/students?select=id`,{headers:{apikey:credentials.publishableKey,Authorization:`Bearer ${oldSession.access_token}`},redirect:'error'});
+  if(rawOld.ok)assert.deepEqual(await rawOld.json(),[]);else assert.ok([401,403].includes(rawOld.status));
+  assert.ok((await adapter.actor().auth.refreshSession({refresh_token:oldSession.refresh_token})).error);
   const old=adapter.actor();await old.auth.setSession({access_token:oldSession.access_token,refresh_token:oldSession.refresh_token});
   const denied=await old.from('students').select('id');assert.ok(denied.error||denied.data.length===0);
   const rotated=adapter.journal.accounts[parentKey];
