@@ -16,7 +16,9 @@ const foreign = new Set(['class_id','student_id','teacher_id','parent_id','marke
 const scoped = new Set(['classes','students','attendance_records','class_assignments','timetable_entries','student_updates','announcements','communication_translations','school_entry_events']);
 
 export class DemoAdapter {
-  constructor({ approval, credentials, directory, fetcher, fault = () => {} }) {
+  constructor({ approval, credentials, directory, fetcher, fault = () => {}, localTestClock }) {
+    if(localTestClock && approval.mode!=='local')throw new Error('Clock injection is local-test-only');
+    this.now=localTestClock ?? Date.now;
     this.identity = validateTarget(approval, credentials);
     this.approval = approval; this.credentials = credentials; this.directory = path.resolve(directory); this.fault = fault;
     const options = { auth:{persistSession:false,autoRefreshToken:false}, global:{fetch:targetFetch(this.identity.url,fetcher)} };
@@ -29,16 +31,17 @@ export class DemoAdapter {
     renameSync(next, this.file);
   }
   async run(dataset, { runId, expiresAt, operation='prepare', account, confirm } = {}) {
+    validateTarget(this.approval,this.credentials,this.now());
     if (!uuid.test(runId ?? '') || !['prepare','verify','list','report','rotate','disable','reset','remove-expired'].includes(operation)) throw new Error('Exact run / supported operation required');
     const digest = datasetDigest(dataset), identity = this.identity;
     const expiry = Date.parse(expiresAt);
-    if (!Number.isFinite(expiry) || expiry > Date.now()+14*86400000) throw new Error('Explicit expiry within 14 days required');
+    if (!Number.isFinite(expiry) || expiry > this.now()+14*86400000) throw new Error('Explicit expiry within 14 days required');
     const writes = !['verify','list','report'].includes(operation);
     const expected = `${operation}:${identity.projectRef}:${runId}`;
     // Default dry-run does not contact Auth/PostgREST, nor create journals.
     if (writes && confirm !== expected) return { dryRun:true, operation, digest, students:20, confirmationRequired:expected };
-    if (operation !== 'reset' && operation !== 'remove-expired' && expiry <= Date.now()) throw new Error('Demo expired');
-    if (operation === 'remove-expired' && expiry > Date.now()) throw new Error('Demo not expired');
+    if (['prepare','rotate'].includes(operation) && expiry <= this.now()) throw new Error('Demo expired');
+    if (operation === 'remove-expired' && expiry > this.now()) throw new Error('Demo not expired');
     mkdirSync(this.directory,{recursive:true,mode:0o700});
     this.file = path.join(this.directory,`${runId}.json`);
     let lock; try { lock = openSync(`${this.file}.lock`,'wx',0o600); } catch { throw new Error('Run locked; confirm no operator is active before recovering a stale lock'); }
