@@ -11,6 +11,7 @@
 - **Pilot, impact and business assumptions:** [Task 32O](docs/40_TASK_32O_PILOT_IMPACT_BUSINESS_MODEL.md).
 - **Separate hosted demo proposal:** [release approval guide](docs/42_ISOLATED_ONLINE_DEMO_PREPARATION.md). No deployment is authorized.
 - **Current hosted deployment preflight:** [Task 32S](docs/44_TASK_32S_ONLINE_DEMO_DEPLOYMENT_PREFLIGHT.md). Identity guards, reduced online features, student access and explicit cloud approval gates; no hosted demo has been created.
+- **Bound demo provisioning and lifecycle:** [Task 32T](docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md). Concrete operator tooling, local QA, session revocation, guarded reset/rotation and approval-only deployment procedure; no cloud action is authorized.
 
 ## Safe local launch (Windows PowerShell)
 

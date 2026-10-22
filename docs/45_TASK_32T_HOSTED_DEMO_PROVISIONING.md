@@ -158,3 +158,13 @@ Continuation findings and observed fixes:
 Fresh audit initially found five high development lint-chain findings plus **two new moderate Vitest/mocker findings**. Vitest was updated from 4.1.11 to compatible 4.1.12, following the [maintainer Windows traversal advisory](https://github.com/advisories/GHSA-xp26-3454-mjgp) and [manual mock-registration advisory](https://github.com/advisories/GHSA-qxg6-89mg-rqv8). No major downgrade or new dependency was introduced. The first dependency reinstall hit a Windows native-library file lock while the owned Next server was running; that server was stopped and installation retried. Final audit/install/build evidence remains to be appended.
 
 Changed files include the new CLI/adapter/target/tests/fictional fixture/browser fixture, the two new local migrations, `package.json`/lockfile, `.gitignore`, the normal dev-launcher guard, connected presentation/hosted verifier changes if recorded, this report/template, safe-development notes and the retained Aarohi handbook. The final Git diff is authoritative. Protected untracked instructions/logs/review, private guide, personal fixture and retained presentation school remain out of scope.
+
+### Changed-path inventory
+
+| Group | Paths |
+|---|---|
+| Entry points and documentation | `.gitignore`, `START_HERE.md`, `docs/25_SAFE_SUPABASE_DEVELOPMENT.md`, `docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md`, `docs/SCHOVERA_INTERNATIONAL_DEMO_GUIDE_FOR_AAROHI.md`, `docs/templates/demo-provisioning-approval.example.json` |
+| Operator implementation / fixtures | `scripts/online-demo/adapter.mjs`, `browser-fixture.mjs`, `cli.mjs`, `integration.mjs`, `target.mjs`, `target.test.mjs`, `fixtures/fictional-campus.json` (all under `scripts/online-demo/`) |
+| Existing launch / verification | `scripts/dev-local.mjs`, `scripts/verify-attendance.mjs`, `scripts/verify-corrections.mjs`, `scripts/verify-online-demo.mjs`, `scripts/verify-phase1.mjs`, `scripts/verify-presentation.mjs` |
+| Application | `src/components/schovera-app.tsx` — scoped homework refresh/draft fix only |
+| Local schema/config and lockfile | `supabase/config.toml`, `supabase/migrations/20261022100000_bound_demo_session_access.sql`, `supabase/migrations/20261022101500_verify_demo_access_boundary.sql`, `package.json`, `package-lock.json` |
