@@ -85,6 +85,7 @@ export class DemoAdapter {
     // Auth admin endpoint + schema read must both accept this pinned key.
     await must(this.db.auth.admin.listUsers({page:1,perPage:1}));
     await must(this.db.from('schools').select('id').limit(1));
+    if(await must(this.db.rpc('verify_demo_access_boundary'))!==true)throw new Error('Demo session authorization migration required');
     const anon=this.actor(), denied=await anon.from('school_devices').select('id').limit(1);
     if (!denied.error && denied.data?.length) throw new Error('Authorization preflight failed');
   }
