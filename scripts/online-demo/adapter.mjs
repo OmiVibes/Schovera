@@ -431,6 +431,11 @@ export class DemoAdapter {
           .limit(2001),
       );
       const ids = new Set(rows.map((r) => r.id));
+      if (
+        ['students', 'classes', 'profiles'].includes(table) &&
+        rows.length !== j.rows[table].length
+      )
+        throw new Error(`Unexpected roster rows: ${table}`);
       if (j.rows[table].some((r) => !ids.has(r.id)))
         throw new Error(`Owned fixture incomplete: ${table}`);
     }
@@ -450,6 +455,34 @@ export class DemoAdapter {
       );
       if (rows.length !== j.rows[table].length)
         throw new Error(`Owned relationships missing: ${table}`);
+    }
+    for (const [table, actorField, role] of [
+      ['parent_student_links', 'parent_id', 'parent'],
+      ['teacher_class_assignments', 'teacher_id', 'teacher'],
+    ]) {
+      const actors = Object.values(j.accounts)
+        .filter((a) => a.role === role)
+        .map((a) => a.id);
+      const rows = await must(
+        this.db.from(table).select('*').in(actorField, actors).limit(2001),
+      );
+      if (
+        rows.length !== j.rows[table].length ||
+        rows.some(
+          (r) =>
+            !j.rows[table].some(
+              (expected) =>
+                expected.id === r.id &&
+                expected.student_id === r.student_id &&
+                expected.class_id === r.class_id &&
+                expected[actorField] === r[actorField],
+            ) ||
+            (table === 'parent_student_links'
+              ? r.status !== 'active'
+              : r.ended_at !== null),
+        )
+      )
+        throw new Error(`Unexpected owned relationships: ${table}`);
     }
     await this.authorize();
   }
