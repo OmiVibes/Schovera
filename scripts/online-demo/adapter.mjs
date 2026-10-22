@@ -46,6 +46,7 @@ export class DemoAdapter {
     mkdirSync(this.directory,{recursive:true,mode:0o700});
     this.file = path.join(this.directory,`${runId}.json`);
     let lock; try { lock = openSync(`${this.file}.lock`,'wx',0o600); } catch { throw new Error('Run locked; confirm no operator is active before recovering a stale lock'); }
+    writeFileSync(lock,JSON.stringify({pid:process.pid,runId,startedAt:new Date(this.now()).toISOString()}));fsyncSync(lock);
     try {
       this.journal = existsSync(this.file) ? JSON.parse(readFileSync(this.file,'utf8')) : null;
       if (this.journal && ['runId','digest','expiresAt','approvalDigest'].some(k=>this.journal[k]!==({runId,digest,expiresAt,approvalDigest:identity.approvalDigest})[k])) throw new Error('Journal ownership mismatch');
@@ -210,7 +211,7 @@ export class DemoAdapter {
   }
   report() {
     const j=this.journal;
-    return {runId:j.runId,projectRef:j.projectRef,stage:j.stage,students:j.rows.students.length,classes:j.rows.classes.length,accounts:Object.values(j.accounts).map(a=>({role:a.role,disabled:!!a.disabled})),expiresAt:j.expiresAt,syntheticTranslationReview:true,phoneDelivery:false};
+    return {runId:j.runId,projectRef:j.projectRef,stage:j.stage,students:j.rows.students.length,classes:j.rows.classes.length,accounts:Object.entries(j.accounts).map(([logicalId,a])=>({logicalId,role:a.role,disabled:!!a.disabled})),expiresAt:j.expiresAt,syntheticTranslationReview:true,phoneDelivery:false};
   }
 }
 function equivalent(a,b) {

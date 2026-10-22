@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "purpose": "schovera-fictional-demo",
+  "mode": "hosted",
+  "projectRef": "REPLACE_WITH_OWNER_VERIFIED_DEMO_REFERENCE",
+  "url": "https://REPLACE_WITH_OWNER_VERIFIED_DEMO_REFERENCE.supabase.co",
+  "allowedDemoProjectRefs": ["REPLACE_WITH_OWNER_VERIFIED_DEMO_REFERENCE"],
+  "productionProjectRefs": ["REPLACE_WITH_INDEPENDENT_PRODUCTION_REFERENCE"],
+  "verifiedBy": "REPLACE_WITH_APPROVING_OPERATOR",
+  "verificationEvidence": "REPLACE_WITH_PRIVATE_DASHBOARD_RECORD_REFERENCE_AND_DATE",
+  "expiresAt": "REPLACE_WITH_APPROVAL_EXPIRY_AFTER_FIXTURE_EXPIRY",
+  "datasetSha256": "ac5db776b7d53974693a10cd888d69ae619ac90b5b35fb7597e9e365676ccb2a",
+  "secretKeySha256": "REPLACE_WITH_NEW_DEMO_SECRET_KEY_SHA256",
+  "publishableKeySha256": "REPLACE_WITH_NEW_DEMO_PUBLIC_KEY_SHA256"
+}
