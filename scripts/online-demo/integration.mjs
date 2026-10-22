@@ -194,16 +194,14 @@ try {
     t = j.rows;
   const extraStudent = randomUUID();
   await must(
-    adapter.db
-      .from('students')
-      .insert({
-        id: extraStudent,
-        school_id: j.schoolId,
-        class_id: t.classes[0].id,
-        full_name: 'Unexpected synthetic fixture child',
-        roll_number: 'EXTRA',
-        active: true,
-      }),
+    adapter.db.from('students').insert({
+      id: extraStudent,
+      school_id: j.schoolId,
+      class_id: t.classes[0].id,
+      full_name: 'Unexpected synthetic fixture child',
+      roll_number: 'EXTRA',
+      active: true,
+    }),
   );
   await assert.rejects(
     adapter.run(dataset, { ...options, operation: 'verify' }),
@@ -222,14 +220,12 @@ try {
       ),
   );
   await must(
-    adapter.db
-      .from('parent_student_links')
-      .insert({
-        id: extraLink,
-        parent_id: parentId,
-        student_id: unrelatedChild.id,
-        status: 'active',
-      }),
+    adapter.db.from('parent_student_links').insert({
+      id: extraLink,
+      parent_id: parentId,
+      student_id: unrelatedChild.id,
+      status: 'active',
+    }),
   );
   await assert.rejects(
     adapter.run(dataset, { ...options, operation: 'verify' }),
@@ -378,6 +374,12 @@ try {
   passed(
     'interrupted rotation keeps replacement credential journaled and profile inactive',
   );
+  await assert.rejects(
+    adapter.run(dataset, { ...options, operation: 'verify' }),
+    /Credential operation incomplete/,
+  );
+  assert.equal(adapter.journal.pendingOperation.operation, 'rotate');
+  assert.ok(adapter.journal.accounts[parentKey].nextPassword);
   await adapter.run(dataset, {
     ...options,
     operation: 'rotate',
@@ -467,6 +469,8 @@ try {
     'server-side demo expiry denies both issued-token reads and privileged RPC writes',
   );
   const report = JSON.stringify(adapter.report());
+  assert.equal(adapter.report().liveIntegrityVerified, false);
+  assert.equal(adapter.report().pendingOperation, null);
   assert.ok(
     !report.includes(credentials.key) &&
       !Object.values(j.accounts).some(

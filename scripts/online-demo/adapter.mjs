@@ -144,16 +144,16 @@ export class DemoAdapter {
         'Run locked; confirm no operator is active before recovering a stale lock',
       );
     }
-    writeFileSync(
-      lock,
-      JSON.stringify({
-        pid: process.pid,
-        runId,
-        startedAt: new Date(this.now()).toISOString(),
-      }),
-    );
-    fsyncSync(lock);
     try {
+      writeFileSync(
+        lock,
+        JSON.stringify({
+          pid: process.pid,
+          runId,
+          startedAt: new Date(this.now()).toISOString(),
+        }),
+      );
+      fsyncSync(lock);
       this.journal = existsSync(this.file)
         ? JSON.parse(readFileSync(this.file, 'utf8'))
         : null;
