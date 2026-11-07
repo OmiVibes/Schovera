@@ -43,6 +43,21 @@ it('selects Korean for Korean original text without translating or replacing it'
   await act(async () => button('Listen').click());
   expect(spoken[0].text).toBe(original); expect(spoken[0].lang).toBe('ko-KR');
 });
+it('keeps both action slots and explains why a Korean voice cannot translate an English notice', async () => {
+  await mount();
+  expect(button('Stop').disabled).toBe(true);
+  const listen = button('Listen');
+  await choose('ko');
+  expect(button('Listen')).toBe(listen);
+  expect(listen.disabled).toBe(true);
+  expect(host.textContent).toContain('Korean playback needs Korean text');
+  expect(spoken).toHaveLength(0);
+  await choose('en');
+  expect(listen.disabled).toBe(false);
+  await act(async () => listen.click());
+  expect(button('Stop').disabled).toBe(false);
+  expect(host.querySelectorAll('.parent-speech-controls button')).toHaveLength(2);
+});
 it('stops playback when the user changes the original language', async () => {
   await mount(); await choose('mr'); await act(async () => button('Listen').click()); expect(spoken[0].lang).toBe('mr-IN');
   await choose('hi'); expect(controller.getSnapshot().phase).toBe('idle'); expect(cancel).toHaveBeenCalled();

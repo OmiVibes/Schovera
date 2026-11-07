@@ -5,6 +5,7 @@ import { useI18n } from '@/lib/i18n-provider';
 import {
   getBrowserSpeechEnvironment,
   detectNoticeLanguage,
+  koreanVoiceNeedsKoreanText,
   ParentSpeechController,
   type NoticeLanguageChoice,
 } from '@/lib/parent-speech';
@@ -40,12 +41,13 @@ export function ParentSpeechControls({
   const isActive = state.noticeId === noticeId && state.phase !== 'idle';
   const [choice, setChoice] = useSpeechChoice(noticeId, detectNoticeLanguage(text) ?? 'auto');
   const needsChoice = requireLanguageChoice && !language && choice === 'auto';
+  const koreanMismatch = koreanVoiceNeedsKoreanText(text, language ?? choice);
   useEffect(() => () => {
     if (controller.getSnapshot().noticeId === noticeId) controller.stop();
   }, [controller, noticeId, text, language]);
 
   return (
-    <div className="parent-speech-controls" role="group" aria-label={t('speech.controls')}>
+    <div className="parent-speech-controls" data-has-language-choice={!language} role="group" aria-label={t('speech.controls')}>
       {!language && <label className="parent-speech-language">
         <span>{t('speech.listenIn')}</span>
         <select value={choice} onChange={(event) => { controller.stop(); setChoice(event.target.value as NoticeLanguageChoice); }} aria-label={t('speech.language')}>
@@ -57,7 +59,7 @@ export function ParentSpeechControls({
         </select>
       </label>}
       {!isActive || state.phase === 'unavailable' || state.phase === 'error' ? (
-        <button type="button" className="parent-speech-button" aria-label={t('speech.listen')} onClick={() => void controller.play(noticeId, text, language ?? choice)} disabled={!text.trim() || needsChoice}>
+        <button type="button" className="parent-speech-button" aria-label={t('speech.listen')} onClick={() => void controller.play(noticeId, text, language ?? choice)} disabled={!text.trim() || needsChoice || koreanMismatch}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" /></svg>{t('speech.listenShort')}
         </button>
       ) : (
@@ -69,12 +71,12 @@ export function ParentSpeechControls({
           ) : (
             <button type="button" className="parent-speech-button" disabled>{t('speech.startingButton')}</button>
           )}
-          <button type="button" className="parent-speech-stop" onClick={() => controller.stop()}>{t('speech.stop')}</button>
         </>
       )}
-      {isActive && state.messageKey && (
-        <span className="parent-speech-status" role="status" aria-live="polite">{t(state.messageKey)}</span>
-      )}
+      <button type="button" className="parent-speech-stop" disabled={!isActive || state.phase === 'unavailable' || state.phase === 'error'} onClick={() => controller.stop()}>{t('speech.stop')}</button>
+      <span className="parent-speech-status" role="status" aria-live="polite">
+        {t(koreanMismatch ? 'speech.koreanTextRequired' : isActive && state.messageKey ? state.messageKey : 'speech.voiceHint')}
+      </span>
     </div>
   );
 }

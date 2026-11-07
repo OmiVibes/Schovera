@@ -100,12 +100,13 @@ describe('parent notice speech policy and controller', () => {
     ['Korean', 'ko', 'ko-KR'],
   ] as const)('requires an exact %s family voice', async (_label, language, locale) => {
     const { controller, synthesis } = mockEnvironment([{ lang: language === 'hi' ? 'en-IN' : 'hi-IN' }]);
-    await controller.play('notice-1', 'नोटिस का मूल पाठ', language);
+    const text = language === 'ko' ? '학교 알림입니다.' : 'नोटिस का मूल पाठ';
+    await controller.play('notice-1', text, language);
     expect(synthesis.speak).not.toHaveBeenCalled();
     expect(controller.getSnapshot().messageKey).toBe('speech.noVoice');
 
     const withVoice = mockEnvironment([{ lang: locale }]);
-    await withVoice.controller.play('notice-2', 'मूळ सूचना मजकूर', language);
+    await withVoice.controller.play('notice-2', text, language);
     expect(withVoice.synthesis.speak).toHaveBeenCalledTimes(1);
     expect(withVoice.synthesis.utterances[0].lang).toBe(locale);
   });
@@ -163,6 +164,14 @@ describe('parent notice speech policy and controller', () => {
     firstUtterance.onend?.();
     expect(controller.getSnapshot().noticeId).toBe('second');
     expect(synthesis.utterances).toHaveLength(2);
+  });
+
+  it('refuses a Korean voice for an untranslated English notice before starting speech', async () => {
+    const { controller, synthesis } = mockEnvironment([{ lang: 'ko-KR' }]);
+    await controller.play('english', 'Bring your library notebook tomorrow.', 'ko');
+    expect(controller.getSnapshot().phase).toBe('unavailable');
+    expect(controller.getSnapshot().messageKey).toBe('speech.koreanTextRequired');
+    expect(synthesis.speak).not.toHaveBeenCalled();
   });
 
   it('rejects empty text and safely handles very long original text without truncating it', async () => {

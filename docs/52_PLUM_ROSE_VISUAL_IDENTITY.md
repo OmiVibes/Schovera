@@ -158,3 +158,22 @@ The native verifier now plays three samples per Hindi/Marathi/Korean voice: the 
 Use `npm run verify:voice-native -- --languages hi,mr,ko` in the isolated QA checkout with its local test environment and the local website running. Only synthetic public phrases are spoken; no student data, audio upload, external recognition service or database write is involved. The initial attempt in this continuation failed because port 3103 was stopped; the same guarded isolated local website was restarted before the independent rerun. This diagnostic expansion changes no website feature or voice-engine configuration. Prior application-build fingerprints remain evidence of their earlier snapshots.
 
 Observed rerun (7 November 2026): **9/9 samples passed**, three each with Microsoft Hemant (Hindi), Marathi (basic eSpeak), and Microsoft Heami (Korean). The loopback-only browser check exited 0. JavaScript syntax, targeted ESLint and `git diff --check` passed. Pronunciation, naturalness and spoken-number accuracy remain **unrated pending fluent-listener review**; no percentage is inferred from these results. No production setting, private environment file, school record or password was changed.
+
+### Larger header and stable playback toolbar
+
+The owner's subsequent screenshot showed Korean selected for an English notice and controls moving when Listen changed into Pause/Stop. The header now uses a 24px/750-weight desktop wordmark, larger school/page context, 700-weight navigation with 54px touch targets, and stronger section/message headings. Mobile uses a smaller 20.8px wordmark and 50px navigation targets. The same shell applies to Parent, Teacher and Principal.
+
+The speech toolbar now reserves both action slots and a status area before playback starts. Stop stays visible but disabled when nothing is playing; Listen/Pause/Resume use the same slot. Grid alignment keeps the language selector and actions in place, including the two-column mobile layout. The expanded browser test measures control positions and dimensions through Listen, Pause, Resume and Stop, rather than relying only on screenshots.
+
+Korean speech remains playback of **Korean text**, not English-to-Korean translation. The control and controller now refuse Korean playback of an English/Devanagari-only message with an English/Hindi/Marathi explanation. This avoids displaying a misleading playing state for that script mismatch; selecting English restores Listen for an English original. Actual Korean original text continues through the existing Korean voice. No Korean translation records or translation-approval rules were added.
+
+Verification on 7 November 2026:
+
+- Speech/controller/component tests: 27 passed; translation component tests: 2 passed. One initial test used a Devanagari body for every language, including Korean; it failed against the new guard, then was corrected to use a Korean body for the Korean voice-family case. The independent rerun passed.
+- Parent/Teacher mobile control geometry, keyboard playback, language labels, Korean/English mismatch refusal, no horizontal overflow and cancellation on navigation passed.
+- Full 23-destination × 4-width layout audit, accessibility/i18n and 96 staff-localization combinations passed in QA run `ff000766-d1c9-4abf-a628-8d3b7a225cbe`.
+- Nine native Hindi/Marathi/Korean samples passed; real Parent/Teacher portal playback, Pause → Stop → Listen restart and garbage-collection survival passed. A concurrent read-only Windows meter showed unmuted output and nonzero peak (`1.0`), without recording audio or changing settings. These remain playback checks, not fluent-listener pronunciation acceptance.
+- Existing fixed Parent/Teacher/Principal sign-ins passed read-only checks on port 3103. Header font size/weight and 390px overflow checks passed. The actual Parent page's primary/Stop button geometry stayed unchanged during native English playback. Existing-school dataset hashes remained unchanged for all 20 datasets.
+- Standalone TypeScript, lint and isolated production build passed, including expected routes, generated `.env.production` only, synthetic-secret scan and temporary cleanup. Build fingerprint: `e991c3d56740802e8fe5b8f28cd06db91ed18ec2e7da1b56180c3182577775e4` (155 approved files).
+
+Desktop captures of all three portals and Parent mobile were inspected. The initial QA server was stopped and was restarted in its existing isolated checkout; the normal website remains on port 3103. No password, production environment file, database schema, hosted resource or paid service changed.

@@ -37,14 +37,37 @@ try {
       await controls.locator('select').selectOption('en'); // The original is English; changing the interface does not translate it.
       const listen = controls.getByRole('button', { name: translate(language, 'speech.listen'), exact: true });
       assert.equal(await listen.innerText(), translate(language, 'speech.listenShort'));
+      const geometry = () => controls.evaluate(root => {
+        const bounds = root.getBoundingClientRect();
+        return [bounds.width, bounds.height, ...[...root.querySelectorAll('select,button')].flatMap(element => {
+          const box = element.getBoundingClientRect();
+          return [box.x - bounds.x, box.y - bounds.y, box.width, box.height];
+        })];
+      });
+      const resting = await geometry();
+      const assertStable = async () => {
+        const current = await geometry();
+        assert.equal(current.length, resting.length, 'Speech control slots changed.');
+        assert.ok(current.every((value,index) => Math.abs(value-resting[index]) <= 1), `Speech controls moved during playback: ${JSON.stringify({ resting, current })}`);
+      };
       await listen.focus(); await page.keyboard.press('Enter');
+      await controls.getByRole('button', { name: translate(language, 'speech.pause'), exact: true }).waitFor();
+      await assertStable();
       await controls.getByRole('button', { name: translate(language, 'speech.pause'), exact: true }).click();
+      await assertStable();
       await controls.getByRole('button', { name: translate(language, 'speech.resume'), exact: true }).click();
+      await assertStable();
       await controls.getByRole('button', { name: translate(language, 'speech.stop'), exact: true }).click();
+      await assertStable();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     }
     assert.equal(await page.evaluate(() => window.__speechTest.spoken.length), 3);
     await page.locator('.language-selector select').selectOption('en');
+    await controls.locator('select').selectOption('ko');
+    assert.equal(await controls.getByRole('button', { name: 'Listen to notice', exact: true }).isDisabled(), true);
+    assert.ok((await controls.innerText()).includes('Korean playback needs Korean text'));
+    assert.equal(await page.evaluate(() => window.__speechTest.spoken.length), 3, 'Changing a voice must not speak or translate the English original.');
+    await controls.locator('select').selectOption('en');
     await controls.getByRole('button', { name: 'Listen to notice', exact: true }).click();
     await controls.getByRole('button', { name: 'Pause', exact: true }).waitFor();
     const before = await page.evaluate(() => window.__speechTest.cancelled);

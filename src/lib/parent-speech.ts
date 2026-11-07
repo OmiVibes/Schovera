@@ -5,7 +5,7 @@ export type PlaybackPhase = 'idle' | 'loading' | 'speaking' | 'paused' | 'unavai
 export type PlaybackState = {
   noticeId: string | null;
   phase: PlaybackPhase;
-  messageKey: 'speech.starting' | 'speech.playing' | 'speech.paused' | 'speech.empty' | 'speech.chooseLanguage' | 'speech.noVoice' | 'speech.unsupported' | 'speech.failed' | null;
+  messageKey: 'speech.starting' | 'speech.playing' | 'speech.paused' | 'speech.empty' | 'speech.chooseLanguage' | 'speech.noVoice' | 'speech.unsupported' | 'speech.failed' | 'speech.koreanTextRequired' | null;
 };
 
 export interface SpeechVoice {
@@ -55,6 +55,13 @@ export function resolveNoticeLanguage(
   choice: NoticeLanguageChoice,
 ): NoticeLanguage | null {
   return choice === 'auto' ? detectNoticeLanguage(text) : choice;
+}
+
+export function koreanVoiceNeedsKoreanText(text: string, language: NoticeLanguageChoice): boolean {
+  // Korean TTS can start without audibly reading an English/Devanagari body.
+  // A voice choice is not translation; do not report that case as playback.
+  return language === 'ko' && detectNoticeLanguage(text) !== 'ko'
+    && /[A-Za-z\u0900-\u097f]/u.test(text);
 }
 
 export function selectNoticeVoice(
@@ -129,6 +136,10 @@ export class ParentSpeechController {
     const language = resolveNoticeLanguage(text, choice);
     if (!language) {
       this.update({ noticeId, phase: 'unavailable', messageKey: 'speech.chooseLanguage' });
+      return;
+    }
+    if (koreanVoiceNeedsKoreanText(text, language)) {
+      this.update({ noticeId, phase: 'unavailable', messageKey: 'speech.koreanTextRequired' });
       return;
     }
     const environment = this.getEnvironment();
