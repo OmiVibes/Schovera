@@ -7,6 +7,8 @@ import { languageOptions, type Language } from '@/lib/i18n';
 import { displayedCommunication, sourceColumn, type CommunicationSource, type ReviewedTranslation } from '@/lib/communication-translations';
 import type { ParentSpeechController } from '@/lib/parent-speech';
 import { ParentSpeechControls } from './parent-speech-controls';
+import { detectNoticeLanguage } from '@/lib/parent-speech';
+import { readingLanguages, type ReadingLanguage } from '@/lib/automatic-translation';
 
 type Speech = { controller: ParentSpeechController; state: ReturnType<ParentSpeechController['getSnapshot']> };
 export function NoticeContent(props: { source: CommunicationSource; speech?: Speech }) {
@@ -19,24 +21,51 @@ function TranslationView({ source, speech }: { source: CommunicationSource; spee
   // Playback state belongs to this visible card, not every copy of its source.
   const speechInstance = useId();
   const db = useMemo(() => createClient(), []);
-  const [choice, setChoice] = useState<Language | 'original'>('original');
+  const [choice, setChoice] = useState<ReadingLanguage | 'original'>('original');
   const [revision, setRevision] = useState(0);
   const queryKey = `${source.kind}:${source.id}:${choice}:${revision}`;
   const column = sourceColumn(source);
   const sourceId = source.id;
-  const [result, setResult] = useState<{ key: string; data: ReviewedTranslation | null; failed: boolean } | null>(null);
+  const sourceTitle = source.title, sourceBody = source.body, sourceKind = source.kind;
+  type Content = { title:string; body:string; language?:ReadingLanguage };
+  const [result, setResult] = useState<{ key:string; content:Content|null; method:'approved'|'automatic'|'original'|null; failed:boolean } | null>(null);
   useEffect(() => {
     if (choice === 'original') return;
     let active = true;
     const abort = new AbortController();
     void (async () => {
-      const { data, error } = await db.from('communication_translations')
-        .select('id,language,title,body,status,updated_at').eq(column, sourceId)
-        .eq('language', choice).eq('status', 'approved').abortSignal(abort.signal).maybeSingle();
-      if (active) setResult({ key: queryKey, data: error ? null : data, failed: Boolean(error) });
+      try {
+        // Keep existing school-approved translations when available; teachers
+        // no longer need to create one for every message/language.
+        if (choice !== 'ko') {
+          const { data, error } = await db.from('communication_translations')
+            .select('id,language,title,body,status,updated_at').eq(column, sourceId)
+            .eq('language', choice).eq('status', 'approved').abortSignal(abort.signal).maybeSingle();
+          if (error) throw new Error('READ_FAILED');
+          if (data?.status === 'approved') {
+            if (active) setResult({ key:queryKey,content:displayedCommunication({kind:sourceKind,id:sourceId,title:sourceTitle,body:sourceBody},data),method:'approved',failed:false });
+            return;
+          }
+        }
+        if (detectNoticeLanguage(`${sourceTitle}. ${sourceBody}`) === choice) {
+          if (active) setResult({ key:queryKey,content:{title:sourceTitle,body:sourceBody,language:choice},method:'original',failed:false });
+          return;
+        }
+        const { data: session } = await db.auth.getSession();
+        if (!session.session?.access_token) throw new Error('SIGN_IN_REQUIRED');
+        const response = await fetch('/api/communication/translate', { method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.session.access_token}`},
+          body:JSON.stringify({kind:sourceKind,id:sourceId,language:choice}),signal:abort.signal });
+        if (!response.ok) throw new Error('TRANSLATION_FAILED');
+        const translated = await response.json();
+        if (translated.sourceTitle !== sourceTitle || translated.sourceBody !== sourceBody || translated.language !== choice
+          || typeof translated.title !== 'string' || typeof translated.body !== 'string' || !['original','automatic'].includes(translated.method)) throw new Error('STALE_TRANSLATION');
+        if(active) setResult({key:queryKey,content:{title:translated.title,body:translated.body,language:choice},method:translated.method,failed:false});
+      } catch {
+        if(active) setResult({key:queryKey,content:null,method:null,failed:true});
+      }
     })();
     return () => { active = false; abort.abort(); };
-  }, [db, column, sourceId, choice, queryKey]);
+  }, [db, column, sourceId, sourceTitle, sourceBody, sourceKind, choice, queryKey]);
   useEffect(() => {
     // A focus event alone must not silence an unchanged original. The speech
     // control already stops if the displayed text/language actually changes.
@@ -46,21 +75,20 @@ function TranslationView({ source, speech }: { source: CommunicationSource; spee
     return () => { window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); };
   }, [speech?.controller]);
   const current = choice !== 'original' && result?.key === queryKey ? result : null;
-  const translated = current?.data?.status === 'approved' && current.data.language === choice ? current.data : null;
-  const content = displayedCommunication(source, translated);
-  const choose = (language: Language | 'original') => { speech?.controller.stop(); setChoice(language); };
+  const content = current?.content ?? {title:source.title,body:source.body,language:detectNoticeLanguage(`${source.title}. ${source.body}`) ?? undefined};
+  const choose = (language: ReadingLanguage | 'original') => { speech?.controller.stop(); setChoice(language); };
   return <div className="notice-language-view" data-testid="notice-language-view">
     <div lang={content.language} className="notice-visible-text"><h3>{content.title}</h3><p>{content.body}</p></div>
     <div className="notice-language-toolbar">
-      <label>{t('translation.language')}<select value={choice} onChange={(event) => choose(event.target.value as Language | 'original')}>
+      <label>{t('translation.language')}<select value={choice} onChange={(event) => choose(event.target.value as ReadingLanguage | 'original')}>
         <option value="original">{t('translation.original')}</option>
-        {languageOptions.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
+        {readingLanguages.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
       </select></label>
-      {speech && <ParentSpeechControls noticeId={`${source.kind}:${source.id}:${speechInstance}`} text={`${content.title}. ${content.body}`} language={content.language} requireLanguageChoice controller={speech.controller} state={speech.state} />}
+      {speech && <ParentSpeechControls noticeId={`${source.kind}:${source.id}:${speechInstance}`} text={`${content.title}. ${content.body}`} language={content.language} disabled={choice !== 'original' && !current?.content} requireLanguageChoice controller={speech.controller} state={speech.state} />}
       {choice !== 'original' && <button type="button" onClick={() => choose('original')}>{t('translation.viewOriginal')}</button>}
       {choice !== 'original' && current?.failed && <button type="button" onClick={() => { speech?.controller.stop(); setRevision((value) => value + 1); }}>{t('common.retry')}</button>}
     </div>
-    <p className="hint notice-language-status" role="status">{choice === 'original' ? t('translation.originalUnknown') : !current ? t('translation.loading') : current.failed ? t('translation.loadError') : translated ? t('translation.approved') : t('translation.unavailable')}</p>
+    <p className="hint notice-language-status" role="status">{choice === 'original' ? t('translation.originalUnknown') : !current ? t('translation.autoLoading') : current.failed ? t('translation.autoFailed') : current.method === 'approved' ? t('translation.approved') : current.method === 'automatic' ? t('translation.automatic') : t('translation.originalUnknown')}</p>
   </div>;
 }
 

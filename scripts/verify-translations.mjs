@@ -1,23 +1,16 @@
 // Guarded local acceptance: all accounts/content are synthetic and removed in finally.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
-import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 
 assertLocalTestEnvironment();
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-const base = process.env.SCHOVERA_TEST_URL || 'http://127.0.0.1:3000';
 const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 const suffix = randomUUID().slice(0, 8);
-const screenshotDirectory = process.argv.includes('--screenshots') ? mkdtempSync(join(tmpdir(), 'schovera-translations-')) : null;
 const password = `Synthetic-${randomUUID()}!aA1`;
 const created = { schools: [], users: [], updates: [] };
-let browser;
 const must = async (query) => { const { data, error } = await query; if (error) throw new Error(error.message); return data; };
 async function school(label) {
   const row = await must(admin.from('schools').insert({ name: `Synthetic translation ${label} ${suffix}`, code: `TL-${label}-${suffix}` }).select().single());
@@ -51,37 +44,6 @@ async function approved(writer, reviewer, source, language, text) {
 }
 async function denied(query) { const { error } = await query; assert.ok(error, 'unauthorized operation succeeded'); }
 
-async function login(actor, route, mockSpeech = false) {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  const external = [];
-  await context.route('**/*', (request) => {
-    const target = new URL(request.request().url());
-    if (['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname) || ['data:', 'about:', 'blob:'].includes(target.protocol)) return request.continue();
-    external.push(target.hostname); return request.abort();
-  });
-  if (mockSpeech) await context.addInitScript(() => {
-    const state = { utterances: [], cancels: 0, speaking: false, paused: false, locales: ['en-IN', 'hi-IN', 'mr-IN'] };
-    window.__translationSpeech = state;
-    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
-      getVoices: () => state.locales.map((lang) => ({ lang })),
-      speak: (utterance) => { state.utterances.push({ text: utterance.text, lang: utterance.lang }); state.speaking = true; queueMicrotask(() => utterance.onstart?.()); },
-      cancel: () => { state.cancels++; state.speaking = false; }, pause: () => { state.paused = true; }, resume: () => { state.paused = false; },
-      addEventListener() {}, removeEventListener() {},
-    } });
-    Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: class { constructor(text) { this.text = text; } } });
-  });
-  const page = await context.newPage();
-  await page.goto(base, { waitUntil: 'networkidle' });
-  await page.getByLabel('Email').fill(actor.email);
-  await page.getByLabel('Password', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Sign in securely' }).click();
-  await page.locator(`.role-${actor.role}`).waitFor({ timeout: 30000 });
-  await page.goto(`${base}${route}`, { waitUntil: 'networkidle' });
-  return { page, context, external };
-}
-async function noOverflow(page) {
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), '390px horizontal overflow');
-}
 
 try {
   const a = await school('A'); const b = await school('B');
@@ -137,84 +99,9 @@ try {
   assert.equal(await translation(unlinked.client, notice, 'hi'), null);
   assert.equal((await must(admin.from('student_updates').select('title,message').eq('id', original.id).single())).message, original.body);
 
-  if (!process.argv.includes('--database-only')) {
-    browser = await chromium.launch({ headless: true });
-    const t = await login(teacher, '/teacher/students');
-    await t.page.getByRole('button', { name: new RegExp(students[0].full_name) }).first().click();
-    const manager = t.page.locator('.teacher-update-card').filter({ hasText: original.title }).locator('.translation-manager');
-    await manager.locator('summary').click();
-    await manager.locator('.translation-editor > label select').selectOption('mr');
-    await manager.getByLabel('Translated title', { exact: true }).fill(samples.mr.title);
-    await manager.getByLabel('Translated message', { exact: true }).fill(samples.mr.body);
-    await manager.getByRole('button', { name: 'Save draft', exact: true }).click();
-    await manager.getByRole('button', { name: 'Submit for review', exact: true }).click();
-    await manager.getByText('Submitted for Principal review', { exact: true }).waitFor();
-    if (screenshotDirectory) await manager.screenshot({ path: join(screenshotDirectory, 'teacher-draft.png') });
-    await noOverflow(t.page);
-    const p = await login(principal, '/principal/communication');
-    const review = p.page.locator('.principal-communication-card').filter({ hasText: original.title }).locator('.translation-manager');
-    await review.locator('summary').click();
-    await review.locator('.translation-editor > label select').selectOption('mr');
-    const reviewText = review.getByLabel('Translated message', { exact: true });
-    try {
-      await reviewText.fill(`${samples.mr.body} Unsaved review comparison.`);
-    } catch (error) {
-      console.error('Principal editor diagnostic:', await review.evaluate((node) => ({
-        open: node.open, fields: node.querySelectorAll('textarea').length,
-        language: node.querySelector('select')?.value,
-        statuses: [...node.querySelectorAll('[role="status"],[role="alert"]')].map((element) => element.textContent),
-      })).catch(() => ({ editorMissing: true })));
-      throw error;
-    }
-    await Promise.all([
-      p.page.waitForResponse((response) => new URL(response.url()).pathname === '/rest/v1/student_updates'),
-      p.page.evaluate(() => window.dispatchEvent(new Event('focus'))),
-    ]);
-    assert.equal(await reviewText.inputValue(), `${samples.mr.body} Unsaved review comparison.`);
-    await reviewText.fill(samples.mr.body);
-    await review.getByRole('checkbox').check();
-    await review.getByRole('button', { name: 'Approve reviewed translation', exact: true }).click();
-    await review.getByText('School-approved translation', { exact: true }).waitFor();
-    if (screenshotDirectory) await review.screenshot({ path: join(screenshotDirectory, 'principal-review.png') });
-    await noOverflow(p.page);
-    const family = await login(parent, '/parent/updates', true);
-    const card = family.page.locator('.parent-updates .update-card').first();
-    const content = card.locator('.notice-language-view');
-    for (const language of ['en', 'hi', 'mr']) {
-      await content.locator('.notice-language-toolbar > label select').selectOption(language);
-      await content.locator('.notice-visible-text').getByText(samples[language].body, { exact: true }).waitFor();
-      assert.equal(await content.locator('img').count(), 0);
-      await content.getByRole('button', { name: 'Listen to notice', exact: true }).click();
-      await family.page.waitForFunction((lang) => window.__translationSpeech.utterances.at(-1)?.lang === `${lang}-IN`, language);
-    }
-    assert.ok((await family.page.evaluate(() => window.__translationSpeech.cancels)) > 0);
-    if (screenshotDirectory) await content.screenshot({ path: join(screenshotDirectory, 'parent-marathi.png') });
-    await content.getByRole('button', { name: 'Pause', exact: true }).click();
-    await content.getByRole('button', { name: 'Resume', exact: true }).click();
-    await content.getByRole('button', { name: 'Stop', exact: true }).click();
-    await family.page.evaluate(() => { window.__translationSpeech.locales = ['en-IN']; });
-    await content.getByRole('button', { name: 'Listen to notice', exact: true }).click();
-    await content.getByRole('status').filter({ hasText: /voice.*unavailable|voice.*available|matching.*voice|voice.*installed/i }).waitFor();
-    await content.getByRole('button', { name: 'View original', exact: true }).click();
-    await content.locator('.notice-visible-text').getByText(original.body, { exact: true }).waitFor();
-    const acknowledge = card.getByRole('button', { name: `Acknowledge update: ${original.title}`, exact: true });
-    await acknowledge.click();
-    await card.getByText('Acknowledged', { exact: true }).waitFor();
-    await family.page.locator('.child-switcher select').selectOption(students[1].id);
-    await family.page.locator('.parent-updates').getByText(sibling.message, { exact: true }).waitFor();
-    assert.equal(await family.page.getByText(samples.mr.body, { exact: true }).count(), 0);
-    const siblingView = family.page.locator('.parent-updates .notice-language-view').first();
-    await siblingView.locator('.notice-language-toolbar > label select').selectOption('mr');
-    await siblingView.getByText('A reviewed translation is unavailable. Showing the original.', { exact: true }).waitFor();
-    await noOverflow(family.page);
-    assert.deepEqual([...t.external, ...p.external, ...family.external], []);
-    for (const view of [t, p, family]) await view.context.close();
-    console.log('Translation browser flow passed: Teacher draft, Principal approval, three languages, visible-text speech, original/fallback, acknowledgement, child switching, escaped text, 390px and no external targets. Audible playback was mocked.');
-    if (screenshotDirectory) console.log(`Synthetic translation UI captures: ${screenshotDirectory}`);
-  } else {
-    await approved(teacher, principal, original, 'mr', samples.mr);
-    await must(parent.client.rpc('acknowledge_update', { p_update_id: original.id }));
-  }
+  // School-reviewed overrides remain supported; teachers need no manual UI step.
+  await approved(teacher, principal, original, 'mr', samples.mr);
+  await must(parent.client.rpc('acknowledge_update', { p_update_id: original.id }));
 
   assert.equal((await must(admin.from('acknowledgements').select('update_id').eq('update_id', original.id))).length, 1);
   await must(action(teacher, original, 'mr', 'save', samples.mr));
@@ -239,7 +126,6 @@ try {
   }
   console.log('Translation database checks passed: original preservation, source correction/edit invalidation, version conflicts, Principal-only approval, Parent draft/write denial, linked-child/school/Teacher scope, and original acknowledgement identity.');
 } finally {
-  await browser?.close();
   if (created.schools.length) {
     await must(admin.from('communication_translations').delete().in('school_id', created.schools));
     if (created.updates.length) await must(admin.from('acknowledgements').delete().in('update_id', created.updates));
@@ -260,3 +146,6 @@ try {
   }
   console.log('Temporary translation fixtures cleaned and verified.');
 }
+
+// Browser acceptance now exercises automatic translation and real local audio.
+if (!process.argv.includes('--database-only')) await import('./verify-local-communication.mjs');

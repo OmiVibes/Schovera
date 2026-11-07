@@ -7,6 +7,8 @@
   },
   "scripts": {
     "verify:voice-native": "node --env-file=.env.test.local scripts/verify-native-voice.mjs",
+    "verify:communication-local": "node --env-file=.env.test.local scripts/verify-local-communication.mjs",
+    "test:automatic-translation": "vitest run src/lib/automatic-translation.test.ts src/lib/local-communication.test.ts",
     "test:ui-copy": "vitest run src/lib/ui-copy.test.ts scripts/lib/build-input-policy.test.mjs",
     "verify:staff-localization": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --env-file=.env.test.local scripts/verify-staff-localization.mjs",
     "verify:simple-voice": "node --experimental-strip-types --env-file=.env.test.local scripts/verify-simple-voice.mjs",
@@ -87,7 +89,7 @@
     "test:gateway:local-integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-gateway-v2.integration.test.ts",
     "test:diagnose-parent-postgrest": "node --env-file=.env.test.local scripts/diagnose-parent-postgrest.mjs",
     "test:entry-polling": "vitest run src/lib/bounded-polling.test.ts",
-    "test:parent-voice": "vitest run src/lib/parent-speech.test.ts src/components/parent-speech-controls.test.tsx src/components/simple-speech.test.tsx",
+    "test:parent-voice": "vitest run src/lib/parent-speech.test.ts src/lib/local-audio-speech.test.ts src/components/parent-speech-controls.test.tsx src/components/simple-speech.test.tsx",
     "test:rfid:integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-rfid-v2.integration.test.ts",
     "test:rfid:v2-integration": "node --env-file=.env.test.local node_modules/vitest/vitest.mjs run scripts/verify-rfid-v2.integration.test.ts",
     "test:rfid": "vitest run scripts/rfid-simulator/core.test.ts scripts/rfid-simulator/event-v2.test.ts scripts/lib/local-test-env.test.ts src/lib/rfid/server.test.ts",

@@ -7,7 +7,8 @@ Updated: 7 November 2026. This records local software work and the remaining ext
 - Three portals: Parent, Teacher and Principal. Existing fixed local accounts/passwords are retained. Manage users is available to the same-school Principal on the guarded local account server.
 - Simpler responsive layout, mobile profile menu, recent student sorting, profile/history views and class-wise activity summaries. The current [plum-and-rose palette and fonts](52_PLUM_ROSE_VISUAL_IDENTITY.md) replace the earlier blue styling. There is no teacher ranking. History stays in PostgreSQL and uses the available academic-year metadata.
 - English, Hindi and Marathi interface labels for the legacy Teacher/Principal screens, account forms, homework editor and AI studio. Switching interface language does not translate names, subjects entered by staff, homework titles, messages or AI output.
-- Parent and Teacher Listen/Pause/Resume/Stop controls. English-script originals start with English selected; ambiguous original languages require a language choice. Approved translated text remains separate from the original. Playback uses the browser's available voices. See the [native voice check, website layout correction and cleanup record](52_PLUM_ROSE_VISUAL_IDENTITY.md#website-layout-and-voice-correction-follow-up) for the latest results and device-language limits.
+- Parent and Teacher Listen/Pause/Resume/Stop controls. On the guarded local Windows server, installed voices generate audio that plays through ordinary browser audio. Unknown original languages still require a choice when needed. Translations remain separate from the original.
+- Teachers write a communication once. The reader's **Read in** choice automatically requests English/Hindi/Marathi/Korean text and selects its matching reading voice. Existing school-approved translations take priority; otherwise local Ollama generates clearly labelled automatic text. A manual translation form is no longer required on Teacher update cards.
 - Teacher AI uses local Ollama by default. Generated materials remain editable drafts for teacher review; spreadsheet editing is a separate supported workflow. There is no automatic cloud-provider fallback.
 - RFID event-v2, durable queue/synchronization, translation approval, fallback simulation and explainable attendance indicators have local synthetic test tooling. Local-only security gates remain in place.
 
@@ -17,12 +18,14 @@ Run browser/database checks only in the existing isolated QA checkout with its l
 
 ```powershell
 # In the isolated QA checkout, after starting Docker and local Supabase:
-$env:SCHOVERA_TEST_URL = 'http://127.0.0.1:3104'
+$env:SCHOVERA_TEST_URL = 'http://127.0.0.1:3103'
 npm run test:ui-copy
 npm run verify:staff-localization
 npm run verify:accessibility-i18n
 npm run verify:role-navigation
 npm run verify:simple-voice
+npm run test:automatic-translation
+npm run verify:communication-local
 npm run verify:accounts
 npm run verify:teacher-ai
 npm run verify:simple-blue-ui
@@ -34,7 +37,19 @@ npm run typecheck
 npm run lint
 ```
 
+The current guarded website already runs on port 3103 from its isolated checkout. These commands still run from the separate QA checkout with its local test environment and create only their own synthetic fixtures. Avoid starting a second Next server on this low-memory laptop solely for QA. If you deliberately run a separate isolated server, use that server's loopback URL instead. Never point these commands at hosted Supabase or Vercel.
+
 The staff localization browser check visits 16 Teacher/Principal destinations in three languages at 1440px and 390px (96 combinations), checks known interface copy, runtime errors and external requests. It does not certify every possible data-dependent state or linguistic quality.
+
+## Write once, read and listen in another language
+
+1. Teacher: write the original update in English and send it once. There is no need to type four versions.
+2. Parent: open the message and choose **Read in → English / हिन्दी / मराठी / 한국어**. Wait for the translation to appear.
+3. Press **Listen**. It reads the displayed language; Pause, Resume and Stop control that audio. **View original** returns to the teacher's exact message.
+
+Automatic text is labelled **Automatic translation — may contain mistakes**. It is not labelled school-approved. Existing reviewed translations still take priority, and a Principal can optionally add a reviewed correction. An unavailable or rejected automatic result leaves the original readable; Retry and View original remain available. Changing the interface language alone does not translate every message or trigger a batch of AI requests.
+
+English originals can be read immediately without Ollama. The old extra voice-language field is omitted when the text's language is known. If playback is silent, unmute the Chrome tab/site and check the Windows sound output and Chrome volume. The app can verify media playback, but cannot verify what a person physically hears.
 
 From the developer repository, the safe current-source build command is:
 
@@ -76,6 +91,23 @@ The existing `FallbackProvider` interface and fake adapter are a tested simulati
 
 Provider-specific secret names and dashboard commands cannot be accurate until a provider is chosen; no fictitious credential template is supplied.
 
+### Local automatic translation and audio setup
+
+The dedicated translation model is **`qwen3:4b-instruct`**, downloaded on this laptop. It is separate from the existing Teacher AI draft model. On another presentation laptop, install Ollama and download it once:
+
+```powershell
+ollama pull qwen3:4b-instruct
+ollama list
+```
+
+The [official Ollama model page](https://ollama.com/library/qwen3:4b-instruct) lists approximately 2.5 GB and the Apache 2.0 licence. Model weights live in Ollama's storage, outside Git; copying the project does not copy them. Test speed and quality on the actual laptop. The current laptop uses this smaller model because the previously installed 7B model caused severe memory pressure alongside Docker, Chrome and Next.
+
+Messages go only to the authenticated loopback app and local Ollama at `127.0.0.1:11434`; there is no cloud translation fallback or paid provider. Translations are generated on request, with a bounded, temporary server cache. Every request, including a cache hit, must still pass the current user's source-record RLS check. Basic number/date checks reject covered value changes, but do not establish complete semantic accuracy. Check important information against the original and ask fluent speakers to review quality.
+
+Local audio requires Windows and installed voices on the server laptop. Follow the [Hindi/Korean/Marathi setup guide](52_PLUM_ROSE_VISUAL_IDENTITY.md#completed-device-installation-and-marathi-fallback-7-november-2026). Text becomes a temporary WAV using Windows SAPI, then plays in Chrome as normal audio. No microphone recording or external TTS provider is used. Temporary WAV files are removed after synthesis; browser blob URLs are released on Stop, completion or navigation. Basic Marathi remains robotic.
+
+Use the existing guarded `dev:accounts-local` launcher in the isolated checkout, with local-only environment files, for this setup. The new services require local test mode, HTTP loopback Supabase, loopback Host, matching Origin and an authenticated active profile. They are disabled for hosted mode. A generic development server without those local flags does not enable these services. No `.env.local` change is needed or authorized. Hosted translation/audio, Linux hosting and an actual school rollout require separate setup and acceptance.
+
 ### Hosting, accounts and RFID
 
 The hosting choice is still pending: use separately approved non-production hosting/database projects, or retain the laptop-local setup. No hosted resources were created or changed here.
@@ -114,6 +146,8 @@ Final current-source isolated build: **passed**, including TypeScript, all expec
 **Remaining external acceptance:** hosting/project choice; approved hosted AI setup if online AI is wanted; provider/consent/limits for actual SMS/IVR; reviewed hosted RFID boundary and physical hardware tests; actual audible voice and fluent-language review. No paid service is active. The updated normal local website runs on `http://127.0.0.1:3103` while its local services remain running; fixed sign-ins are unchanged.
 
 ### Sign-in language selector follow-up
+
+The later automatic-translation/audio follow-up is recorded in [the current verification section](52_PLUM_ROSE_VISUAL_IDENTITY.md#automatic-reading-translation-and-ordinary-browser-audio). It passed 54 tests, legacy DB security checks, the connected translation/real-audio flow, three-portal layout/localization/navigation checks, typecheck/lint and an isolated production build. The older fingerprints below remain historical. Production resources and fixed passwords were unchanged.
 
 The subsequent [plum-and-rose verification record](52_PLUM_ROSE_VISUAL_IDENTITY.md) includes a successful isolated build covering this selector and the new fonts/palette; the earlier fingerprints in this file remain historical.
 

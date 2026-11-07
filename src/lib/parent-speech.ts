@@ -38,6 +38,7 @@ export interface SpeechSynthesisLike {
 export type SpeechEnvironment = {
   synthesis: SpeechSynthesisLike;
   createUtterance(text: string): SpeechUtteranceLike;
+  startTimeoutMs?: number;
 };
 
 export function detectNoticeLanguage(text: string): NoticeLanguage | null {
@@ -187,7 +188,7 @@ export class ParentSpeechController {
       // looking at an indefinite starting state; late callbacks are invalidated.
       this.startTimer = setTimeout(() => {
         if (generation === this.generation) this.fail(noticeId);
-      }, 8000);
+      }, environment.startTimeoutMs ?? 8000);
       // cancel() can leave Chromium's queue paused after Pause → Stop.
       if (environment.synthesis.paused) environment.synthesis.resume();
       environment.synthesis.speak(utterance);

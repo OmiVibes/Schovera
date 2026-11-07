@@ -29,56 +29,14 @@ const args = process.argv.slice(2);
 if (args.length && (args.length !== 2 || args[0] !== '--languages')) throw new Error('Use --languages en,hi,mr,ko to test installed voices with generic samples.');
 const languages = args.length ? args[1].split(',') : [];
 if (languages.some(language => !Object.hasOwn(samples, language)) || new Set(languages).size !== languages.length) throw new Error('Unsupported or repeated voice language.');
-const browser = await chromium.launch({ channel: 'chrome', headless: false });
-try {
-  if (languages.length) await verifyInstalledLanguages(browser, languages);
-  else for (const role of ['parent', 'teacher']) {
-    const context = await browser.newContext();
-    const outside = [];
-    await context.route('**/*', route => {
-      const host = new URL(route.request().url()).hostname;
-      if (['127.0.0.1','localhost','[::1]'].includes(host)) return route.continue();
-      outside.push(host); return route.abort();
-    });
-    await context.addInitScript(() => {
-      window.__nativeSpeechEvents = [];
-      const nativeSpeak = speechSynthesis.speak.bind(speechSynthesis);
-      speechSynthesis.speak = utterance => {
-        const index = window.__nativeSpeechEvents.length;
-        window.__nativeSpeechEvents.push({ index, events: [] });
-        for (const name of ['start','end','error']) utterance.addEventListener(name, event => window.__nativeSpeechEvents[index].events.push(name === 'error' ? `error:${event.error}` : name));
-        nativeSpeak(utterance);
-      };
-    });
-    const page = await context.newPage(); page.setDefaultTimeout(30000);
-    await page.goto(base);
-    await page.getByLabel('Email', { exact: true }).fill(`${role}@schovera.demo`);
-    await page.getByLabel('Password', { exact: true }).fill(process.env.SCHOVERA_DEMO_PASSWORD || 'SchoveraDemo2026!');
-    await page.getByRole('button', { name: 'Sign in securely', exact: true }).click();
-    await page.locator(`.role-${role}`).waitFor();
-    await page.locator(`nav.app-section-nav a[href="/${role}/notices"]`).click();
-    const controls = page.locator('.school-notice-card .parent-speech-controls').first();
-    await controls.waitFor();
-    assert.equal(await controls.locator('select').inputValue(), 'en');
-    const listen = controls.getByRole('button', { name: 'Listen to notice', exact: true });
-    await listen.click();
-    await controls.getByRole('button', { name: 'Pause', exact: true }).waitFor();
-    await controls.getByRole('button', { name: 'Pause', exact: true }).click();
-    await controls.getByRole('button', { name: 'Stop', exact: true }).click();
-    await listen.click();
-    await controls.getByRole('button', { name: 'Pause', exact: true }).waitFor();
-    // Exercise the utterance-wrapper lifetime while the native engine runs.
-    const session = await context.newCDPSession(page);
-    await session.send('HeapProfiler.collectGarbage');
-    await page.waitForFunction(() => window.__nativeSpeechEvents.at(-1)?.events.includes('end'), null, { timeout: 30000 });
-    await listen.waitFor();
-    const events = await page.evaluate(() => window.__nativeSpeechEvents.at(-1).events);
-    assert.deepEqual(events, ['start','end']);
-    assert.deepEqual(outside, []);
-    console.log(`${role}: real Chrome speech start/end, Pause → Stop → Listen restart and garbage-collection survival passed. This does not certify physical speaker audibility.`);
-    await context.close();
-  }
-} finally { await browser.close(); }
+if (languages.length) {
+  const browser = await chromium.launch({ channel: 'chrome', headless: false });
+  try { await verifyInstalledLanguages(browser, languages); }
+  finally { await browser.close(); }
+} else {
+  // The local website now plays generated WAVs through ordinary browser audio.
+  await import('./verify-simple-voice.mjs');
+}
 
 async function verifyInstalledLanguages(browser, requested) {
   const page = await browser.newPage();

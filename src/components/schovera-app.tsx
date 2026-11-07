@@ -19,7 +19,7 @@ import { AssignmentEditor } from '@/components/assignment-editor';
 import { OptionalSection } from '@/components/optional-section';
 import { ManageUsers } from '@/components/manage-users';
 import { AttendanceTrends } from '@/components/attendance-trends';
-import type { ParentSpeechController } from '@/lib/parent-speech';
+import { detectNoticeLanguage, type ParentSpeechController } from '@/lib/parent-speech';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
 // Principals never need to download the Teacher-only workspace.
@@ -2436,7 +2436,7 @@ function Announcements({
                 <span className="notice-origin">{parentView ? t('parent.schoolWideNotice') : ui("School-wide notice")}</span>
                 {announcement.priority === 'important' && <span className="notice-important"><Icon name="important" /> {parentView ? t('importance.important') : ui("Important")}</span>}
               </header>
-              {parentView ? <NoticeContent source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} speech={speech} /> : <><h3>{announcement.title}</h3><p>{announcement.body}</p>{speech && <ParentSpeechControls noticeId={`notice:${profile.id}:${announcement.id}`} text={`${announcement.title}. ${announcement.body}`} requireLanguageChoice controller={speech.controller} state={speech.state} />}</>}
+              <NoticeContent source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} speech={speech} />
               {profile.role === 'principal' && <TranslationManager source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} canApprove />}
               {profile.role === 'principal' && announcement.priority === 'important' && <FallbackDispatch kind="announcement" sourceId={announcement.id} />}
               <footer>
@@ -2515,8 +2515,7 @@ function Card({
       {corrected && <p className="correction-reference">{parent ? t('correction.replaced') : ui("This update was corrected by a newer communication.")}</p>}
       {parent && childContext && <p className="parent-update-context"><Icon name="student" /> {t('parent.aboutChild', { context: childContext })}</p>}
       {parent && corrected && <p className="original-message-label">{t('ack.originalMessage')}</p>}
-      {parent ? <NoticeContent source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} speech={speech} /> : <><p>{update.message}</p>{speech && <ParentSpeechControls noticeId={`update:${update.id}`} text={`${update.title}. ${update.message}`} requireLanguageChoice controller={speech.controller} state={speech.state} />}</>}
-      {teacher && !corrected && <TranslationManager source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} />}
+      {parent ? <NoticeContent source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} speech={speech} /> : <><p>{update.message}</p>{speech && <ParentSpeechControls noticeId={`update:${update.id}`} text={`${update.title}. ${update.message}`} language={detectNoticeLanguage(`${update.title}. ${update.message}`) ?? undefined} requireLanguageChoice controller={speech.controller} state={speech.state} />}</>}
       {teacher && !corrected && update.importance === 'important' && <FallbackDispatch kind="update" sourceId={update.id} />}
       <small className={teacher ? 'teacher-update-meta' : undefined}>
         {update.profiles?.full_name && `${update.profiles.full_name} · `}

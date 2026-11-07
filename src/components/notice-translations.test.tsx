@@ -8,7 +8,7 @@ import { displayedCommunication, type CommunicationSource, type ReviewedTranslat
 import { NoticeContent } from './notice-translations';
 
 const fixture = vi.hoisted(() => ({ rows: new Map<string, unknown>(), reads: [] as string[] }));
-vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ from: () => {
+vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ auth:{getSession:async()=>({data:{session:{access_token:'synthetic-token'}}})}, from: () => {
   let id = ''; let language = '';
   const builder = { select: () => builder, abortSignal: () => builder,
     eq: (key: string, value: string) => { if (key.endsWith('_id')) id = value; if (key === 'language') language = value; return builder; },
@@ -21,7 +21,7 @@ function setup() {
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 }
-afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); fixture.rows.clear(); fixture.reads.length = 0; });
+afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); fixture.rows.clear(); fixture.reads.length = 0; vi.unstubAllGlobals(); });
 
 it('does not replace an original with a draft or a missing translation', () => {
   for (const status of ['draft', 'in_review', 'needs_review'] as const) {
@@ -57,7 +57,7 @@ it('switches approved languages, speaks the visible text, stops on language/sour
   await change('mr'); expect(cancel.mock.calls.length).toBeGreaterThan(before);
   await act(async () => { (host.querySelector('.parent-speech-button') as HTMLButtonElement).click(); });
   expect(spoken[1].lang).toBe('mr-IN'); expect(spoken[1].text).toContain('वाचनालय');
-  await change('en'); expect(host.textContent).toContain('reviewed translation is unavailable'); expect(host.textContent).toContain(source.body);
+  await change('en'); expect(host.textContent).toContain('Original message'); expect(host.textContent).toContain(source.body);
   await act(async () => root.render(<Harness value={{ ...source, id: 'synthetic-b', title: 'Child B', body: 'Only child B text' }} />));
   expect(host.textContent).not.toContain('वाचनालय'); expect(host.textContent).not.toContain(source.body); expect(host.textContent).toContain('Only child B text');
   expect((host.querySelector('.notice-language-toolbar > label select') as HTMLSelectElement).value).toBe('original');
@@ -65,4 +65,28 @@ it('switches approved languages, speaks the visible text, stops on language/sour
   await change('hi');
   await act(async () => { (host.querySelector('.parent-speech-button') as HTMLButtonElement).click(); });
   expect([...host.querySelectorAll('button')].filter((button) => button.textContent === 'Pause')).toHaveLength(1);
+});
+
+it('automatically translates Korean on request without a teacher draft and refuses stale or failed output',async()=>{
+  setup();
+  const spoken:SpeechUtteranceLike[]=[];
+  const controller=new ParentSpeechController(()=>({synthesis:{speaking:false,paused:false,getVoices:()=>[{lang:'ko-KR'},{lang:'en-IN'}],speak:u=>{spoken.push(u);u.onstart?.();},cancel:vi.fn(),pause:vi.fn(),resume:vi.fn(),addEventListener:vi.fn(),removeEventListener:vi.fn()},createUtterance:text=>({text,lang:'',voice:null,onstart:null,onend:null,onerror:null})}));
+  function Harness(){const state=useSyncExternalStore(controller.subscribe,controller.getSnapshot,controller.getSnapshot);return <I18nProvider><NoticeContent source={source} speech={{controller,state}}/></I18nProvider>;}
+  const fetchMock=vi.fn(async()=>new Response(JSON.stringify({sourceTitle:source.title,sourceBody:source.body,title:'학교 안내',body:'학부모 모임은 오전 10시에 있습니다.',language:'ko',method:'automatic'}),{status:200}));
+  vi.stubGlobal('fetch',fetchMock);
+  await act(async()=>root.render(<Harness/>));
+  expect(host.querySelector('.parent-speech-language')).toBeNull();
+  const choose=async(value:string)=>act(async()=>{const select=host.querySelector('.notice-language-toolbar > label select') as HTMLSelectElement;select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));});
+  await choose('ko');
+  expect(fetchMock).toHaveBeenCalledOnce();
+  expect(host.textContent).toContain('Automatic translation');
+  expect(host.querySelector('.notice-visible-text')?.getAttribute('lang')).toBe('ko');
+  await act(async()=>{(host.querySelector('.parent-speech-button') as HTMLButtonElement).click();});
+  expect(spoken[0].lang).toBe('ko-KR');expect(spoken[0].text).toContain('학부모');
+  await choose('original');expect(host.textContent).toContain(source.body);
+  fetchMock.mockImplementation(async()=>new Response(JSON.stringify({sourceTitle:'Stale source',sourceBody:source.body,title:'학교 안내',body:'다른 메시지',language:'ko',method:'automatic'}),{status:200}));
+  await choose('ko');expect(host.textContent).toContain('Automatic translation is unavailable');
+  expect(host.textContent).toContain(source.body);expect(host.textContent).not.toContain('다른 메시지');
+  expect((host.querySelector('.parent-speech-button') as HTMLButtonElement).disabled).toBe(true);
+  controller.dispose();
 });
