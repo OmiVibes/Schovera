@@ -144,3 +144,17 @@ Pre-commit retest on 7 November 2026: all four installed voices passed twice thr
 | Korean / Microsoft Heami | 안녕하세요. 학교 알림 음성 테스트입니다. | Pending |
 
 Ask a fluent listener to confirm every word is intelligible and in the intended language, without skipped or substituted words. Separately check school-approved names, dates and times using synthetic examples, because those are not certified by these short samples. Pause and resume mid-sentence, then Stop and Listen again. Record the laptop, voice, sample, listener/date and any mispronounced words. Correct the text/language selection or select a suitable installed voice and repeat before presenting; do not mark pronunciation accepted based only on this automated run.
+
+### Extended school-sentence and number checks
+
+The native verifier now plays three samples per Hindi/Marathi/Korean voice: the introductory phrase above, a school instruction and a date/time sentence. It asserts the exact original utterance text, requested utterance/voice language, local voice service, full utterance volume and native start/end without errors for every sample. These checks prevent accidental text replacement and wrong-language voice selection; they do not analyze the resulting phonemes or certify spoken numbers.
+
+| Language | Additional instruction | Date/time sample | Meaning to check by ear |
+|---|---|---|---|
+| Hindi | कृपया कल विज्ञान की किताब और अपनी कॉपी लेकर आएँ। | 7 नवंबर 2026 को सुबह 9 बजे अभिभावकों की बैठक है। | Bring the science book and notebook tomorrow. Parents meet on 7 November 2026 at 9 in the morning. |
+| Marathi | कृपया उद्या विज्ञानाचे पुस्तक आणि तुमची वही घेऊन या. | ७ नोव्हेंबर २०२६ रोजी सकाळी ९ वाजता पालकांची बैठक आहे. | Bring the science book and notebook tomorrow. Parents meet on 7 November 2026 at 9 in the morning. |
+| Korean | 내일 과학 교과서와 공책을 가져오세요. | 2026년 11월 7일 오전 9시에 학부모 모임이 있습니다. | Bring the science textbook and notebook tomorrow. Parents meet on 7 November 2026 at 9 in the morning. |
+
+Use `npm run verify:voice-native -- --languages hi,mr,ko` in the isolated QA checkout with its local test environment and the local website running. Only synthetic public phrases are spoken; no student data, audio upload, external recognition service or database write is involved. The initial attempt in this continuation failed because port 3103 was stopped; the same guarded isolated local website was restarted before the independent rerun. This diagnostic expansion changes no website feature or voice-engine configuration. Prior application-build fingerprints remain evidence of their earlier snapshots.
+
+Observed rerun (7 November 2026): **9/9 samples passed**, three each with Microsoft Hemant (Hindi), Marathi (basic eSpeak), and Microsoft Heami (Korean). The loopback-only browser check exited 0. JavaScript syntax, targeted ESLint and `git diff --check` passed. Pronunciation, naturalness and spoken-number accuracy remain **unrated pending fluent-listener review**; no percentage is inferred from these results. No production setting, private environment file, school record or password was changed.
