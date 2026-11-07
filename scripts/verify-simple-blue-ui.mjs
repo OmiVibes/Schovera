@@ -31,6 +31,26 @@ try {
       assert.equal(await chart.getByRole('button', { name: period, exact: true }).getAttribute('aria-pressed'), 'true');
     }
     const year = chart.getByLabel('Academic year', { exact: true });
+    // Check the real persisted-history visualizations, including keyboard access.
+    await chart.locator('.attendance-line-chart').waitFor();
+    assert.equal(await chart.locator('.attendance-metric').count(), 4);
+    await chart.locator('.attendance-ring svg[role="img"]').waitFor();
+    const point = chart.locator('.attendance-chart-point').first();
+    await point.focus(); await page.keyboard.press('Enter');
+    assert.equal(await point.getAttribute('aria-pressed'), 'true');
+    if (role === 'parent') {
+      const date = chart.locator('.attendance-calendar-day:not(:disabled)').first();
+      await date.click(); assert.equal(await date.getAttribute('aria-pressed'), 'true');
+    }
+    await chart.locator('.attendance-all-records summary').click();
+    assert.ok(await chart.locator('.attendance-all-records tbody tr').count() > 0);
+    for (const width of [1440, 768, 390, 320]) {
+      await page.setViewportSize({width,height:1000});
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),true,`${role} attendance overflows at ${width}px`);
+      assert.equal(await chart.locator('.attendance-chart-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),width<=800?1:2);
+      await chart.screenshot({path:`.local/blue-ui/${role}-attendance-${width}.png`});
+    }
+    await page.setViewportSize({width:1440,height:1000});
     const years = await year.locator('option').evaluateAll(options => options.map(o => o.value).filter(Boolean));
     if (years.length) { await year.selectOption(years[0]); await page.locator('.attendance-trends[data-loaded="true"]').waitFor(); }
     await chart.getByRole('button', { name: 'Refresh', exact: true }).click(); await page.locator('.attendance-trends[data-loaded="true"]').waitFor();

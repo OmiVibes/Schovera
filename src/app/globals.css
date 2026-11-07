@@ -2136,17 +2136,9 @@ body { background: var(--canvas); }
 .directory-actions button[aria-pressed=true], .trend-periods button[aria-pressed=true] { background: var(--brand); color: white; }
 .attendance-trends { margin-block: 20px; padding: clamp(16px, 3vw, 26px); min-width: 0; }
 .attendance-trends h2 { margin: 0; font-size: 1.2rem; }
-.trend-filters, .trend-periods, .trend-legend { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.trend-filters, .trend-periods { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .trend-filters label { display: grid; gap: 5px; font-size: .85rem; min-width: 0; }
 .trend-filters select { min-height: 44px; max-width: 100%; border: 1px solid var(--palette-rose); border-radius: 12px; padding: 8px; }
-.trend-chart { display: flex; gap: 8px; height: 180px; overflow-x: auto; padding: 10px 4px 0; border-bottom: 1px solid var(--palette-rose); margin-block: 16px; }
-.trend-column { flex: 1 0 24px; max-width: 100px; min-width: 24px; display: flex; flex-direction: column; gap: 6px; justify-content: flex-end; text-align: center; }
-.trend-stack { height: 135px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; border-radius: 8px 8px 0 0; }
-.trend-stack span { display: block; flex-shrink: 0; }
-.trend-present { background: var(--brand); }.trend-late { background: var(--palette-mauve); }.trend-absent { background: var(--palette-rose); border: 1px solid var(--palette-mauve); }
-.trend-column small { font-size: .65rem; color: var(--ink-soft); }
-.trend-legend span { display: inline-flex; align-items: center; gap: 7px; font-size: .85rem; }
-.trend-legend i { width: 12px; height: 12px; border-radius: 50%; }
 .attendance-trends summary { cursor: pointer; min-height: 44px; padding-block: 12px; color: var(--brand); font-weight: 700; }
 .trend-table { overflow-x: auto; }.trend-table table { width: 100%; border-collapse: collapse; }.trend-table th, .trend-table td { padding: 10px; text-align: left; border-bottom: 1px solid var(--line); }
 @media (max-width: 820px) {
@@ -2190,9 +2182,6 @@ body { background: var(--canvas); }
 .app .parent-update-card .ack button { background: var(--brand); }
 .app .parent-update-card .ack button:hover:not(:disabled) { background: var(--brand-dark); }
 .app .parent-latest-heading > a { color: var(--brand); }
-.trend-chart { height: 215px; }
-.trend-column { min-width: 44px; flex-basis: 44px; }
-.trend-column > b { font-size: .8rem; color: var(--brand); }
 .app .workspace-page-heading > p { display: none; }
 .parent-speech-controls { gap: 12px; align-items: end; padding-block: 10px; }
 .parent-speech-language { min-width: 0; }

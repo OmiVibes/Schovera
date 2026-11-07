@@ -1866,14 +1866,6 @@ function AttendanceSummary({
           <b>{counts.late}</b>{t('attendance.late')}
         </span>
       </div>
-      <div className="history-list">
-        {attendance.slice(0, 10).map((row) => (
-          <div className={`attendance-history-row ${row.status}`} key={row.id}>
-            <time dateTime={row.attendance_date}>{displaySchoolDate(row.attendance_date, {}, language)}</time>
-            <span><Icon name={row.status === 'present' ? 'check' : row.status === 'absent' ? 'important' : 'attendance'} />{localizedStatus(row.status, t)}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
