@@ -38,7 +38,9 @@ function TranslationView({ source, speech }: { source: CommunicationSource; spee
     return () => { active = false; abort.abort(); };
   }, [db, column, sourceId, choice, queryKey]);
   useEffect(() => {
-    const refresh = () => { speech?.controller.stop(); setRevision((value) => value + 1); };
+    // A focus event alone must not silence an unchanged original. The speech
+    // control already stops if the displayed text/language actually changes.
+    const refresh = () => { setRevision((value) => value + 1); };
     window.addEventListener('focus', refresh);
     window.addEventListener('online', refresh);
     return () => { window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); };
@@ -48,16 +50,17 @@ function TranslationView({ source, speech }: { source: CommunicationSource; spee
   const content = displayedCommunication(source, translated);
   const choose = (language: Language | 'original') => { speech?.controller.stop(); setChoice(language); };
   return <div className="notice-language-view" data-testid="notice-language-view">
+    <div lang={content.language} className="notice-visible-text"><h3>{content.title}</h3><p>{content.body}</p></div>
     <div className="notice-language-toolbar">
       <label>{t('translation.language')}<select value={choice} onChange={(event) => choose(event.target.value as Language | 'original')}>
         <option value="original">{t('translation.original')}</option>
         {languageOptions.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
       </select></label>
-      {choice !== 'original' && <><button type="button" onClick={() => choose('original')}>{t('translation.viewOriginal')}</button><button type="button" onClick={() => { speech?.controller.stop(); setRevision((value) => value + 1); }}>{t('common.retry')}</button></>}
+      {speech && <ParentSpeechControls noticeId={`${source.kind}:${source.id}:${speechInstance}`} text={`${content.title}. ${content.body}`} language={content.language} requireLanguageChoice controller={speech.controller} state={speech.state} />}
+      {choice !== 'original' && <button type="button" onClick={() => choose('original')}>{t('translation.viewOriginal')}</button>}
+      {choice !== 'original' && current?.failed && <button type="button" onClick={() => { speech?.controller.stop(); setRevision((value) => value + 1); }}>{t('common.retry')}</button>}
     </div>
     <p className="hint notice-language-status" role="status">{choice === 'original' ? t('translation.originalUnknown') : !current ? t('translation.loading') : current.failed ? t('translation.loadError') : translated ? t('translation.approved') : t('translation.unavailable')}</p>
-    <div lang={content.language} className="notice-visible-text"><h3>{content.title}</h3><p>{content.body}</p></div>
-    {speech && <ParentSpeechControls noticeId={`${source.kind}:${source.id}:${speechInstance}`} text={`${content.title}. ${content.body}`} language={content.language} requireLanguageChoice controller={speech.controller} state={speech.state} />}
   </div>;
 }
 

@@ -34,6 +34,17 @@ function mockEnvironment(voices: SpeechVoice[] = [{ lang: 'en-IN', name: 'Indian
 afterEach(() => vi.useRealTimers());
 
 describe('parent notice speech policy and controller', () => {
+  it('resumes a browser queue left paused by cancel before starting another notice', async () => {
+    const { controller, synthesis } = mockEnvironment();
+    synthesis.paused = true;
+    synthesis.cancel.mockImplementation(() => { synthesis.speaking = false; });
+    await controller.play('retry', 'The next original notice.', 'en');
+    expect(synthesis.resume).toHaveBeenCalledOnce();
+    expect(synthesis.utterances[0].volume).toBe(1);
+    synthesis.utterances[0].onstart?.();
+    expect(controller.getSnapshot().phase).toBe('speaking');
+    controller.stop();
+  });
   it('fails a stalled start and ignores a late start after timeout', async () => {
     vi.useFakeTimers();
     const { controller, synthesis } = mockEnvironment();
@@ -73,6 +84,8 @@ describe('parent notice speech policy and controller', () => {
     expect(detectNoticeLanguage('कल विद्यालय बंद रहेगा')).toBeNull();
     expect(detectNoticeLanguage('उद्या शाळा बंद राहील')).toBeNull();
     expect(detectNoticeLanguage('')).toBeNull();
+    expect(detectNoticeLanguage('학교 알림을 읽어 드립니다. Schovera')).toBe('ko');
+    expect(detectNoticeLanguage('안녕하세요')).toBe('ko');
   });
 
   it('prefers en-IN and falls back only to another English voice', () => {
@@ -84,6 +97,7 @@ describe('parent notice speech policy and controller', () => {
   it.each([
     ['Hindi', 'hi', 'hi-IN'],
     ['Marathi', 'mr', 'mr-IN'],
+    ['Korean', 'ko', 'ko-KR'],
   ] as const)('requires an exact %s family voice', async (_label, language, locale) => {
     const { controller, synthesis } = mockEnvironment([{ lang: language === 'hi' ? 'en-IN' : 'hi-IN' }]);
     await controller.play('notice-1', 'नोटिस का मूल पाठ', language);

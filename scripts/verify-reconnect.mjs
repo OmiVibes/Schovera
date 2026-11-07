@@ -91,8 +91,8 @@ async function login(page, email, heading) {
     });
   });
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
-  if (await page.locator('input[type="email"]').count()) {
-    await page.locator('input[type="email"]').fill(email);
+  if (await page.locator('input[autocomplete="username"]').count()) {
+    await page.locator('input[autocomplete="username"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button', { name: 'Sign in securely' }).click();
   }
@@ -106,7 +106,7 @@ async function openSection(page, role, section) {
   const path = `/${role}/${section}`;
   const email = { teacher: 'teacher@schovera.demo', parent: 'parent@schovera.demo', principal: 'principal@schovera.demo' }[role];
   const heading = { teacher: 'Good morning', parent: 'Aarav', principal: 'Welcome' }[role];
-  if (await page.locator('input[type="email"]').isVisible().catch(() => false)) {
+  if (await page.locator('input[autocomplete="username"]').isVisible().catch(() => false)) {
     console.log(`${role} session expired during extended offline acceptance; reauthenticating before opening ${section}.`);
     await login(page, email, heading);
     return openSection(page, role, section);
@@ -116,9 +116,9 @@ async function openSection(page, role, section) {
   await page.waitForFunction((expectedPath) => {
     const activeLink = document.querySelector('nav.app-section-nav a[aria-current="page"]');
     return (activeLink instanceof HTMLAnchorElement && new URL(activeLink.href).pathname === expectedPath)
-      || Boolean(document.querySelector('input[type="email"]'));
+      || Boolean(document.querySelector('input[autocomplete="username"]'));
   }, path, { timeout: 15000 });
-  if (await page.locator('input[type="email"]').isVisible().catch(() => false)) {
+  if (await page.locator('input[autocomplete="username"]').isVisible().catch(() => false)) {
     console.log(`${role} session expired during extended offline acceptance; reauthenticating before opening ${section}.`);
     await login(page, email, heading);
     return openSection(page, role, section);
@@ -362,7 +362,7 @@ try {
   console.log('Parent rapid offline/online flapping recovery passed.');
 
   await parentSecondPage.getByRole('button', { name: 'Sign out' }).click();
-  await parentSecondPage.locator('input[type="email"]').waitFor({ state: 'visible', timeout: 15000 });
+  await parentSecondPage.locator('input[autocomplete="username"]').waitFor({ state: 'visible', timeout: 15000 });
   const postLogoutTitle = `Reconnect post logout ${suffix}`;
   await sendUpdate(teacherClient, assignment.class_id, student.id, postLogoutTitle, 'normal');
   expect(await parentSecondPage.getByText(postLogoutTitle).count() === 0, 'Logged-out Parent tab retained or received protected student communication.');
@@ -630,7 +630,7 @@ try {
   if (homeworkError) throw homeworkError;
   assignmentIds.push(homeworkId);
   await restoreConnectivity(parentContext, parentPage);
-  if (await parentPage.locator('input[type="email"]').isVisible().catch(() => false)) {
+  if (await parentPage.locator('input[autocomplete="username"]').isVisible().catch(() => false)) {
     console.log('Parent auth session expired during extended offline acceptance; signing in again for the persisted homework read.');
     await login(parentPage, parentProfile.email, 'Aarav');
     const childSelect = parentPage.locator('.child-switcher select');

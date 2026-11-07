@@ -13,6 +13,7 @@ import { openGatewayDatabase } from './rfid-gateway/storage.mjs';
 import { LocalSupabaseV2Transport } from './rfid-gateway/local-v2-transport.mjs';
 import { canonicalEventV2, type DeviceEventV2 } from './rfid-simulator/event-v2';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+import { openOptionalTool } from './lib/open-optional-tool.mjs';
 
 type Account = { id: string; email: string; role: 'principal' | 'parent' | 'teacher'; client: SupabaseClient; token: string };
 const dbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -129,7 +130,7 @@ function expectCompleteParentFixture(snapshot: Record<string, unknown> | undefin
   expect(physical?.matching_counts, `${label}: physical fixture rows`).toMatchObject({ profiles: 1, schools: 1, students: 1, classes: 1, parent_student_links: 1 });
 }
 
-function requestLocal(urlText: string, pathname: string, body?: unknown, token?: string, method = 'POST'): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
+function requestLocal(urlText: string, pathname: string, body?: unknown, token?: string, method = 'POST', timeoutMs = 8_000): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
   const url = new URL(urlText);
   if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) throw new Error('integration request target must be loopback HTTP');
   const raw = body === undefined ? '' : JSON.stringify(body);
@@ -140,7 +141,7 @@ function requestLocal(urlText: string, pathname: string, body?: unknown, token?:
       res.on('data', (chunk: Buffer) => { bytes += chunk.length; if (bytes > 20_000) { req.destroy(new Error('response too large')); return; } chunks.push(chunk); });
       res.on('end', () => { const status = res.statusCode ?? 0; if (status >= 300 && status < 400) { reject(new Error('loopback endpoint returned a redirect')); return; } resolve({ status, body: Buffer.concat(chunks).toString('utf8'), headers: res.headers }); });
     });
-    req.setTimeout(8_000, () => req.destroy(new Error('loopback endpoint timeout')));
+    req.setTimeout(timeoutMs, () => req.destroy(new Error('loopback endpoint timeout')));
     req.on('error', reject); req.end(raw);
   });
 }
@@ -273,8 +274,8 @@ async function loginAndCheck(account: Account, expectedTexts: string[], forbidde
   if (account.role === 'parent' && account.id === parentA?.id && studentA) {
     await page.evaluate(([key, value]) => sessionStorage.setItem(key, value), [`schovera:selected-child:${account.id}`, studentA.id]);
   }
-  if (await page.locator('input[type="email"]').count()) {
-    await page.locator('input[type="email"]').fill(account.email);
+  if (await page.locator('input[autocomplete="username"]').count()) {
+    await page.locator('input[autocomplete="username"]').fill(account.email);
     await page.locator('input[type="password"]').fill(browserPassword);
     if (account.role === 'parent') await snapshotFixture('immediately-before-parent-browser-login', account.token, account);
     const parentQueryResponse = account.role === 'parent'
@@ -284,9 +285,20 @@ async function loginAndCheck(account: Account, expectedTexts: string[], forbidde
     if (parentQueryResponse) await parentQueryResponse;
   }
   const panel = page.locator('[data-testid="school-entry-panel"]');
+  const parentHasNoLinkedChildren = account.role === 'parent' && account.id !== parentA?.id;
+  if (parentHasNoLinkedChildren) {
+    await page.getByRole('heading', { name: 'No child is linked to your account', exact: true }).waitFor();
+    expect(expectedTexts).toHaveLength(0);
+    expect(await panel.count()).toBe(0);
+    for (const text of forbiddenTexts) expect(await page.getByText(text, { exact: false }).count()).toBe(0);
+    await expect.poll(() => firstParentResponseSnapshot !== null, { message: 'unlinked Parent zero-row response snapshot captured' }).toBe(true);
+    await firstParentResponseSnapshot;
+    if (!keepOpen) await context.close();
+    return keepOpen ? page : null;
+  }
+  await openOptionalTool(page);
   try { await panel.waitFor({ state: 'visible', timeout: 20_000 }); }
   catch { throw new Error(`dashboard panel did not render for synthetic role; url=${new URL(page.url()).pathname}, title=${await page.title()}, body=${(await page.locator('body').innerText()).slice(0, 700)}, network=${diagnostics.join('; ')}`); }
-  const parentHasNoLinkedChildren = account.role === 'parent' && account.id !== parentA?.id;
   const teacherHasNoAssignedClasses = account.role === 'teacher' && account.id === teacherUnassigned?.id;
   const hasNoEntryContext = parentHasNoLinkedChildren || teacherHasNoAssignedClasses;
   try {
@@ -396,7 +408,9 @@ describe('Task 32H gateway to loopback local Supabase', () => {
     assertLocalTestEnvironment(process.env);
     const target = new URL(appUrl);
     expectValue(target.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname), 'app target must be loopback HTTP');
-    const health = await requestLocal(appUrl, '/', undefined, undefined, 'GET');
+    // Cold Next development compilation is not device transport latency. Keep
+    // all actual ingestion requests at 8s; allow only initial page startup 30s.
+    const health = await requestLocal(appUrl, '/', undefined, undefined, 'GET', 30_000);
     expectValue(health.status === 200, 'local Schovera app is not responding on the configured loopback URL');
     admin = createClient(dbUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
     browser = await chromium.launch({ headless: true });

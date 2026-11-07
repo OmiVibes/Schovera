@@ -15,6 +15,7 @@ import {
   translate,
 } from '../src/lib/i18n.ts';
 import { formatSchoolDate, schoolToday } from '../src/lib/school-date.mjs';
+import { uiText } from '../src/lib/ui-copy.ts';
 
 assertLocalTestEnvironment(process.env, { requireServiceRole: false });
 
@@ -116,7 +117,7 @@ try {
   assert.equal(await page.locator('main').count(), 1, 'Authenticated workspace should expose one main landmark.');
   assert.ok(await page.locator('.app-section-nav').getAttribute('aria-label'), 'Workspace navigation is unnamed.');
   assert.ok(await languageSelect.getAttribute('aria-label'), 'Language control is unnamed.');
-  const acknowledgeButtons = page.locator('.parent-update-card button[aria-label]');
+  const acknowledgeButtons = page.locator('.parent-update-card .ack button[aria-label]');
   if (await acknowledgeButtons.count()) {
     assert.ok(await acknowledgeButtons.first().getAttribute('aria-label'), 'Acknowledgement action has no accessible name.');
     await acknowledgeButtons.first().focus();
@@ -177,9 +178,10 @@ try {
 
   for (const email of [process.env.SCHOVERA_TEACHER_EMAIL || 'teacher@schovera.demo', process.env.SCHOVERA_PRINCIPAL_EMAIL || 'principal@schovera.demo']) {
     await page.locator('.account-actions button.link').click();
-    await page.getByLabel('Email').waitFor();
-    await page.getByLabel('Email').fill(email);
-    await page.getByLabel('Password', { exact: true }).fill(password);
+    const selectedLanguage = await page.locator('html').getAttribute('lang') || 'en';
+    await page.getByLabel(uiText('Email', selectedLanguage), { exact: true }).waitFor();
+    await page.getByLabel(uiText('Email', selectedLanguage), { exact: true }).fill(email);
+    await page.getByLabel(uiText('Password', selectedLanguage), { exact: true }).fill(password);
     await page.locator('.login-card button').last().click();
     const role = email.startsWith('teacher') ? 'teacher' : 'principal';
     await page.locator(`.role-${role}`).waitFor({ timeout: 30000 });

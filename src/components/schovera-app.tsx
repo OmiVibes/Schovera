@@ -1,4 +1,5 @@
 'use client';
+import { UiText, useUiText } from '@/components/ui-text';
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -10,18 +11,21 @@ import { formatSchoolDate, schoolToday } from '@/lib/school-date.mjs';
 import { getLocale, translate, type Language, type TranslationKey } from '@/lib/i18n';
 import { I18nProvider, LanguageSelector, useI18n } from '@/lib/i18n-provider';
 import { SchoolEntryPanel } from '@/components/school-entry-panel';
-import { useParentSpeech } from '@/components/parent-speech-controls';
+import { useParentSpeech, ParentSpeechControls } from '@/components/parent-speech-controls';
 import { NoticeContent, TranslationManager } from '@/components/notice-translations';
 import { FallbackDispatch, ParentFallbackPreferences } from '@/components/fallback-simulator';
 import { AttendanceInsights } from '@/components/attendance-insights';
 import { AssignmentEditor } from '@/components/assignment-editor';
+import { OptionalSection } from '@/components/optional-section';
+import { ManageUsers } from '@/components/manage-users';
+import { AttendanceTrends } from '@/components/attendance-trends';
 import type { ParentSpeechController } from '@/lib/parent-speech';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
 // Principals never need to download the Teacher-only workspace.
 const TeacherAIWorkspace = dynamic(
   () => import('@/components/teacher-ai-workspace').then((module) => module.TeacherAIWorkspace),
-  { loading: () => <section className="card ai-loading-state" role="status">Opening AI Studio…</section> },
+  { loading: () => <section className="card ai-loading-state" role="status"><UiText source={"Opening AI Studio…"} /></section> },
 );
 
 type Role = 'teacher' | 'parent' | 'principal';
@@ -91,12 +95,13 @@ const localizedWeekdays: Record<Language, string[]> = {
   mr: ['सोमवार', 'मंगळवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार'],
 };
 const navigationKeys: Record<string, TranslationKey> = {
-  'parent-home': 'nav.home', 'parent-profile': 'nav.profile', 'parent-updates': 'nav.updates',
+  'parent-home': 'nav.home', 'parent-profile': 'nav.childProfile', 'parent-updates': 'nav.updates',
   'parent-attendance': 'nav.attendance', 'parent-homework': 'nav.homework', 'parent-timetable': 'nav.timetable', 'parent-notices': 'nav.notices',
-  'teacher-home': 'nav.overview', 'teacher-students': 'nav.students', 'teacher-profile': 'nav.profile', 'teacher-ai': 'nav.ai',
+  'teacher-home': 'nav.overview', 'teacher-students': 'nav.students', 'teacher-profile': 'nav.studentProfile', 'teacher-ai': 'nav.ai',
   'teacher-attendance': 'nav.attendance', 'teacher-homework': 'nav.homework', 'teacher-timetable': 'nav.timetable', 'teacher-notices': 'nav.notices',
   'principal-overview': 'nav.overview', 'principal-students': 'nav.students', 'principal-communication': 'nav.communication',
   'principal-attendance': 'nav.attendance', 'principal-homework': 'nav.homework', 'principal-timetable': 'nav.timetable', 'principal-notices': 'nav.notices',
+  'principal-users': 'nav.users',
 };
 const schoolWeekday = () => {
   const [year, month, day] = today().split('-').map(Number);
@@ -198,6 +203,7 @@ const roleNavigation: Record<
   principal: [
     { label: 'Overview', id: 'principal-overview', slug: 'home', icon: 'school' },
     { label: 'Students', id: 'principal-students', slug: 'students', icon: 'student' },
+    { label: 'Manage users', id: 'principal-users', slug: 'users', icon: 'student' },
     { label: 'Communication', id: 'principal-communication', slug: 'communication', icon: 'updates' },
     { label: 'Attendance', id: 'principal-attendance', slug: 'attendance', icon: 'attendance' },
     { label: 'Homework', id: 'principal-homework', slug: 'homework', icon: 'homework' },
@@ -211,6 +217,7 @@ export function AppEntry() {
 }
 
 export function SchoveraApp() {
+  const ui = useUiText();
   const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
@@ -317,33 +324,35 @@ export function SchoveraApp() {
   if (busy)
     return (
       <main className="center" aria-live="polite">
-        <p className="loading-copy">Loading Schovera…</p>
+        <p className="loading-copy"><UiText source={"Loading Schovera…"} /></p>
       </main>
     );
   if (!profile)
     return (
       <main className="login">
-        <section className="login-intro" aria-labelledby="login-title">
+        <header className="login-topbar">
           <div className="brand-lockup">
             <b className="logo" aria-hidden="true">
               S
             </b>
             <span>Schovera</span>
           </div>
-          <p className="eyebrow">SCHOOL. HOME. TOGETHER.</p>
+          <LanguageSelector showLabel />
+        </header>
+        <section className="login-intro" aria-labelledby="login-title">
+          <p className="eyebrow"><UiText source={"SCHOOL. HOME. TOGETHER."} /></p>
           <h1>
-            School. Home.
-            <br />
-            Together.
-          </h1>
+            <UiText source={"School. Home."} /><br />
+            <UiText source={"Together."} /></h1>
           <p className="lead" id="login-title">
-            Structured school-to-home communication that keeps teachers, parents
-            and principals connected.
-          </p>
+            <UiText source={"School updates, homework and attendance in one easy place."} /></p>
           <p className="login-note">
-            One secure place for clear updates, attendance and official school
-            notices.
-          </p>
+            <UiText source={"One secure place for clear updates, attendance and official school notices."} /></p>
+          <ul className="login-features">
+            <li><Icon name="updates" /><span><UiText source={"Student updates"} /></span></li>
+            <li><Icon name="attendance" /><span><UiText source={"Attendance"} /></span></li>
+            <li><Icon name="homework" /><span><UiText source={"Homework"} /></span></li>
+          </ul>
         </section>
         <form
           className="card login-card"
@@ -353,7 +362,7 @@ export function SchoveraApp() {
             setCanRetryProfileLoad(false);
             setSigningIn(true);
             const { error: signInError } = await db.auth.signInWithPassword({
-              email,
+              email: email.trim(),
               password,
             });
             if (signInError) {
@@ -364,24 +373,23 @@ export function SchoveraApp() {
             setSigningIn(false);
           }}
         >
-          <p className="eyebrow">SECURE SIGN IN</p>
-          <h2>Welcome to Schovera</h2>
+          <p className="eyebrow"><UiText source={"SECURE SIGN IN"} /></p>
+          <h2><UiText source={"Welcome to Schovera"} /></h2>
           <p className="form-intro">
-            Sign in with the account provided by your school.
-          </p>
+            <UiText source={"For Parents, Teachers and Principals. Sign in to open your school portal."} /></p>
           <label>
-            <span>Email</span>
+            <span><UiText source={"Email"} /></span>
             <span className="field-with-icon"><Icon name="updates" /><input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              placeholder="you@school.org"
+              autoComplete="username"
+              placeholder={ui("you@school.org")}
             /></span>
           </label>
           <div className="password-field-wrap"><label>
-            <span>Password</span>
+            <span><UiText source={"Password"} /></span>
             <span className="field-with-icon"><Icon name="student" /><input
               type={showPassword ? 'text' : 'password'}
               required
@@ -389,10 +397,10 @@ export function SchoveraApp() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             /></span>
-          </label><button className="password-toggle" type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? 'Hide' : 'Show'}</button></div>
+          </label><button className="password-toggle" type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? ui("Hide password") : ui("Show password")}>{showPassword ? ui("Hide") : ui("Show")}</button></div>
           {error && (
             <p className="error" role="alert">
-              {error}
+              {ui(error)}
             </p>
           )}
           {canRetryProfileLoad && (
@@ -404,17 +412,16 @@ export function SchoveraApp() {
                 void load();
               }}
             >
-              Retry account check
-            </button>
+              <UiText source={"Retry account check"} /></button>
           )}
           <button disabled={signingIn}>
-            {signingIn ? 'Signing in…' : 'Sign in securely'}
+            {signingIn ? ui("Signing in…") : ui("Sign in securely")}
           </button>
         </form>
       </main>
     );
   if (routeRole && routeRole !== profile.role) {
-    return <main className="center"><section className="card role-mismatch-card"><span className="role-mismatch-icon" aria-hidden="true"><Icon name="school" /></span><p className="eyebrow">ACCOUNT WORKSPACE</p><h1>That workspace is not available to this account.</h1><p>You are signed in as a {profile.role}. Return to your workspace or switch to the account for this role.</p><div><Link className="primary" href="/">Return to your workspace</Link><button className="secondary" type="button" onClick={async () => { profileRef.current = null; setProfile(null); setBusy(true); await db.auth.signOut(); router.replace('/'); }}>Sign out and switch account</button></div></section></main>;
+    return <main className="center"><section className="card role-mismatch-card"><span className="role-mismatch-icon" aria-hidden="true"><Icon name="school" /></span><p className="eyebrow"><UiText source={"ACCOUNT WORKSPACE"} /></p><h1><UiText source={"That workspace is not available to this account."} /></h1><p><UiText source={"You are signed in as a "} />{profile.role}<UiText source={". Return to your workspace or switch to the account for this role."} /></p><div><Link className="primary" href="/"><UiText source={"Return to your workspace"} /></Link><button className="secondary" type="button" onClick={async () => { profileRef.current = null; setProfile(null); setBusy(true); await db.auth.signOut(); router.replace('/'); }}><UiText source={"Sign out and switch account"} /></button></div></section></main>;
   }
   const currentPage = roleNavigation[profile.role].find((item) => item.slug === routeSlug) || roleNavigation[profile.role][0];
   return (
@@ -425,10 +432,15 @@ export function SchoveraApp() {
             <div className="logo small" aria-hidden="true">S</div>
             <div>
               <strong>Schovera</strong>
-              <span>{profile.school_name || 'Your school'}</span>
+              <span>{profile.school_name || ui("Your school")}</span>
             </div>
           </div>
+          <div className="header-page-context" aria-hidden="true">
+            <span>{t(`common.${profile.role}`)}</span>
+            <strong>{t(navigationKeys[currentPage.id])}</strong>
+          </div>
           <div className="account-actions">
+            <details className="mobile-profile-menu"><summary aria-label={t('nav.profile')}>•••</summary><div><b>{profile.full_name}</b><p>{t(`common.${profile.role}`)}</p><p>{profile.school_name}</p></div></details>
             <LanguageSelector />
             <span className="role-chip">{t(`common.${profile.role}`)}</span>
             <span className="account-avatar" aria-hidden="true">{initials(profile.full_name)}</span>
@@ -462,23 +474,23 @@ export function SchoveraApp() {
       {profile.role !== 'parent' && currentPage.slug === 'home' && (
         <section className="dashboard-hero">
           <div>
-            <p className="eyebrow">{nice(profile.role)} workspace · {profile.school_name || 'Your school'}</p>
+            <p className="eyebrow">{ui(nice(profile.role))} <UiText source={"workspace · "} />{profile.school_name || ui("Your school")}</p>
             <h1>
               {profile.role === 'teacher'
-                ? `Good morning, ${profile.full_name.split(' ')[0]}.`
-                : `Welcome, ${profile.full_name.split(' ').slice(0, 2).join(' ')}.`}
+                ? ui("Good morning, {0}.", [profile.full_name.split(' ')[0]])
+                : ui("Welcome, {0}.", [profile.full_name.split(' ').slice(0, 2).join(' ')])}
             </h1>
           </div>
           <p className="hero-support">
             {profile.role === 'teacher'
-              ? 'Send clear student updates, record attendance and follow important acknowledgements.'
-              : 'Here\'s your school communication overview.'}
+              ? ui("Choose a class. Take attendance, set homework or send an update.")
+              : ui("Your school, at a glance.")}
           </p>
         </section>
       )}
       {currentPage.slug !== 'home' && <section className="workspace-page-heading" aria-labelledby="workspace-page-title">
         <div className="workspace-page-title">
-          <p className="eyebrow">{nice(profile.role)} workspace</p>
+          <p className="eyebrow">{ui(nice(profile.role))} <UiText source={"workspace"} /></p>
           <h1 id="workspace-page-title">{t(navigationKeys[currentPage.id] || 'common.schoolNotices')}</h1>
         </div>
         <p>{profile.role === 'parent'
@@ -489,7 +501,7 @@ export function SchoveraApp() {
                   : currentPage.slug === 'notices' ? t('parent.noticeContext')
                     : currentPage.slug === 'profile' ? t('parent.profileOverview')
                       : t('parent.child')
-          : `${profile.school_name || 'Your school'} · Your school workspace`}</p>
+          : ui("{0} · Your school workspace", [profile.school_name || ui("Your school")])}</p>
       </section>}
       <div className="dashboard-content">
           {profile.role === 'teacher' ? (
@@ -505,6 +517,8 @@ export function SchoveraApp() {
 }
 
 function Teacher({ profile, page }: { profile: Profile; page: string }) {
+  const ui = useUiText();
+  const { t } = useI18n();
   const db = useMemo(() => createClient(), []);
   const activeClassIdRef = useRef('');
   const classRequestVersionRef = useRef(0);
@@ -518,6 +532,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     [classId, setClassId] = useState(''),
     [student, setStudent] = useState<any>(null),
     [studentSearch, setStudentSearch] = useState(''),
+    [recentFirst, setRecentFirst] = useState(false),
     [updates, setUpdates] = useState<Update[]>([]),
     [classLoading, setClassLoading] = useState(true),
     [updatesLoading, setUpdatesLoading] = useState(false),
@@ -908,6 +923,8 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
       )
     : students;
   const teacherCorrectedIds = correctedUpdateIds(updates);
+  const teacherSpeech = useParentSpeech(`${profile.id}:${page}:${classId}:${student?.id || ''}`);
+  const visibleStudents = recentFirst ? [...filteredStudents].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')) || a.full_name.localeCompare(b.full_name)) : filteredStudents;
   const pendingForSelectedStudent = pendingSend &&
     pendingSend.classId === classId &&
     pendingSend.studentId === student?.id
@@ -915,26 +932,26 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     : null;
   return (
     <section className="teacher-workspace" id="teacher-home">
-      <section className="teacher-today-card" aria-label="Today's teaching context">
+      <section className="teacher-today-card" aria-label={ui("Today's teaching context")}>
         <div className="section-icon"><Icon name="school" /></div>
         <div>
-          <p className="eyebrow">TODAY AT SCHOVERA</p>
-          <h2>{classId ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Choose your class'}</h2>
-        <p>{classId ? `${classLoading ? 'Loading class roster…' : students.length === 1 ? '1 student' : `${students.length} students`} · ${mode === 'attendance' ? 'Attendance register open' : mode === 'timetable' ? 'Today’s schedule' : mode === 'notices' ? 'Official school notices' : 'Ready for parent updates'}` : 'Select your assigned class to begin.'}</p>
+          <p className="eyebrow"><UiText source={"TODAY AT SCHOVERA"} /></p>
+          <h2>{classId ? ui("Grade {0}{1}", [classes.find((row) => row.id === classId)?.grade, classes.find((row) => row.id === classId)?.division]) : ui("Choose your class")}</h2>
+        <p>{classId ? `${classLoading ? ui('Loading class roster…') : ui('{0} students', [students.length])} · ${ui(mode === 'attendance' ? 'Attendance register open' : mode === 'timetable' ? 'Today’s schedule' : mode === 'notices' ? 'Official school notices' : 'Ready for parent updates')}` : ui("Select your assigned class to begin.")}</p>
         </div>
-        <span className="today-status">{mode === 'attendance' ? 'Attendance' : mode === 'timetable' ? 'Schedule' : mode === 'notices' ? 'School notices' : 'Student updates'}</span>
+        <span className="today-status">{mode === 'attendance' ? ui("Attendance") : mode === 'timetable' ? ui("Schedule") : mode === 'notices' ? ui("School notices") : ui("Student updates")}</span>
       </section>
     <section className={`two teacher-mode-${mode}`}>
       <aside className="card teacher-sidebar teacher-class-panel">
-        <p className="eyebrow">YOUR CLASSROOM</p>
-        <h2>Your classroom</h2>
-        <p className="hint">Choose the class you are working with now.</p>
-        <div className="teacher-class-status" aria-label="Current class status">
-          <span><small>Class</small><b>{classId ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Not selected'}</b></span>
-          <span><small>Students</small><b>{classLoading ? 'Loading…' : classId ? students.length : '—'}</b></span>
-          <span><small>Selected student</small><b>{student ? student.full_name : 'Choose a student'}</b></span>
+        <p className="eyebrow"><UiText source={"YOUR CLASSROOM"} /></p>
+        <h2><UiText source={"Your classroom"} /></h2>
+        <p className="hint"><UiText source={"Choose the class you are working with now."} /></p>
+        <div className="teacher-class-status" aria-label={ui("Current class status")}>
+          <span><small><UiText source={"Class"} /></small><b>{classId ? ui("Grade {0}{1}", [classes.find((row) => row.id === classId)?.grade, classes.find((row) => row.id === classId)?.division]) : ui("Not selected")}</b></span>
+          <span><small><UiText source={"Students"} /></small><b>{classLoading ? ui("Loading…") : classId ? students.length : '—'}</b></span>
+          <span><small><UiText source={"Selected student"} /></small><b>{student ? student.full_name : ui("Choose a student")}</b></span>
         </div>
-        <div className="chips" aria-label="Assigned classes">
+        <div className="chips" aria-label={ui("Assigned classes")}>
           {classes.map((row) => (
             <button
               key={row.id}
@@ -962,25 +979,25 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                 setAttendanceNote('');
                 setNote('');
               }}
-            >{`Grade ${row.grade}${row.division}`}</button>
+            >{ui("Grade {0}{1}", [row.grade, row.division])}</button>
           ))}
         </div>
         {(mode === 'updates' || mode === 'profile') && (
           <>
             <div className="section-heading">
-              <p className="eyebrow">STUDENT UPDATES</p>
-              <h2>Select a student</h2>
+              <p className="eyebrow"><UiText source={"STUDENT UPDATES"} /></p>
+              <h2><UiText source={"Select a student"} /></h2>
             </div>
             {classId ? (
               <div className="teacher-roster-search-area">
                 <label className="teacher-roster-search">
-                  <span className="sr-only">Search students</span>
+                  <span className="sr-only"><UiText source={"Search students"} /></span>
                   <Icon name="search" />
                   <input
                     type="search"
                     value={studentSearch}
                     onChange={(event) => setStudentSearch(event.target.value)}
-                    placeholder="Search by name or roll number"
+                    placeholder={ui("Search by name or roll number")}
                     aria-describedby="teacher-roster-search-count"
                   />
                   {studentSearch && (
@@ -988,24 +1005,24 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                       type="button"
                       className="teacher-roster-search-clear"
                       onClick={() => setStudentSearch('')}
-                      aria-label="Clear student search"
+                      aria-label={ui("Clear student search")}
                     >
-                      Clear
-                    </button>
+                      <UiText source={"Clear"} /></button>
                   )}
                 </label>
+                <div className="directory-actions"><button type="button" aria-pressed={recentFirst} onClick={() => setRecentFirst(!recentFirst)}><UiText source={"Recently added"} /></button><Link href="/teacher/profile"><UiText source={"View details →"} /></Link></div>
                 <p id="teacher-roster-search-count" className="teacher-roster-search-count" aria-live="polite">
-                  {classLoading ? 'Loading class roster…' : normalizedStudentSearch
-                    ? `${filteredStudents.length} of ${students.length} students`
-                    : `${students.length} students`}
+                  {classLoading ? ui("Loading class roster…") : normalizedStudentSearch
+                    ? ui("{0} of {1} students", [filteredStudents.length, students.length])
+                    : ui("{0} students", [students.length])}
                 </p>
               <div id="teacher-students"
                 className="student-list"
-                aria-label="Students in selected class"
+                aria-label={ui("Students in selected class")}
               >
                 {classLoading ? (
-                  <Skeleton label="Loading students" rows={4} />
-                ) : filteredStudents.map((row) => (
+                  <Skeleton label={ui("Loading students")} rows={4} />
+                ) : visibleStudents.map((row) => (
                   <button
                     className={
                       student?.id === row.id ? 'student active' : 'student'
@@ -1023,108 +1040,105 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                       setNote('');
                     }}
                   >
-                    <span className="student-name"><i>{initials(row.full_name)}</i><span>{row.full_name}<small>Grade {classes.find((item) => item.id === classId)?.grade}{classes.find((item) => item.id === classId)?.division} · Roll {row.roll_number}</small></span></span>
+                    <span className="student-name"><i>{initials(row.full_name)}</i><span>{row.full_name}<small><UiText source={"Grade "} />{classes.find((item) => item.id === classId)?.grade}{classes.find((item) => item.id === classId)?.division} <UiText source={"· Roll "} />{row.roll_number}</small></span></span>
                     <span className="student-chevron" aria-hidden="true">›</span>
                   </button>
                 ))}
                 {normalizedStudentSearch && !filteredStudents.length && (
                   <div className="teacher-roster-no-results" role="status">
                     <span className="section-icon" aria-hidden="true"><Icon name="search" /></span>
-                    <div><b>No students found</b><p>Try another name or roll number.</p></div>
-                    <button type="button" onClick={() => setStudentSearch('')}>Clear search</button>
+                    <div><b><UiText source={"No students found"} /></b><p><UiText source={"Try another name or roll number."} /></p></div>
+                    <button type="button" onClick={() => setStudentSearch('')}><UiText source={"Clear search"} /></button>
                   </div>
                 )}
                 {!classLoading && !normalizedStudentSearch && !filteredStudents.length && (
-                  <p className="empty compact-empty" role="status">No active students are assigned to this class yet.</p>
+                  <p className="empty compact-empty" role="status"><UiText source={"No active students are assigned to this class yet."} /></p>
                 )}
               </div>
               </div>
             ) : (
               <p className="empty compact-empty">
-                Select a class to view students.
-              </p>
+                <UiText source={"Select a class to view students."} /></p>
             )}
           </>
         )}
-        {mode === 'home' && <div className="teacher-sidebar-notices"><Announcements profile={profile} /></div>}
+        {mode === 'home' && <div className="teacher-sidebar-notices"><OptionalSection id="teacher-home-notices" title={t('nav.notices')} description=""><Announcements profile={profile} speech={teacherSpeech} /></OptionalSection></div>}
       </aside>
       {mode === 'home' ? (
         <div className="teacher-home-stack">
           <TeacherHome classId={classId} classLabel={classes.find((row) => row.id === classId)} studentCount={students.length} />
-          <SchoolEntryPanel role="teacher" profileId={profile.id} schoolId={profile.school_id} classes={classes} classId={classId} onClassChange={(nextClassId) => {
+          <OptionalSection id="school-entry-tools" title={t('simple.entry')} description={t('simple.entryHelp')}><SchoolEntryPanel role="teacher" profileId={profile.id} schoolId={profile.school_id} classes={classes} classId={classId} onClassChange={(nextClassId) => {
             activeClassIdRef.current = nextClassId;
             setClassId(nextClassId);
-          }} />
+          }} /></OptionalSection>
         </div>
       ) : mode === 'updates' ? (
         <div className="card teacher-task-panel">
           {pendingSend && !pendingForSelectedStudent && !correctionTarget && (
             <div className="pending-send-recovery pending-send-other" role="status">
               <span className="update-icon" aria-hidden="true"><Icon name="updates" /></span>
-              <span><b>An earlier send still needs confirmation</b><small>Return to its student to retry it safely, or discard it before creating changed information.</small></span>
-              <button type="button" className="link" onClick={() => { clearPendingSend(); setNote('Pending send discarded. You can create a new update.'); }}>Discard</button>
+              <span><b><UiText source={"An earlier send still needs confirmation"} /></b><small><UiText source={"Return to its student to retry it safely, or discard it before creating changed information."} /></small></span>
+              <button type="button" className="link" onClick={() => { clearPendingSend(); setNote('Pending send discarded. You can create a new update.'); }}><UiText source={"Discard"} /></button>
             </div>
           )}
           {student ? (
             <>
-              <p className="eyebrow">PARENT UPDATE FOR</p>
+              <p className="eyebrow"><UiText source={"PARENT UPDATE FOR"} /></p>
               <div className="selected-student">
                 <span className="student-avatar">{initials(student.full_name)}</span>
-                <div><h2>{student.full_name}</h2><span>Grade {classes.find((row) => row.id === classId)?.grade}{classes.find((row) => row.id === classId)?.division} · Roll {student.roll_number}</span></div>
-                <span className="selected-indicator"><Icon name="check" /> Selected</span>
+                <div><h2>{student.full_name}</h2><span><UiText source={"Grade "} />{classes.find((row) => row.id === classId)?.grade}{classes.find((row) => row.id === classId)?.division} <UiText source={"· Roll "} />{student.roll_number}</span></div>
+                <span className="selected-indicator"><Icon name="check" /> <UiText source={"Selected"} /></span>
               </div>
-              <div className="student-snapshot" aria-label="Selected student context">
-                <span><small>Attendance</small><b className={`status ${records[student.id] || 'present'}`}>{nice(records[student.id] || 'present')}</b></span>
-                <span><small>Latest update</small><b>{updates[0] ? nice(updates[0].category) : 'None yet'}</b></span>
-                <span><small>Last sent</small><b>{updates[0] ? new Date(updates[0].sent_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '—'}</b></span>
-                <span><small>Important update</small><b className={effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'snapshot-awaiting' : 'snapshot-acknowledged'}>{effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'Awaiting' : 'Up to date'}</b></span>
+              <div className="student-snapshot" aria-label={ui("Selected student context")}>
+                <span><small><UiText source={"Attendance"} /></small><b className={`status ${records[student.id] || 'present'}`}>{ui(nice(records[student.id] || 'present'))}</b></span>
+                <span><small><UiText source={"Latest update"} /></small><b>{updates[0] ? ui(nice(updates[0].category)) : ui("None yet")}</b></span>
+                <span><small><UiText source={"Last sent"} /></small><b>{updates[0] ? new Date(updates[0].sent_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '—'}</b></span>
+                <span><small><UiText source={"Important update"} /></small><b className={effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'snapshot-awaiting' : 'snapshot-acknowledged'}>{effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? ui("Awaiting") : ui("Up to date")}</b></span>
               </div>
-              <button type="button" className="profile-link" onClick={() => setMode('profile')}>View student profile</button>
+              <button type="button" className="profile-link" onClick={() => setMode('profile')}><UiText source={"View student profile"} /></button>
               <div className="teacher-form-heading">
-                <div><p className="eyebrow">{correctionTarget ? 'CORRECTING SENT COMMUNICATION' : 'NEW COMMUNICATION'}</p><h2 className="form-title">{correctionTarget ? 'Send a correction' : 'Send an update'}</h2></div>
-                <span>About {student.full_name.split(' ')[0]}</span>
+                <div><p className="eyebrow">{correctionTarget ? ui("CORRECTING SENT COMMUNICATION") : ui("NEW COMMUNICATION")}</p><h2 className="form-title">{correctionTarget ? ui("Send a correction") : ui("Send an update")}</h2></div>
+                <span><UiText source={"About "} />{student.full_name.split(' ')[0]}</span>
               </div>
               {correctionTarget && (
                 <div className="correction-context" role="status">
                   <span className="update-icon" aria-hidden="true"><Icon name="updates" /></span>
-                  <span><b>Correcting: {correctionTarget.title}</b><small>The original stays in the family history. Category and importance are preserved.</small></span>
-                  <button type="button" className="link" onClick={() => setCorrectionTarget(null)}>Cancel</button>
+                  <span><b><UiText source={"Correcting: "} />{correctionTarget.title}</b><small><UiText source={"The original stays in the family history. Category and importance are preserved."} /></small></span>
+                  <button type="button" className="link" onClick={() => setCorrectionTarget(null)}><UiText source={"Cancel"} /></button>
                 </div>
               )}
               {pendingForSelectedStudent && !correctionTarget && (
                 <div className="pending-send-recovery" role="status">
                   <span className="update-icon" aria-hidden="true"><Icon name="updates" /></span>
-                  <span><b>We could not confirm delivery</b><small>Retrying uses the same send action, so no duplicate can be created.</small></span>
-                  <button type="button" onClick={() => (document.getElementById('teacher-update-form') as HTMLFormElement | null)?.requestSubmit()}>Retry sending</button>
-                  <button type="button" className="link" onClick={() => { clearPendingSend(); setNote('Pending send discarded. You can create a new update.'); }}>Discard</button>
+                  <span><b><UiText source={"We could not confirm delivery"} /></b><small><UiText source={"Retrying uses the same send action, so no duplicate can be created."} /></small></span>
+                  <button type="button" onClick={() => (document.getElementById('teacher-update-form') as HTMLFormElement | null)?.requestSubmit()}><UiText source={"Retry sending"} /></button>
+                  <button type="button" className="link" onClick={() => { clearPendingSend(); setNote('Pending send discarded. You can create a new update.'); }}><UiText source={"Discard"} /></button>
                 </div>
               )}
               <form id="teacher-update-form" className="teacher-update-form" onSubmit={correctionTarget ? sendCorrection : send}>
                 {!correctionTarget && <label className="category-field">
-                  <span><Icon name="updates" /> Category</span>
+                  <span><Icon name="updates" /> <UiText source={"Category"} /></span>
                   <select key={`category-${pendingForSelectedStudent?.requestId || 'new'}`} name="category" defaultValue={pendingForSelectedStudent?.category || 'academic'}>
                     {categories.map((category) => (
                       <option key={category} value={category}>
-                        {nice(category)}
+                        {ui(nice(category))}
                       </option>
                     ))}
                   </select>
                 </label>}
                 <label>
-                  Title
-                  <input
+                  <UiText source={"Title"} /><input
                     name="title"
                     required
                     minLength={3}
                     maxLength={120}
                     key={`title-${correctionTarget?.id || pendingForSelectedStudent?.requestId || 'new'}`}
                     defaultValue={correctionTarget?.title || pendingForSelectedStudent?.title || ''}
-                    placeholder="Clear update title"
+                    placeholder={ui("Clear update title")}
                   />
                 </label>
                 <label>
-                  Message
-                  <textarea
+                  <UiText source={"Message"} /><textarea
                     name="message"
                     required
                     minLength={3}
@@ -1132,44 +1146,42 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                     rows={4}
                     key={`message-${correctionTarget?.id || pendingForSelectedStudent?.requestId || 'new'}`}
                     defaultValue={correctionTarget?.message || pendingForSelectedStudent?.message || ''}
-                    placeholder="Write a short, kind, specific update…"
+                    placeholder={ui("Write a short, kind, specific update…")}
                   />
                 </label>
                 {!correctionTarget && <label className="check importance-control">
                   <input key={`important-${pendingForSelectedStudent?.requestId || 'new'}`} name="important" type="checkbox" defaultChecked={pendingForSelectedStudent?.importance === 'important'} />
-                  <span><b>Important update</b><small>Ask the linked parent to acknowledge this message.</small></span>
+                  <span><b><UiText source={"Important update"} /></b><small><UiText source={"Ask the linked parent to acknowledge this message."} /></small></span>
                 </label>}
                 <button disabled={sending}>
-                  {sending ? 'Sending…' : correctionTarget ? 'Send correction to parent' : 'Send update to parent'}
+                  {sending ? ui("Sending…") : correctionTarget ? ui("Send correction to parent") : ui("Send update to parent")}
                 </button>
               </form>
               {note && (
                 <p className={note.startsWith('Could') ? 'error' : 'success'}>
-                  {note}
+                  {ui(note)}
                 </p>
               )}
               <div className="section-heading history-heading">
-                <p className="eyebrow">SENT UPDATES</p>
-                <h2>Recent communication</h2>
+                <p className="eyebrow"><UiText source={"SENT UPDATES"} /></p>
+                <h2><UiText source={"Recent communication"} /></h2>
               </div>
               {updatesLoading ? (
-                <Skeleton label="Loading recent communication" rows={3} />
+                <Skeleton label={ui("Loading recent communication")} rows={3} />
               ) : updatesError ? (
-                <p className="error" role="alert">{updatesError}</p>
+                <p className="error" role="alert">{ui(updatesError)}</p>
               ) : updates.length ? (
                 updates.map((update) => (
-                  <Card key={update.id} update={update} teacher corrected={teacherCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? updates.find((item) => item.id === update.corrects_update_id)?.title : undefined} onCorrect={teacherCorrectedIds.has(update.id) ? undefined : setCorrectionTarget} />
+                  <Card key={update.id} update={update} teacher speech={teacherSpeech} corrected={teacherCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? updates.find((item) => item.id === update.corrects_update_id)?.title : undefined} onCorrect={teacherCorrectedIds.has(update.id) ? undefined : setCorrectionTarget} />
                 ))
               ) : (
                 <p className="empty compact-empty">
-                  No updates have been sent for this student yet.
-                </p>
+                  <UiText source={"No updates have been sent for this student yet."} /></p>
               )}
             </>
           ) : (
             <p className="empty">
-              Choose a student to create a clear, structured parent update.
-            </p>
+              <UiText source={"Choose a student to create a clear, structured parent update."} /></p>
           )}
         </div>
       ) : mode === 'profile' ? (
@@ -1197,13 +1209,13 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
             setRecords((current) => ({ ...current, [studentId]: status }));
           }}
           onSave={saveAttendance}
-        />{classId && <AttendanceInsights role="teacher" profileId={profile.id} schoolId={profile.school_id} classId={classId} revision={attendanceNote} />}</div>
+        />{classId && <><AttendanceTrends key={`${classId}:${attendanceNote}`} schoolId={profile.school_id} classId={classId} /><AttendanceInsights role="teacher" profileId={profile.id} schoolId={profile.school_id} classId={classId} revision={attendanceNote} /></>}</div>
       ) : mode === 'homework' ? (
         <div id="teacher-homework"><TeacherAssignments key={classId} teacherId={profile.id} classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
       ) : mode === 'timetable' ? (
         <TimetableView classId={classId} className={classes.find((row) => row.id === classId) ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Your class'} profile={profile} />
       ) : (
-        <div id="teacher-notices" className="teacher-notices-panel"><Announcements profile={profile} /></div>
+        <div id="teacher-notices" className="teacher-notices-panel"><Announcements profile={profile} speech={teacherSpeech} /></div>
       )}
     </section>
     </section>
@@ -1211,23 +1223,25 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
 }
 
 function TeacherHome({ classId, classLabel, studentCount }: { classId: string; classLabel?: { grade: string; division: string }; studentCount: number }) {
+  const ui = useUiText();
   return (
     <section className="teacher-home-dashboard card" aria-labelledby="teacher-home-heading">
       <div className="teacher-home-heading">
         <span className="section-icon" aria-hidden="true"><Icon name="school" /></span>
         <div>
-          <p className="eyebrow">YOUR SCHOOL DAY</p>
-          <h2 id="teacher-home-heading">{classId && classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Choose a class to get started'}</h2>
-          <p>{classId ? `${studentCount} students in your selected classroom` : 'Choose one of your assigned classes to see the right actions for today.'}</p>
+          <p className="eyebrow"><UiText source={"YOUR SCHOOL DAY"} /></p>
+          <h2 id="teacher-home-heading">{classId && classLabel ? ui("Grade {0}{1}", [classLabel.grade, classLabel.division]) : ui("Choose a class to get started")}</h2>
+          <p>{classId ? ui("{0} students in your selected classroom", [studentCount]) : ui("Choose one of your assigned classes to see the right actions for today.")}</p>
         </div>
       </div>
-      <h3>Go to a task</h3>
+      <h3><UiText source={"Go to a task"} /></h3>
       <div className="teacher-home-actions">
-        <Link href="/teacher/students"><Icon name="student" /><span><b>Student updates</b><small>Write or review family communication</small></span><span aria-hidden="true">›</span></Link>
-        <Link href="/teacher/attendance"><Icon name="attendance" /><span><b>Attendance</b><small>Mark or review your class register</small></span><span aria-hidden="true">›</span></Link>
-        <Link href="/teacher/homework"><Icon name="homework" /><span><b>Homework</b><small>Share an assignment with your class</small></span><span aria-hidden="true">›</span></Link>
-        <Link href="/teacher/timetable"><Icon name="timetable" /><span><b>Today&apos;s schedule</b><small>Check your class timetable</small></span><span aria-hidden="true">›</span></Link>
-        <Link href="/teacher/notices"><Icon name="notice" /><span><b>School notices</b><small>Read official school information</small></span><span aria-hidden="true">›</span></Link>
+        <Link href="/teacher/students"><Icon name="student" /><span><b><UiText source={"Student updates"} /></b><small><UiText source={"Write or review family communication"} /></small></span><span aria-hidden="true">›</span></Link>
+        <Link href="/teacher/attendance"><Icon name="attendance" /><span><b><UiText source={"Attendance"} /></b><small><UiText source={"Mark or review your class register"} /></small></span><span aria-hidden="true">›</span></Link>
+        <Link href="/teacher/homework"><Icon name="homework" /><span><b><UiText source={"Homework"} /></b><small><UiText source={"Share an assignment with your class"} /></small></span><span aria-hidden="true">›</span></Link>
+        <Link href="/teacher/timetable"><Icon name="timetable" /><span><b><UiText source={"Today's schedule"} /></b><small><UiText source={"Check your class timetable"} /></small></span><span aria-hidden="true">›</span></Link>
+        <Link href="/teacher/notices"><Icon name="notice" /><span><b><UiText source={"School notices"} /></b><small><UiText source={"Read official school information"} /></small></span><span aria-hidden="true">›</span></Link>
+        <Link href="/teacher/ai"><Icon name="ai" /><span><b><UiText source={"AI studio"} /></b><small><UiText source={"Create teaching materials"} /></small></span><span aria-hidden="true">›</span></Link>
       </div>
     </section>
   );
@@ -1246,25 +1260,26 @@ function AttendanceMarker({
   onStatus,
   onSave,
 }: any) {
+  const ui = useUiText();
   const saved = note.startsWith('Attendance saved');
   return (
     <div className="card teacher-attendance-register">
       {!classId ? (
         <div className="attendance-empty-state">
           <span className="section-icon"><Icon name="attendance" /></span>
-          <h2>Select a class to begin</h2>
-          <p>Choose one of your assigned classes to open its daily register.</p>
+          <h2><UiText source={"Select a class to begin"} /></h2>
+          <p><UiText source={"Choose one of your assigned classes to open its daily register."} /></p>
         </div>
       ) : (
         <>
           <header className="attendance-register-header">
             <div>
-              <p className="eyebrow">DAILY ATTENDANCE</p>
-              <h2>Attendance register</h2>
-              <p>{classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Selected class'} · {students.length} students</p>
+              <p className="eyebrow"><UiText source={"DAILY ATTENDANCE"} /></p>
+              <h2><UiText source={"Attendance register"} /></h2>
+              <p>{classLabel ? ui("Grade {0}{1}", [classLabel.grade, classLabel.division]) : ui("Selected class")} · {students.length} <UiText source={"students"} /></p>
             </div>
             <label className="attendance-date-field">
-              <span>Date</span>
+              <span><UiText source={"Date"} /></span>
               <input
                 type="date"
                 max={today()}
@@ -1275,42 +1290,42 @@ function AttendanceMarker({
           </header>
           <div className="attendance-register-guidance">
             <span className="section-icon"><Icon name="check" /></span>
-            <p>Everyone starts as Present. Change only Absent or Late students.</p>
-            <span className={saved ? 'attendance-state saved' : 'attendance-state pending'}>{saved ? <><Icon name="check" /> Saved</> : <>Ready to mark</>}</span>
+            <p><UiText source={"Everyone starts as Present. Change only Absent or Late students."} /></p>
+            <span className={saved ? 'attendance-state saved' : 'attendance-state pending'}>{saved ? <><Icon name="check" /> <UiText source={"Saved"} /></> : <><UiText source={"Ready to mark"} /></>}</span>
           </div>
-          <div className="attendance-counts attendance-live-summary" aria-label="Live attendance summary" aria-live="polite">
-            <span className="attendance-total"><b>{students.length}</b>Total</span>
-            <span className="attendance-present"><b>{counts.present}</b>Present</span>
-            <span className="attendance-absent"><b>{counts.absent}</b>Absent</span>
-            <span className="attendance-late"><b>{counts.late}</b>Late</span>
+          <div className="attendance-counts attendance-live-summary" aria-label={ui("Live attendance summary")} aria-live="polite">
+            <span className="attendance-total"><b>{students.length}</b><UiText source={"Total"} /></span>
+            <span className="attendance-present"><b>{counts.present}</b><UiText source={"Present"} /></span>
+            <span className="attendance-absent"><b>{counts.absent}</b><UiText source={"Absent"} /></span>
+            <span className="attendance-late"><b>{counts.late}</b><UiText source={"Late"} /></span>
           </div>
           {busy ? (
-            <Skeleton label="Loading attendance" rows={4} />
+            <Skeleton label={ui("Loading attendance")} rows={4} />
           ) : (
             <div className="roster">
-              <div className="attendance-roster-heading" aria-hidden="true"><span>Student</span><span>Status</span></div>
+              <div className="attendance-roster-heading" aria-hidden="true"><span><UiText source={"Student"} /></span><span><UiText source={"Status"} /></span></div>
               {students.map((student: any) => (
                 <div className={`roster-row attendance-row ${records[student.id] || 'present'}`} key={student.id}>
                   <span className="attendance-student-identity">
                     <i aria-hidden="true">{initials(student.full_name)}</i>
-                    <span><b>{student.full_name}</b><small>Roll {student.roll_number}</small></span>
+                    <span><b>{student.full_name}</b><small><UiText source={"Roll "} />{student.roll_number}</small></span>
                   </span>
-                  <span className="attendance-segments" role="group" aria-label={`Attendance status for ${student.full_name}`}>
-                    {(['present', 'absent', 'late'] as Status[]).map((status) => <button type="button" key={status} className={`attendance-choice ${status} ${(records[student.id] || 'present') === status ? 'selected' : ''}`} aria-pressed={(records[student.id] || 'present') === status} onClick={() => onStatus(student.id, status)}>{status === 'present' ? <Icon name="check" /> : status === 'absent' ? <Icon name="important" /> : <Icon name="attendance" />}{nice(status)}</button>)}
+                  <span className="attendance-segments" role="group" aria-label={ui("Attendance status for {0}", [student.full_name])}>
+                    {(['present', 'absent', 'late'] as Status[]).map((status) => <button type="button" key={status} className={`attendance-choice ${status} ${(records[student.id] || 'present') === status ? 'selected' : ''}`} aria-pressed={(records[student.id] || 'present') === status} onClick={() => onStatus(student.id, status)}>{status === 'present' ? <Icon name="check" /> : status === 'absent' ? <Icon name="important" /> : <Icon name="attendance" />}{ui(nice(status))}</button>)}
                   </span>
                 </div>
               ))}
             </div>
           )}
           <div className="attendance-save-area">
-            <div><b>{counts.present} Present · {counts.absent} Absent · {counts.late} Late</b><span>{saved ? 'Attendance is saved for this date.' : 'Review exceptions, then save the register.'}</span></div>
+            <div><b>{counts.present} <UiText source={"Present · "} />{counts.absent} <UiText source={"Absent · "} />{counts.late} <UiText source={"Late"} /></b><span>{saved ? ui("Attendance is saved for this date.") : ui("Review exceptions, then save the register.")}</span></div>
             <button disabled={busy || !students.length} onClick={onSave}>
-              {busy ? 'Saving attendance…' : saved ? 'Save changes' : 'Save attendance'}
+              {busy ? ui("Saving attendance…") : saved ? ui("Save changes") : ui("Save attendance")}
             </button>
           </div>
           {note && (
             <p className={note.startsWith('Could') ? 'error' : 'success'}>
-              {note}
+              {ui(note)}
             </p>
           )}
         </>
@@ -1323,8 +1338,11 @@ function Skeleton({ label, rows = 3 }: { label: string; rows?: number }) {
   return <div className="skeleton" role="status" aria-label={label}>{Array.from({ length: rows }, (_, index) => <span key={index} />)}</div>;
 }
 
-function AssignmentCard({ assignment, showClass = false, language = 'en' }: { assignment: Assignment; showClass?: boolean; language?: Language }) {
-  const className = assignment.classes ? `Grade ${assignment.classes.grade}${assignment.classes.division}` : '';
+function AssignmentCard({ assignment, showClass = false, language: requestedLanguage }: { assignment: Assignment; showClass?: boolean; language?: Language }) {
+  const { language: interfaceLanguage } = useI18n();
+  const language = requestedLanguage ?? interfaceLanguage;
+  const ui = useUiText();
+  const className = assignment.classes ? ui('Grade {0}{1}', [assignment.classes.grade, assignment.classes.division]) : '';
   return <article className={`assignment-card${assignment.due_date < today() ? ' assignment-past' : ''}`}>
     <header><span className="assignment-icon" aria-hidden="true"><Icon name="homework" /></span><div><p>{assignment.subject}</p><h3>{assignment.title}</h3></div><time dateTime={assignment.due_date}>{dueLabel(assignment.due_date, language)}</time></header>
     <p className="assignment-description">{assignment.description}</p>
@@ -1333,6 +1351,7 @@ function AssignmentCard({ assignment, showClass = false, language = 'en' }: { as
 }
 
 function TeacherAssignments({ classId, classLabel, studentsCount, teacherId }: { classId: string; classLabel?: any; studentsCount: number; teacherId: string }) {
+  const ui = useUiText();
   const db = useMemo(() => createClient(), []);
   const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [sending, setSending] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('');
   // The channel retains its first callback. Read current rows through a ref,
@@ -1363,7 +1382,7 @@ function TeacherAssignments({ classId, classLabel, studentsCount, teacherId }: {
     else { formElement.reset(); setNote('Homework assigned to the class.'); refresh(); }
   };
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
-  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">CLASS HOMEWORK</p><h2 id="teacher-homework-heading">Homework & assignments</h2><p>{classId && classLabel ? `Grade ${classLabel.grade}${classLabel.division} · ${studentsCount} students` : 'Select an assigned class to create homework.'}</p></div></header>{!classId ? <p className="empty compact-empty">Choose a class in Your classroom to begin assigning homework.</p> : <><form className="assignment-form" onSubmit={create}><label>Subject<input name="subject" required maxLength={80} placeholder="Science" /></label><label>Title<input name="title" required maxLength={140} placeholder="Plant Cell Diagram" /></label><label className="assignment-description-field">Description<textarea name="description" required maxLength={1500} rows={3} placeholder="Explain what students should complete." /></label><label>Due date<input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? 'Assigning…' : 'Assign homework'}</button></form>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<div className="assignment-list-heading"><div><p className="eyebrow">UPCOMING</p><h2>Upcoming assignments</h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label="Loading homework" rows={3} /> : upcoming.length ? upcoming.map((assignment) => <div key={assignment.id}><AssignmentCard assignment={assignment} />{assignment.teacher_id === teacherId && <AssignmentEditor assignment={assignment} onSaved={refresh} />}</div>) : <p className="empty compact-empty">No homework assigned yet.</p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow">EARLIER</p><h2>Past assignments</h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
+  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow"><UiText source={"CLASS HOMEWORK"} /></p><h2 id="teacher-homework-heading"><UiText source={"Homework & assignments"} /></h2><p>{classId && classLabel ? ui("Grade {0}{1} · {2} students", [classLabel.grade, classLabel.division, studentsCount]) : ui("Select an assigned class to create homework.")}</p></div></header>{!classId ? <p className="empty compact-empty"><UiText source={"Choose a class in Your classroom to begin assigning homework."} /></p> : <><form className="assignment-form" onSubmit={create}><label><UiText source={"Subject"} /><input name="subject" required maxLength={80} placeholder={ui("Science")} /></label><label><UiText source={"Title"} /><input name="title" required maxLength={140} placeholder={ui("Plant Cell Diagram")} /></label><label className="assignment-description-field"><UiText source={"Description"} /><textarea name="description" required maxLength={1500} rows={3} placeholder={ui("Explain what students should complete.")} /></label><label><UiText source={"Due date"} /><input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? ui("Assigning…") : ui("Assign homework")}</button></form>{error && <p className="error" role="alert">{ui(error)}</p>}{note && <p className="success" role="status">{ui(note)}</p>}<div className="assignment-list-heading"><div><p className="eyebrow"><UiText source={"UPCOMING"} /></p><h2><UiText source={"Upcoming assignments"} /></h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label={ui("Loading homework")} rows={3} /> : upcoming.length ? upcoming.map((assignment) => <div key={assignment.id}><AssignmentCard assignment={assignment} />{assignment.teacher_id === teacherId && <AssignmentEditor assignment={assignment} onSaved={refresh} />}</div>) : <p className="empty compact-empty"><UiText source={"No homework assigned yet."} /></p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow"><UiText source={"EARLIER"} /></p><h2><UiText source={"Past assignments"} /></h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
 }
 
 function ParentHomework({ child, className }: { child?: any; className: string }) {
@@ -1379,6 +1398,7 @@ function ParentHomework({ child, className }: { child?: any; className: string }
 }
 
 function TimetableViewEnglish({ classId, className, profile, manage = false }: { classId?: string; className: string; profile: Profile; manage?: boolean }) {
+  const ui = useUiText();
   const db = useMemo(() => createClient(), []); const [entries, setEntries] = useState<TimetableEntry[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''); const requestRef = useRef(0); const currentDay = schoolWeekday();
   const refresh = async () => { const version = ++requestRef.current; if (!classId) { setEntries([]); setLoading(false); return; } setLoading(true); const result = profile.role === 'principal' ? await db.from('timetable_entries').select('*,profiles!timetable_entries_teacher_id_fkey(full_name)').eq('class_id', classId).order('weekday').order('start_time') : await db.from('timetable_entries').select('*').eq('class_id', classId).order('weekday').order('start_time'); if (version === requestRef.current) { setEntries((result.data || []) as TimetableEntry[]); setError(result.error ? 'Timetable could not be loaded.' : ''); setLoading(false); } };
   const { onChannelStatus } = useRealtimeResync(refresh);
@@ -1386,8 +1406,8 @@ function TimetableViewEnglish({ classId, className, profile, manage = false }: {
   useEffect(() => { const channel = db.channel(`timetable-${profile.role}-${classId || 'none'}`).on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_entries' }, (event: any) => { if (!classId || event.new?.class_id === classId || event.old?.class_id === classId) refresh(); }).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, profile.role, onChannelStatus]);
   const todayEntries = entries.filter((entry) => entry.weekday === currentDay);
   const regionId = manage ? `${profile.role}-timetable-view` : `${profile.role}-timetable`;
-  if (!classId) return <section className="card timetable-empty" id={regionId}><span className="section-icon"><Icon name="timetable" /></span><h2>Select a class to view its timetable</h2><p>Choose an authorized class to see today&apos;s and weekly periods.</p></section>;
-  return <section className="timetable-workspace" id={regionId} aria-labelledby={`${regionId}-heading`}><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">{manage ? 'TIMETABLE MANAGEMENT' : 'CLASS SCHEDULE'}</p><h2 id={`${regionId}-heading`}>{manage ? 'Weekly timetable' : "Today’s schedule"}</h2><p className="hint">{className} · School time in India Standard Time</p></div></div>{error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label="Loading timetable" rows={3} /> : <><section className="timetable-today" aria-labelledby={`${profile.role}-today-heading`}><div><p className="eyebrow">TODAY · {weekdayNames[currentDay - 1].toUpperCase()}</p><h3 id={`${profile.role}-today-heading`}>Today&apos;s periods</h3></div>{todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || 'Teacher'}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b>No classes scheduled for today.</b><p>The weekly timetable remains available below.</p></span></div>}</section><section className="timetable-week" aria-labelledby={`${profile.role}-week-heading`}><p className="eyebrow">WEEKLY TIMETABLE</p><h3 id={`${profile.role}-week-heading`}>All school days</h3><div className="timetable-days">{schoolDays.map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{day}</b>{currentDay === index + 1 && <span>Today</span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small>Period {entry.period_number} · {entry.profiles?.full_name || 'Teacher'}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p>No periods</p>}</section>; })}</div></section></>}</section>;
+  if (!classId) return <section className="card timetable-empty" id={regionId}><span className="section-icon"><Icon name="timetable" /></span><h2><UiText source={"Select a class to view its timetable"} /></h2><p><UiText source={"Choose an authorized class to see today's and weekly periods."} /></p></section>;
+  return <section className="timetable-workspace" id={regionId} aria-labelledby={`${regionId}-heading`}><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">{manage ? ui("TIMETABLE MANAGEMENT") : ui("CLASS SCHEDULE")}</p><h2 id={`${regionId}-heading`}>{manage ? ui("Weekly timetable") : ui("Today’s schedule")}</h2><p className="hint">{ui(className)} <UiText source={"· School time in India Standard Time"} /></p></div></div>{error ? <p className="error" role="alert">{ui(error)}</p> : loading ? <Skeleton label={ui("Loading timetable")} rows={3} /> : <><section className="timetable-today" aria-labelledby={`${profile.role}-today-heading`}><div><p className="eyebrow"><UiText source={"TODAY · "} />{ui(weekdayNames[currentDay - 1])}</p><h3 id={`${profile.role}-today-heading`}><UiText source={"Today's periods"} /></h3></div>{todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || ui("Teacher")}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b><UiText source={"No classes scheduled for today."} /></b><p><UiText source={"The weekly timetable remains available below."} /></p></span></div>}</section><section className="timetable-week" aria-labelledby={`${profile.role}-week-heading`}><p className="eyebrow"><UiText source={"WEEKLY TIMETABLE"} /></p><h3 id={`${profile.role}-week-heading`}><UiText source={"All school days"} /></h3><div className="timetable-days">{schoolDays.map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{ui(day)}</b>{currentDay === index + 1 && <span><UiText source={"Today"} /></span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small><UiText source={"Period "} />{entry.period_number} · {entry.profiles?.full_name || ui("Teacher")}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p><UiText source={"No periods"} /></p>}</section>; })}</div></section></>}</section>;
 }
 
 function TimetableView(props: { classId?: string; className: string; profile: Profile; manage?: boolean }) {
@@ -1397,6 +1417,7 @@ function TimetableView(props: { classId?: string; className: string; profile: Pr
 }
 
 function ParentTimetableView({ classId, className }: { classId?: string; className: string }) {
+  const ui = useUiText();
   const { language, t } = useI18n();
   const db = useMemo(() => createClient(), []);
   const [entries, setEntries] = useState<TimetableEntry[]>([]);
@@ -1436,13 +1457,13 @@ function ParentTimetableView({ classId, className }: { classId?: string; classNa
         <h2 id={`${regionId}-heading`}>{t('parent.today')} · {className}</h2>
         <p className="hint">{t('parent.schoolTime', { className })}</p>
       </div></div>
-      {error ? <p className="error" role="alert">{error}</p> : loading ? <Skeleton label={t('parent.loadingTimetable')} rows={3} /> : <>
+      {error ? <p className="error" role="alert">{ui(error)}</p> : loading ? <Skeleton label={t('parent.loadingTimetable')} rows={3} /> : <>
         <section className="timetable-today" aria-labelledby="parent-today-heading">
           <div><p className="eyebrow">{t('parent.today')} · {days[currentDay - 1]}</p><h3 id="parent-today-heading">{t('parent.todayPeriods')}</h3></div>
-          {todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || 'Teacher'}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b>{t('parent.noClassesToday')}</b><p>{t('parent.weeklyAvailable')}</p></span></div>}
+          {todayEntries.length ? <div className="timetable-periods">{todayEntries.map((entry) => <article className="timetable-period" key={entry.id}><span className="period-order">P{entry.period_number}</span><div><b>{entry.subject}</b><p>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)}{entry.room ? ` · ${entry.room}` : ''}</p></div><small>{entry.profiles?.full_name || ui("Teacher")}</small></article>)}</div> : <div className="timetable-calm-empty"><Icon name="timetable" /><span><b>{t('parent.noClassesToday')}</b><p>{t('parent.weeklyAvailable')}</p></span></div>}
         </section>
         <section className="timetable-week" aria-labelledby="parent-week-heading"><p className="eyebrow">{t('parent.weeklyTimetable')}</p><h3 id="parent-week-heading">{t('parent.allSchoolDays')}</h3>
-          <div className="timetable-days">{days.map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{day}</b>{currentDay === index + 1 && <span>{t('parent.today')}</span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small>{t('parent.period', { number: entry.period_number })} · {entry.profiles?.full_name || 'Teacher'}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p>{t('parent.noPeriods')}</p>}</section>; })}</div>
+          <div className="timetable-days">{days.map((day, index) => { const dayEntries = entries.filter((entry) => entry.weekday === index + 1); return <section className={currentDay === index + 1 ? 'timetable-day current-day' : 'timetable-day'} key={day}><header><b>{ui(day)}</b>{currentDay === index + 1 && <span>{t('parent.today')}</span>}</header>{dayEntries.length ? dayEntries.map((entry) => <div className="timetable-row" key={entry.id}><span>{timeLabel(entry.start_time)}</span><div><b>{entry.subject}</b><small>{t('parent.period', { number: entry.period_number })} · {entry.profiles?.full_name || ui("Teacher")}{entry.room ? ` · ${entry.room}` : ''}</small></div></div>) : <p>{t('parent.noPeriods')}</p>}</section>; })}</div>
         </section>
       </>}
     </section>
@@ -1450,6 +1471,7 @@ function ParentTimetableView({ classId, className }: { classId?: string; classNa
 }
 
 function PrincipalTimetable({ profile }: { profile: Profile }) {
+  const ui = useUiText();
   const db = useMemo(() => createClient(), []); const [classes, setClasses] = useState<any[]>([]), [teachers, setTeachers] = useState<any[]>([]), [classId, setClassId] = useState(''), [entries, setEntries] = useState<TimetableEntry[]>([]), [form, setForm] = useState({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' }), [note, setNote] = useState(''), [error, setError] = useState(''), [saving, setSaving] = useState(false), [tick, setTick] = useState(0);
   const createRequestRef = useRef<{ key: string; payload: string } | null>(null);
   useEffect(() => { Promise.all([db.from('classes').select('id,grade,division').eq('school_id', profile.school_id).eq('active', true).order('grade'), db.from('profiles').select('id,full_name').eq('school_id', profile.school_id).eq('role', 'teacher').eq('active', true).order('full_name')]).then(([classResult, teacherResult]) => { setClasses(classResult.data || []); setTeachers(teacherResult.data || []); if (!classId && classResult.data?.[0]) setClassId(classResult.data[0].id); }); }, [db, profile.school_id]);
@@ -1460,21 +1482,24 @@ function PrincipalTimetable({ profile }: { profile: Profile }) {
   const save = async (event: React.FormEvent) => { event.preventDefault(); setNote(''); setError(''); if (!form.subject.trim()) { setError('Subject is required.'); return; } const payloadKey = JSON.stringify({ classId, teacherId: form.teacherId, weekday: form.weekday, period: form.period, subject: form.subject.trim(), start: form.start, end: form.end, room: form.room.trim() }); if (!form.id && createRequestRef.current?.payload !== payloadKey) createRequestRef.current = { key: crypto.randomUUID(), payload: payloadKey }; setSaving(true); const { error: rpcError } = await db.rpc('save_timetable_entry', { p_entry_id: form.id || null, p_class_id: classId, p_teacher_id: form.teacherId, p_weekday: Number(form.weekday), p_period_number: Number(form.period), p_subject: form.subject, p_start_time: form.start, p_end_time: form.end, p_room: form.room || null, p_client_request_id: form.id ? null : createRequestRef.current!.key, p_expected_updated_at: form.expectedUpdatedAt || null }); setSaving(false); if (rpcError) setError(rpcError.message); else { if (!form.id) createRequestRef.current = null; setNote(form.id ? 'Timetable period updated.' : 'Timetable period added.'); setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' }); setTick((value) => value + 1); } };
   const edit = (entry: TimetableEntry) => { createRequestRef.current = null; setForm({ id: entry.id, teacherId: entry.teacher_id, weekday: String(entry.weekday), period: String(entry.period_number), subject: entry.subject, start: timeLabel(entry.start_time), end: timeLabel(entry.end_time), room: entry.room || '', expectedUpdatedAt: entry.updated_at }); };
   const remove = async (id: string) => { setError(''); const { error: rpcError } = await db.rpc('delete_timetable_entry', { p_entry_id: id }); if (rpcError) setError(rpcError.message); else { setNote('Timetable period removed.'); setTick((value) => value + 1); } };
-  const classLabel = classes.find((row) => row.id === classId); return <section className="principal-timetable" id="principal-timetable"><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow">SCHOOL OPERATIONS</p><h2>Timetable</h2><p className="hint">Configure weekly class periods for your school.</p></div></div><label className="timetable-select">Class<select value={classId} onChange={(event) => setClassId(event.target.value)}>{classes.map((row) => <option value={row.id} key={row.id}>Grade {row.grade}{row.division}</option>)}</select></label><div className="principal-timetable-grid"><TimetableView classId={classId} className={classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Class'} profile={profile} manage /><form className="card timetable-form" onSubmit={save}><p className="eyebrow">{form.id ? 'EDIT PERIOD' : 'ADD PERIOD'}</p><h3>{form.id ? 'Update timetable period' : 'Add timetable period'}</h3><label>Teacher<select required value={form.teacherId} onChange={(event) => setForm({ ...form, teacherId: event.target.value })}><option value="">Select teacher</option>{teachers.map((teacher) => <option value={teacher.id} key={teacher.id}>{teacher.full_name}</option>)}</select></label><label>Subject<input value={form.subject} maxLength={80} onChange={(event) => setForm({ ...form, subject: event.target.value })} /></label><div className="timetable-form-grid"><label>Day<select value={form.weekday} onChange={(event) => setForm({ ...form, weekday: event.target.value })}>{schoolDays.map((day, index) => <option value={index + 1} key={day}>{day}</option>)}</select></label><label>Period<input type="number" min="1" max="20" value={form.period} onChange={(event) => setForm({ ...form, period: event.target.value })} /></label></div><div className="timetable-form-grid"><label>Start<input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label>End<input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div><label>Room <span className="hint">(optional)</span><input value={form.room} maxLength={80} onChange={(event) => setForm({ ...form, room: event.target.value })} /></label>{error && <p className="error" role="alert">{error}</p>}{note && <p className="success" role="status">{note}</p>}<button className="primary" disabled={saving || !classId || !form.teacherId}>{saving ? 'Saving…' : form.id ? 'Save changes' : 'Add period'}</button>{form.id && <button type="button" className="secondary" onClick={() => setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' })}>Cancel edit</button>}</form></div><section className="card timetable-manage-list"><h3>Configured periods</h3>{entries.length ? entries.map((entry) => <div key={entry.id}><span>{weekdayNames[entry.weekday - 1]} · P{entry.period_number}</span><b>{entry.subject}</b><small>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)} · {entry.profiles?.full_name || 'Teacher'}</small><button type="button" onClick={() => edit(entry)}>Edit</button><button type="button" onClick={() => remove(entry.id)}>Remove</button></div>) : <p className="empty compact-empty">No timetable periods yet. Add the first period for this class.</p>}</section></section>;
+  const classLabel = classes.find((row) => row.id === classId); return <section className="principal-timetable" id="principal-timetable"><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow"><UiText source={"SCHOOL OPERATIONS"} /></p><h2><UiText source={"Timetable"} /></h2><p className="hint"><UiText source={"Configure weekly class periods for your school."} /></p></div></div><label className="timetable-select"><UiText source={"Class"} /><select value={classId} onChange={(event) => setClassId(event.target.value)}>{classes.map((row) => <option value={row.id} key={row.id}><UiText source={"Grade "} />{row.grade}{row.division}</option>)}</select></label><div className="principal-timetable-grid"><TimetableView classId={classId} className={classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Class'} profile={profile} manage /><form className="card timetable-form" onSubmit={save}><p className="eyebrow">{form.id ? ui("EDIT PERIOD") : ui("ADD PERIOD")}</p><h3>{form.id ? ui("Update timetable period") : ui("Add timetable period")}</h3><label><UiText source={"Teacher"} /><select required value={form.teacherId} onChange={(event) => setForm({ ...form, teacherId: event.target.value })}><option value=""><UiText source={"Select teacher"} /></option>{teachers.map((teacher) => <option value={teacher.id} key={teacher.id}>{teacher.full_name}</option>)}</select></label><label><UiText source={"Subject"} /><input value={form.subject} maxLength={80} onChange={(event) => setForm({ ...form, subject: event.target.value })} /></label><div className="timetable-form-grid"><label><UiText source={"Day"} /><select value={form.weekday} onChange={(event) => setForm({ ...form, weekday: event.target.value })}>{schoolDays.map((day, index) => <option value={index + 1} key={day}>{ui(day)}</option>)}</select></label><label><UiText source={"Period"} /><input type="number" min="1" max="20" value={form.period} onChange={(event) => setForm({ ...form, period: event.target.value })} /></label></div><div className="timetable-form-grid"><label><UiText source={"Start"} /><input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label><UiText source={"End"} /><input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div><label><UiText source={"Room "} /><span className="hint"><UiText source={"(optional)"} /></span><input value={form.room} maxLength={80} onChange={(event) => setForm({ ...form, room: event.target.value })} /></label>{error && <p className="error" role="alert">{ui(error)}</p>}{note && <p className="success" role="status">{ui(note)}</p>}<button className="primary" disabled={saving || !classId || !form.teacherId}>{saving ? ui("Saving…") : form.id ? ui("Save changes") : ui("Add period")}</button>{form.id && <button type="button" className="secondary" onClick={() => setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' })}><UiText source={"Cancel edit"} /></button>}</form></div><section className="card timetable-manage-list"><h3><UiText source={"Configured periods"} /></h3>{entries.length ? entries.map((entry) => <div key={entry.id}><span>{ui(weekdayNames[entry.weekday - 1])} <UiText source={"· P"} />{entry.period_number}</span><b>{entry.subject}</b><small>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)} · {entry.profiles?.full_name || ui("Teacher")}</small><button type="button" onClick={() => edit(entry)}><UiText source={"Edit"} /></button><button type="button" onClick={() => remove(entry.id)}><UiText source={"Remove"} /></button></div>) : <p className="empty compact-empty"><UiText source={"No timetable periods yet. Add the first period for this class."} /></p>}</section></section>;
 }
 
 function PrincipalHomework({ profile }: { profile: Profile }) {
   const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]); const refresh = async () => { const { data } = await db.from('class_assignments').select('*,classes(grade,division)').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(8); setAssignments(data || []); }; const { onChannelStatus } = useRealtimeResync(refresh);
   useEffect(() => { refresh(); const channel = db.channel('principal-homework').on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments' }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, profile.school_id, onChannelStatus]);
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today());
-  return <section className="card principal-homework" id="principal-homework"><div className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow">LEARNING ACTIVITY</p><h2>Homework activity</h2><p>Recent class assignments across your school.</p></div><b>{upcoming.length} upcoming</b></div>{assignments.length ? assignments.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} showClass />) : <p className="empty compact-empty">No assignments to show yet.</p>}</section>;
+  return <section className="card principal-homework" id="principal-homework"><div className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow"><UiText source={"LEARNING ACTIVITY"} /></p><h2><UiText source={"Homework activity"} /></h2><p><UiText source={"Recent class assignments across your school."} /></p></div><b>{upcoming.length} <UiText source={"upcoming"} /></b></div>{assignments.length ? assignments.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} showClass />) : <p className="empty compact-empty"><UiText source={"No assignments to show yet."} /></p>}</section>;
 }
 
 function Parent({ profile, page }: { profile: Profile; page: string }) {
+  const ui = useUiText();
   const { language, t } = useI18n();
   const db = useMemo(() => createClient(), []);
   const activeChildIdRef = useRef('');
   const childRequestVersionRef = useRef(0);
+  const [childrenLoaded, setChildrenLoaded] = useState(false);
+  const [childrenError, setChildrenError] = useState(false);
   const [children, setChildren] = useState<any[]>([]),
     [childId, setChildId] = useState(''),
     [updates, setUpdates] = useState<Update[]>([]),
@@ -1492,10 +1517,14 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
       .select('students(*,classes(grade,division))')
       .eq('parent_id', profile.id)
       .eq('status', 'active')
-      .then(({ data }) => {
-        const linked = (data || []).map((row: any) => row.students);
+      .then(({ data, error }) => {
+        setChildrenLoaded(true);
+        setChildrenError(Boolean(error));
+        if (error) return;
+        const linked = (data || []).map((row: any) => row.students).filter(Boolean);
         setChildren(linked);
-        const storedChildId = sessionStorage.getItem(`schovera:selected-child:${profile.id}`);
+        let storedChildId = '';
+        try { storedChildId = sessionStorage.getItem(`schovera:selected-child:${profile.id}`) || ''; } catch { /* Child selection still works without browser storage. */ }
         setChildId((current) =>
           current && linked.some((child: any) => child.id === current)
             ? current
@@ -1643,6 +1672,8 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
     }
   };
   const latestEffectiveUpdate = effectiveUpdates(updates)[0];
+  if (!childrenLoaded) return <section className="parent-dashboard" id="parent-home"><p role="status">{t('parent.loadingChildren')}</p></section>;
+  if (childrenError || !children.length) return <section className="parent-dashboard" id="parent-home" data-content-ready="true"><section className="card"><h2>{t(childrenError ? 'parent.noChildSelected' : 'parent.noLinkedChild')}</h2><p role={childrenError ? 'alert' : undefined}>{t(childrenError ? 'parent.childLinkLoadFailed' : 'parent.askSchoolLink')}</p></section>{page === 'notices' && <div id="parent-notices"><Announcements profile={profile} parentView speech={speech} /></div>}</section>;
   return (
     <section className={`parent-dashboard${page === 'home' ? ' parent-dashboard-home' : ''}`} id="parent-home" data-content-ready={!updatesLoading && !attendanceLoading}>
       {connectionState !== 'online' && (
@@ -1682,6 +1713,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
           </label>
         )}
       </section>
+      </div>}
       {(page === 'home' || page === 'updates') && <section className="attention-panel" aria-labelledby="important-heading">
         <p className="eyebrow">{t('parent.importantForYou')}</p>
         <h2 id="important-heading">
@@ -1699,7 +1731,6 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
           <p className="attention-copy">{t('parent.noImportant')}</p>
         )}
       </section>}
-      </div>}
       {page === 'profile' && <StudentOverview schoolName={profile.school_name} student={child} classLabel={child?.classes} role="parent" parentId={profile.id} speech={speech} />}
       {page === 'home' && <section className="right-now" aria-labelledby="right-now-heading">
         <div className="section-heading"><p className="eyebrow">{t('parent.rightNow')}</p><h2 id="right-now-heading">{t('parent.atAGlance')}</h2></div>
@@ -1709,10 +1740,10 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
           <div><Icon name="updates" /><span>{t('parent.latestUpdate')}<b>{updatesLoading ? t('parent.loadingUpdates') : updates[0] ? localizedCategory(updates[0].category, t) : t('parent.noUpdates')}</b></span></div>
         </div>
       </section>}
-      {page === 'home' && <SchoolEntryPanel key={`parent-entry-${child?.id || 'none'}`} role="parent" profileId={profile.id} schoolId={profile.school_id} child={child ? { id: child.id, full_name: child.full_name } : null} />}
-      {page === 'home' && <section className="card parent-latest-update" aria-labelledby="parent-latest-update-heading">
+      {page === 'home' && <OptionalSection id="school-entry-tools" title={t('simple.entry')} description={t('simple.entryHelp')}><SchoolEntryPanel key={`parent-entry-${child?.id || 'none'}`} role="parent" profileId={profile.id} schoolId={profile.school_id} child={child ? { id: child.id, full_name: child.full_name } : null} /></OptionalSection>}
+      {page === 'home' && !(awaitingAcknowledgement.length && latestEffectiveUpdate?.id === awaitingAcknowledgement[0].id) && <section className="card parent-latest-update" aria-labelledby="parent-latest-update-heading">
         <div className="parent-latest-heading"><div><p className="eyebrow">{t('parent.childSpecific')}</p><h2 id="parent-latest-update-heading">{t('parent.latestUpdate')}</h2></div><Link href="/parent/updates">{t('parent.viewAllUpdates')}</Link></div>
-        {updatesLoading ? <Skeleton label={t('parent.loadingUpdates')} rows={1} /> : updatesError ? <p className="error" role="alert">{updatesError}</p> : latestEffectiveUpdate ? <article className="parent-latest-update-content">
+        {updatesLoading ? <Skeleton label={t('parent.loadingUpdates')} rows={1} /> : updatesError ? <p className="error" role="alert">{ui(updatesError)}</p> : latestEffectiveUpdate ? <article className="parent-latest-update-content">
           <span className="update-icon" aria-hidden="true"><Icon name={categoryIcon(latestEffectiveUpdate.category)} /></span>
           <div className="parent-latest-copy"><div className="parent-latest-meta"><span>{localizedCategory(latestEffectiveUpdate.category, t)}</span>{latestEffectiveUpdate.importance === 'important' && <span className="parent-important-label">{t('importance.important')}</span>}{latestEffectiveUpdate.corrects_update_id && <span className="parent-correction-label">{t('correction.label')}</span>}</div>
             <NoticeContent source={{ kind: 'update', id: latestEffectiveUpdate.id, title: latestEffectiveUpdate.title, body: latestEffectiveUpdate.message }} speech={speech} />
@@ -1728,8 +1759,8 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
         counts={counts}
         error={attendanceError}
         loading={attendanceLoading}
-      /></div>}
-      {page === 'notices' && <div id="parent-notices"><ParentFallbackPreferences key={profile.id} /><Announcements profile={profile} parentView speech={speech} /></div>}
+      /><AttendanceTrends key={childId} schoolId={profile.school_id} studentId={childId} /></div>}
+      {page === 'notices' && <div id="parent-notices"><Announcements profile={profile} parentView speech={speech} /><ParentFallbackPreferences key={profile.id} /></div>}
       {page === 'updates' && <section className="parent-updates" id="parent-updates" aria-labelledby="child-updates-heading">
         <div className="section-heading">
           <p className="eyebrow">{t('parent.childSpecific')}</p>
@@ -1743,10 +1774,10 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
         )}
         {acknowledgementError && (
           <p className="error" role="alert">
-            {acknowledgementError}
+            {ui(acknowledgementError)}
           </p>
         )}
-      {updatesLoading ? <Skeleton label={t('parent.loadingUpdates')} rows={3} /> : updatesError ? <p className="error" role="alert">{updatesError}</p> : updates.map((update) => (
+      {updatesLoading ? <Skeleton label={t('parent.loadingUpdates')} rows={3} /> : updatesError ? <p className="error" role="alert">{ui(updatesError)}</p> : updates.map((update) => (
         <Card
           key={update.id}
           update={update}
@@ -1797,13 +1828,14 @@ function AttendanceSummary({
   error: string;
   loading: boolean;
 }) {
+  const ui = useUiText();
   const { language, t } = useI18n();
   if (error)
     return (
       <div className="card attendance-card">
         <h2>{t('parent.attendance')}</h2>
         <p className="error" role="alert">
-          {error}
+          {ui(error)}
         </p>
       </div>
     );
@@ -1847,8 +1879,9 @@ function AttendanceSummary({
 }
 
 function StudentOverview({ student, classLabel, role, parentId, speech, schoolName }: { schoolName?: string; student: any; classLabel?: any; role: Role; parentId?: string; speech?: { controller: ParentSpeechController; state: ReturnType<ParentSpeechController['getSnapshot']> } }) {
+  const ui = useUiText();
   const { language, t } = useI18n();
-  const text = (key: string, fallback: string) => role === 'parent' ? t(key) : fallback;
+  const text = (key: string, fallback: string) => role === 'parent' || language !== 'en' ? t(key) : fallback;
   const db = useMemo(() => createClient(), []);
   const requestRef = useRef(0);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
@@ -1891,7 +1924,7 @@ function StudentOverview({ student, classLabel, role, parentId, speech, schoolNa
       .subscribe(onChannelStatus);
     return () => { db.removeChannel(channel); };
   }, [db, role, student?.id, student?.class_id, onChannelStatus]);
-  if (!student) return <section className="card student-profile-empty" id={`${role}-profile`}><span className="section-icon"><Icon name="student" /></span><h2>{role === 'parent' ? t('parent.noChildSelected') : 'Select a student to view their profile'}</h2><p>{role === 'parent' ? t('parent.chooseChild') : 'Choose an authorized student to see their current school context.'}</p></section>;
+  if (!student) return <section className="card student-profile-empty" id={`${role}-profile`}><span className="section-icon"><Icon name="student" /></span><h2>{role === 'parent' ? t('parent.noChildSelected') : ui("Select a student to view their profile")}</h2><p>{role === 'parent' ? t('parent.chooseChild') : ui("Choose an authorized student to see their current school context.")}</p></section>;
   const counts = attendance.reduce((total, row) => ({ ...total, [row.status]: total[row.status] + 1 }), { present: 0, absent: 0, late: 0 } as Record<Status, number>);
   const currentUpdates = effectiveUpdates(updates); const latest = currentUpdates[0];
   const isAcknowledged = (item: Update) => role === 'parent'
@@ -1899,29 +1932,43 @@ function StudentOverview({ student, classLabel, role, parentId, speech, schoolNa
     : Boolean(item.acknowledgements?.length);
   const awaiting = currentUpdates.filter((item) => item.importance === 'important' && !isAcknowledged(item)).length;
   const upcoming = assignments.filter((item) => item.due_date >= today()); const next = upcoming[0];
-  const grade = classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : student.classes ? `Grade ${student.classes.grade}${student.classes.division}` : text('parent.classFallback', 'Class');
+  const grade = classLabel ? ui('Grade {0}{1}', [classLabel.grade, classLabel.division]) : student.classes ? ui('Grade {0}{1}', [student.classes.grade, student.classes.division]) : text('parent.classFallback', 'Class');
   return <section className="student-profile" id={`${role}-profile`} aria-labelledby={`${role}-profile-heading`}>
-    <header className="student-profile-identity"><span className="student-avatar" aria-hidden="true">{initials(student.full_name)}</span><div><p className="eyebrow">{text('parent.profileOverview', 'STUDENT OVERVIEW')}</p><h1 id={`${role}-profile-heading`}>{student.full_name}</h1><p>{grade} · {text('parent.roll', `Roll number ${student.roll_number || '—'}`).replace('{number}', String(student.roll_number || '—'))}</p><small>{schoolName || 'Your school'}</small></div></header>
+    <header className="student-profile-identity"><span className="student-avatar" aria-hidden="true">{initials(student.full_name)}</span><div><p className="eyebrow">{text('parent.profileOverview', 'STUDENT OVERVIEW')}</p><h1 id={`${role}-profile-heading`}>{student.full_name}</h1><p>{grade} · {(role === 'parent' ? t('parent.roll', { number: student.roll_number || '—' }) : ui("Roll number {0}", [student.roll_number || '—']))}</p><small>{schoolName || ui("Your school")}</small></div></header>
+    <OptionalSection id={`${role}-attendance-history`} title={language === 'hi' ? 'इतिहास देखें' : language === 'mr' ? 'इतिहास पाहा' : ui("View history")} description={language === 'hi' ? 'शैक्षणिक वर्ष के अनुसार उपस्थिति।' : language === 'mr' ? 'शैक्षणिक वर्षानुसार उपस्थिती.' : 'Attendance by academic year.'}><AttendanceTrends key={student.id} schoolId={student.school_id} studentId={student.id} /></OptionalSection>
     {loading ? <Skeleton label={text('parent.loadingProfile', 'Loading student profile')} rows={4} /> : <>
-      <div className="student-profile-summary" aria-label={text('parent.profileAtGlance', 'Student profile at a glance')}><article><Icon name="attendance" /><span><small>{text('parent.attendance', 'Attendance')}</small><b>{attendance.length ? localizedStatus(attendance[0].status, t) : text('parent.attendanceNotRecorded', 'Not recorded')}</b></span></article><article><Icon name="updates" /><span><small>{text('parent.profileCommunication', 'Communication')}</small><b>{awaiting ? text('parent.communicationSummaryAwaiting', '{count} awaiting').replace('{count}', String(awaiting)) : latest ? text('parent.communicationUpToDate', 'Up to date') : text('parent.noUpdates', 'No updates')}</b></span></article><article><Icon name="homework" /><span><small>{text('parent.homework', 'Homework')}</small><b>{upcoming.length ? `${upcoming.length} upcoming` : text('parent.homeworkNoneUpcoming', 'None upcoming')}</b></span></article></div>
+      <div className="student-profile-summary" aria-label={text('parent.profileAtGlance', 'Student profile at a glance')}><article><Icon name="attendance" /><span><small>{text('parent.attendance', 'Attendance')}</small><b>{attendance.length ? localizedStatus(attendance[0].status, t) : text('parent.attendanceNotRecorded', 'Not recorded')}</b></span></article><article><Icon name="updates" /><span><small>{text('parent.profileCommunication', 'Communication')}</small><b>{awaiting ? (role === 'parent' ? t('parent.communicationSummaryAwaiting', { count: awaiting }) : ui("{0} awaiting", [awaiting])) : latest ? text('parent.communicationUpToDate', 'Up to date') : text('parent.noUpdates', 'No updates')}</b></span></article><article><Icon name="homework" /><span><small>{text('parent.homework', 'Homework')}</small><b>{upcoming.length ? ui("{0} upcoming", [upcoming.length]) : text('parent.homeworkNoneUpcoming', 'None upcoming')}</b></span></article></div>
       <div className="student-profile-grid">
-        <section className="card profile-section"><p className="eyebrow">{text('parent.attendance', 'ATTENDANCE')}</p><h2>{text('parent.profileAttendance', 'Recent attendance')}</h2>{errors.attendance ? <p className="error" role="alert">{text('parent.attendanceError', errors.attendance)}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>{text('attendance.present', 'Present')}</span><span><b>{counts.absent}</b>{text('attendance.absent', 'Absent')}</span><span><b>{counts.late}</b>{text('attendance.late', 'Late')}</span></div><p className="hint">{role === 'parent' ? t('parent.attendanceLatest', { status: localizedStatus(attendance[0].status, t), date: displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language) }) : `Latest: ${localizedStatus(attendance[0].status, t)} · ${displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language)}`}</p></> : <p className="empty compact-empty">{text('parent.noAttendanceRecorded', 'No attendance recorded yet.')}</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">{text('parent.attendance', 'ATTENDANCE')}</p><h2>{text('parent.profileAttendance', 'Recent attendance')}</h2>{errors.attendance ? <p className="error" role="alert">{text('parent.attendanceError', errors.attendance)}</p> : attendance.length ? <><div className="attendance-counts"><span><b>{counts.present}</b>{text('attendance.present', 'Present')}</span><span><b>{counts.absent}</b>{text('attendance.absent', 'Absent')}</span><span><b>{counts.late}</b>{text('attendance.late', 'Late')}</span></div><p className="hint">{role === 'parent' ? t('parent.attendanceLatest', { status: localizedStatus(attendance[0].status, t), date: displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language) }) : ui("Latest: {0} · {1}", [localizedStatus(attendance[0].status, t), displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language)])}</p></> : <p className="empty compact-empty">{text('parent.noAttendanceRecorded', 'No attendance recorded yet.')}</p>}</section>
         <section className="card profile-section"><p className="eyebrow">{text('parent.profileCommunication', 'COMMUNICATION')}</p><h2>{text('parent.profileCommunication', 'Teacher updates')}</h2>{errors.updates ? <p className="error" role="alert">{text('parent.updatesError', errors.updates)}</p> : latest ? <>{role !== 'parent' && <p className="profile-update-title"><span className="update-icon"><Icon name={categoryIcon(latest.category)} /></span><b>{latest.title}</b></p>}<p className="hint">{localizedCategory(latest.category, t)} · {displayDate(latest.sent_at, language)}</p>{latest.importance === 'important' && <p className={isAcknowledged(latest) ? 'status present' : 'status pending'}>{isAcknowledged(latest) ? t('ack.acknowledged') : t('ack.awaiting')}</p>}{role === 'parent' && speech && <NoticeContent source={{ kind: 'update', id: latest.id, title: latest.title, body: latest.message }} speech={speech} />}</> : <p className="empty compact-empty">{text('parent.noRecentCommunication', 'No teacher updates yet.')}</p>}</section>
-        <section className="card profile-section"><p className="eyebrow">{text('parent.homework', 'HOMEWORK')}</p><h2>{text('parent.profileHomework', 'Upcoming homework')}</h2>{errors.homework ? <p className="error" role="alert">{text('parent.homeworkError', errors.homework)}</p> : next ? <><p className="profile-update-title"><span className="update-icon"><Icon name="homework" /></span><b>{next.title}</b></p><p className="hint">{next.subject} · {dueLabel(next.due_date, role === 'parent' ? language : 'en')}</p><p className="hint">{upcoming.length} upcoming assignment{upcoming.length === 1 ? '' : 's'}</p></> : <p className="empty compact-empty">{text('parent.noUpcomingHomework', 'No upcoming homework.')}</p>}</section>
+        <section className="card profile-section"><p className="eyebrow">{text('parent.homework', 'HOMEWORK')}</p><h2>{text('parent.profileHomework', 'Upcoming homework')}</h2>{errors.homework ? <p className="error" role="alert">{text('parent.homeworkError', errors.homework)}</p> : next ? <><p className="profile-update-title"><span className="update-icon"><Icon name="homework" /></span><b>{next.title}</b></p><p className="hint">{next.subject} · {dueLabel(next.due_date, role === 'parent' ? language : 'en')}</p><p className="hint">{upcoming.length} <UiText source={"upcoming assignment"} />{upcoming.length === 1 ? '' : ui("s")}</p></> : <p className="empty compact-empty">{text('parent.noUpcomingHomework', 'No upcoming homework.')}</p>}</section>
       </div>
     </>}
   </section>;
 }
 
 function PrincipalStudentOverview({ profile }: { profile: Profile }) {
+  const ui = useUiText();
   const db = useMemo(() => createClient(), []); const requestRef = useRef(0);
   const [query, setQuery] = useState(''); const [students, setStudents] = useState<any[]>([]); const [selected, setSelected] = useState<any>(null);
+  const [recent, setRecent] = useState(false); const [showAll, setShowAll] = useState(false);
   useEffect(() => { const version = ++requestRef.current; db.from('students').select('*,classes(grade,division)').eq('school_id', profile.school_id).eq('active', true).order('full_name').then(({ data }) => { if (version === requestRef.current) setStudents(data || []); }); }, [db, profile.school_id]);
-  const normalized = query.trim().toLocaleLowerCase(); const results = normalized ? students.filter((student) => student.full_name.toLocaleLowerCase().includes(normalized) || String(student.roll_number || '').toLocaleLowerCase().includes(normalized)) : students.slice(0, 8);
-  return <section className="principal-students" id="principal-students"><div className="section-heading"><p className="eyebrow">STUDENT OVERVIEW</p><h2>Find a student</h2><p className="hint">Search students in your school by name or roll number.</p></div><label className="teacher-roster-search"><span className="sr-only">Search students</span><Icon name="search" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or roll number" /></label><div className="principal-student-results">{results.map((student) => <button type="button" key={student.id} className={selected?.id === student.id ? 'student active' : 'student'} onClick={() => setSelected(student)}><span className="student-name"><i>{initials(student.full_name)}</i><span>{student.full_name}<small>Grade {student.classes?.grade}{student.classes?.division} · Roll {student.roll_number}</small></span></span><span className="student-chevron">›</span></button>)}{normalized && !results.length && <p className="empty compact-empty">No students found.</p>}</div><StudentOverview schoolName={profile.school_name} student={selected} classLabel={selected?.classes} role="principal" /></section>;
+  const normalized = query.trim().toLocaleLowerCase();
+  const matches = students.filter(student => !normalized || student.full_name.toLocaleLowerCase().includes(normalized) || String(student.roll_number || '').toLocaleLowerCase().includes(normalized));
+  const ordered = recent ? [...matches].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')) || a.full_name.localeCompare(b.full_name)) : matches;
+  const results = showAll || normalized ? ordered : ordered.slice(0, 8);
+  return <section className="principal-students" id="principal-students">
+    <div className="section-heading"><h2><UiText source={"Find a student"} /></h2></div>
+    <div className="directory-actions"><button type="button" aria-pressed={recent} onClick={() => setRecent(!recent)}><UiText source={"Recently added"} /></button><button type="button" className="link" onClick={() => setShowAll(!showAll)}>{showAll ? ui("Show fewer") : ui("View all")} ({matches.length})</button></div>
+    <label className="teacher-roster-search"><span className="sr-only"><UiText source={"Search students"} /></span><Icon name="search" /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={ui("Search name or roll number")} /></label>
+    <div className="principal-student-results">{results.map(student => <button type="button" key={student.id} className={selected?.id === student.id ? 'student active' : 'student'} onClick={() => setSelected(student)}><span className="student-name"><i>{initials(student.full_name)}</i><span>{student.full_name}<small><UiText source={"Grade "} />{student.classes?.grade}{student.classes?.division} <UiText source={"· Roll "} />{student.roll_number}</small></span></span><span className="student-chevron">›</span></button>)}{normalized && !results.length && <p className="empty compact-empty"><UiText source={"No students found."} /></p>}</div>
+    <StudentOverview schoolName={profile.school_name} student={selected} classLabel={selected?.classes} role="principal" />
+  </section>;
 }
 
 function Principal({ profile, page }: { profile: Profile; page: string }) {
+  const ui = useUiText();
+  const { t } = useI18n();
   const router = useRouter();
   const db = useMemo(() => createClient(), []);
   const communicationRequestVersionRef = useRef(0);
@@ -2046,84 +2093,80 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
         <div className="principal-overview-heading">
           <span className="section-icon" aria-hidden="true"><Icon name="updates" /></span>
           <div>
-            <p className="eyebrow">COMMUNICATION HEALTH</p>
-            <h2 id="communication-overview-heading">School-to-home communication</h2>
+            <p className="eyebrow"><UiText source={"COMMUNICATION HEALTH"} /></p>
+            <h2 id="communication-overview-heading"><UiText source={"School-to-home communication"} /></h2>
           </div>
           {communicationCoverage !== null && (
-            <p className="communication-coverage" aria-label={`${communicationCoverage}% of important updates have been acknowledged`}>
-              <b>{communicationCoverage}%</b><span>acknowledged</span>
+            <p className="communication-coverage" aria-label={ui("{0}% of important updates have been acknowledged", [communicationCoverage])}>
+              <b>{communicationCoverage}%</b><span><UiText source={"acknowledged"} /></span>
             </p>
           )}
         </div>
-        <div className="principal-metrics" aria-label="Important school-to-home communication metrics">
+        <div className="principal-metrics" aria-label={ui("Important school-to-home communication metrics")}>
           <article className="principal-metric-card metric-important">
             <span className="metric-icon" aria-hidden="true"><Icon name="important" /></span>
-            <small>Important sent</small>
+            <small><UiText source={"Important sent"} /></small>
             <b>{important.length}</b>
-            <p>Updates requiring a parent response</p>
+            <p><UiText source={"Updates requiring a parent response"} /></p>
           </article>
           <article className="principal-metric-card metric-acknowledged">
             <span className="metric-icon" aria-hidden="true"><Icon name="check" /></span>
-            <small>Acknowledged</small>
+            <small><UiText source={"Acknowledged"} /></small>
             <b>{acknowledged.length}</b>
-            <p>Confirmed by a parent</p>
+            <p><UiText source={"Confirmed by a parent"} /></p>
           </article>
           <button
             type="button"
             className="principal-metric-card metric-awaiting principal-awaiting-metric"
             onClick={showAwaitingCommunication}
             aria-controls="principal-recent-communication"
-            aria-label={`View ${awaiting} important update${awaiting === 1 ? '' : 's'} awaiting acknowledgement`}
+            aria-label={ui("View {0} important update{1} awaiting acknowledgement", [awaiting, awaiting === 1 ? '' : ui("s")])}
           >
             <span className="metric-icon" aria-hidden="true"><Icon name="updates" /></span>
-            <small>Awaiting</small>
+            <small><UiText source={"Awaiting"} /></small>
             <b>{awaiting}</b>
-            <p>Still awaiting acknowledgement</p>
-            <span className="principal-metric-action">View details</span>
+            <p><UiText source={"Still awaiting acknowledgement"} /></p>
+            <span className="principal-metric-action"><UiText source={"View details"} /></span>
           </button>
         </div>
       </section>}
       <div className="principal-main-grid">
         <div className="principal-primary-column">
-      {page === 'home' && <nav className="workspace-shortcuts" aria-label="School workspace shortcuts">
-        <Link href="/principal/students"><Icon name="student" /><span><b>Students</b><small>Find a student profile</small></span></Link>
-        <Link href="/principal/communication"><Icon name="updates" /><span><b>Communication</b><small>Review family updates</small></span></Link>
-        <Link href="/principal/attendance"><Icon name="attendance" /><span><b>Attendance</b><small>See today&apos;s register status</small></span></Link>
-        <Link href="/principal/notices"><Icon name="notice" /><span><b>School notices</b><small>Publish official information</small></span></Link>
+      {page === 'home' && <nav className="workspace-shortcuts" aria-label={ui("School workspace shortcuts")}>
+        <Link href="/principal/students"><Icon name="student" /><span><b><UiText source={"Students"} /></b><small><UiText source={"Find a student profile"} /></small></span></Link>
+        <Link href="/principal/communication"><Icon name="updates" /><span><b><UiText source={"Communication"} /></b><small><UiText source={"Review family updates"} /></small></span></Link>
+        <Link href="/principal/attendance"><Icon name="attendance" /><span><b><UiText source={"Attendance"} /></b><small><UiText source={"See today's register status"} /></small></span></Link>
+        <Link href="/principal/notices"><Icon name="notice" /><span><b><UiText source={"School notices"} /></b><small><UiText source={"Publish official information"} /></small></span></Link>
       </nav>}
-      {page === 'home' && <SchoolEntryPanel role="principal" profileId={profile.id} schoolId={profile.school_id} />}
+      {page === 'home' && <OptionalSection id="school-entry-tools" title={t('simple.entry')} description={t('simple.entryHelp')}><SchoolEntryPanel role="principal" profileId={profile.id} schoolId={profile.school_id} /></OptionalSection>}
+      {page === 'users' && <ManageUsers key={`${profile.id}:${profile.school_id}`} profileId={profile.id} schoolId={profile.school_id} />}
       {page === 'students' && <PrincipalStudentOverview profile={profile} />}
       {page === 'homework' && <PrincipalHomework profile={profile} />}
       {page === 'timetable' && <PrincipalTimetable profile={profile} />}
       {page === 'attendance' && <div className="card attendance-overview" id="principal-attendance">
-        <p className="eyebrow">TODAY’S ATTENDANCE</p>
-        <h2>Today&apos;s attendance</h2>
+        <p className="eyebrow"><UiText source={"TODAY’S ATTENDANCE"} /></p>
+        <h2><UiText source={"Today's attendance"} /></h2>
         {attendanceError ? (
-          <p className="error">{attendanceError}</p>
+          <p className="error">{ui(attendanceError)}</p>
         ) : (
           <>
             <div className="attendance-counts">
               <span>
-                <b>{markedClassIds.size}</b>Marked classes
-              </span>
+                <b>{markedClassIds.size}</b><UiText source={"Marked classes"} /></span>
               <span>
                 <b>{Math.max(0, classes.length - markedClassIds.size)}</b>
-                Pending classes
-              </span>
+                <UiText source={"Pending classes"} /></span>
               <span>
-                <b>{attendanceCounts.present}</b>Present
-              </span>
+                <b>{attendanceCounts.present}</b><UiText source={"Present"} /></span>
               <span>
-                <b>{attendanceCounts.absent}</b>Absent
-              </span>
+                <b>{attendanceCounts.absent}</b><UiText source={"Absent"} /></span>
               <span>
-                <b>{attendanceCounts.late}</b>Late
-              </span>
+                <b>{attendanceCounts.late}</b><UiText source={"Late"} /></span>
             </div>
             <div className="history-list">
               {classes.map((row) => (
                 <p key={row.id}>
-                  <span>{`Grade ${row.grade}${row.division}`}</span>
+                  <span>{ui("Grade {0}{1}", [row.grade, row.division])}</span>
                   <b
                     className={
                       markedClassIds.has(row.id)
@@ -2131,47 +2174,44 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
                         : 'status pending'
                     }
                   >
-                    {markedClassIds.has(row.id) ? 'Marked' : 'Pending'}
+                    {markedClassIds.has(row.id) ? ui("Marked") : ui("Pending")}
                   </b>
                 </p>
               ))}
             </div>
             {!classes.length && (
               <p className="empty compact-empty">
-                No active classes are available for today&apos;s attendance
-                view.
-              </p>
+                <UiText source={"No active classes are available for today's attendance view."} /></p>
             )}
             {todayAttendance.length > 0 && (
               <p className="hint">
-                Latest activity:{' '}
-                {todayAttendance[0].students?.full_name || 'Student'} attendance
-                recorded today.
-              </p>
+                <UiText source={"Latest activity:"} />{' '}
+                {todayAttendance[0].students?.full_name || ui("Student")} <UiText source={"attendance recorded today."} /></p>
             )}
           </>
         )}
       </div>}
-      {page === 'attendance' && <AttendanceInsights role="principal" profileId={profile.id} schoolId={profile.school_id} />}
+      {page === 'attendance' && <><AttendanceTrends schoolId={profile.school_id} /><AttendanceInsights role="principal" profileId={profile.id} schoolId={profile.school_id} /></>}
       {(page === 'home' || page === 'communication') && <div className="card principal-recent-communication" id="principal-recent-communication">
         <div className="principal-communication-heading">
           <div>
-            <p className="eyebrow">RECENT ACTIVITY</p>
-            <h2>{communicationFilter === 'awaiting' ? 'Awaiting acknowledgement' : 'Recent communication'}</h2>
+            <p className="eyebrow"><UiText source={"RECENT ACTIVITY"} /></p>
+            <h2>{communicationFilter === 'awaiting' ? ui("Awaiting acknowledgement") : ui("Recent communication")}</h2>
             <p className="hint">
               {communicationFilter === 'awaiting'
-                ? 'Important student updates still waiting for a parent acknowledgement.'
-                : 'Teacher updates shared with families. This is not teacher scoring.'}
+                ? ui("Important student updates still waiting for a parent acknowledgement.")
+                : ui("Updates shared with parents.")}
             </p>
           </div>
-          <div className="principal-communication-filter" role="group" aria-label="Filter recent communication">
-            <button type="button" className={communicationFilter === 'all' ? 'active' : ''} aria-pressed={communicationFilter === 'all'} onClick={showAllCommunication}>All</button>
-            <button type="button" className={communicationFilter === 'awaiting' ? 'active' : ''} aria-pressed={communicationFilter === 'awaiting'} onClick={showAwaitingOnly}>Awaiting <span>{awaiting}</span></button>
+          <div className="principal-communication-filter" role="group" aria-label={ui("Filter recent communication")}>
+            {page === 'home' && <Link href="/principal/communication"><UiText source={"View all →"} /></Link>}
+            <button type="button" className={communicationFilter === 'all' ? 'active' : ''} aria-pressed={communicationFilter === 'all'} onClick={showAllCommunication}><UiText source={"All"} /></button>
+            <button type="button" className={communicationFilter === 'awaiting' ? 'active' : ''} aria-pressed={communicationFilter === 'awaiting'} onClick={showAwaitingOnly}><UiText source={"Awaiting "} /><span>{awaiting}</span></button>
           </div>
         </div>
-        {communicationError && all.length > 0 && <p className="hint" role="status">{communicationError} Previously loaded communication is still shown.</p>}
+        {communicationError && all.length > 0 && <p className="hint" role="status">{ui(communicationError)} <UiText source={"Previously loaded communication is still shown."} /></p>}
         {communicationError && !all.length ? (
-          <p className="error">{communicationError}</p>
+          <p className="error">{ui(communicationError)}</p>
         ) : communicationLoading ? (
           <PrincipalCommunicationSkeleton />
         ) : visibleCommunication.length ? (
@@ -2181,17 +2221,15 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
         ) : communicationFilter === 'awaiting' ? (
           <div className="principal-awaiting-empty" role="status">
             <span className="section-icon" aria-hidden="true"><Icon name="check" /></span>
-            <div><b>All important updates acknowledged</b><p>There are no important student updates currently waiting for acknowledgement.</p></div>
+            <div><b><UiText source={"All important updates acknowledged"} /></b><p><UiText source={"There are no important student updates currently waiting for acknowledgement."} /></p></div>
           </div>
         ) : (
           <p className="empty compact-empty">
-            No student updates have been sent yet. Communication activity will
-            appear here when teachers share updates with families.
-          </p>
+            <UiText source={"No student updates have been sent yet. Communication activity will appear here when teachers share updates with families."} /></p>
         )}
       </div>}
         </div>
-        {page === 'notices' && <aside className="principal-support-column" id="principal-notices" aria-label="School notices">
+        {page === 'notices' && <aside className="principal-support-column" id="principal-notices" aria-label={ui("School notices")}>
           <Announcements profile={profile} publish />
         </aside>}
       </div>
@@ -2200,8 +2238,9 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
 }
 
 function PrincipalCommunicationSkeleton() {
+  const ui = useUiText();
   return (
-    <div className="principal-communication-skeleton" role="status" aria-label="Loading recent communication">
+    <div className="principal-communication-skeleton" role="status" aria-label={ui("Loading recent communication")}>
       <span className="principal-skeleton-avatar" />
       <div><span /><span /><span className="short" /></div>
     </div>
@@ -2209,11 +2248,12 @@ function PrincipalCommunicationSkeleton() {
 }
 
 function PrincipalCommunicationCard({ update, corrected, correctionOf }: { update: Update; corrected: boolean; correctionOf?: string }) {
+  const ui = useUiText();
   const studentName = update.students?.full_name || 'Student';
   const studentClass = update.students?.classes
-    ? `Grade ${update.students.classes.grade}${update.students.classes.division}`
+    ? ui('Grade {0}{1}', [update.students.classes.grade, update.students.classes.division])
     : '';
-  const studentContext = [studentClass, update.students?.roll_number ? `Roll ${update.students.roll_number}` : '']
+  const studentContext = [studentClass, update.students?.roll_number ? ui('Roll number {0}', [update.students.roll_number]) : '']
     .filter(Boolean)
     .join(' · ');
   const acknowledged = Boolean(update.acknowledgements?.length);
@@ -2221,26 +2261,26 @@ function PrincipalCommunicationCard({ update, corrected, correctionOf }: { updat
   return (
     <article
       className={`principal-communication-card${needsAcknowledgement ? ' important-update' : ''}${acknowledged ? ' acknowledged-update' : ''}`}
-      aria-label={`${studentName}: ${nice(update.category)} update sent ${displayDate(update.sent_at)}`}
+      aria-label={ui("{0}: {1} update sent {2}", [studentName, ui(nice(update.category)), displayDate(update.sent_at)])}
     >
       <header>
         <span className="student-avatar" aria-hidden="true">{initials(studentName)}</span>
         <div>
-          <p className="principal-student-label">{studentContext || 'STUDENT UPDATE'}</p>
+          <p className="principal-student-label">{studentContext || ui("STUDENT UPDATE")}</p>
           <h3>{studentName}</h3>
         </div>
       </header>
       <div className="principal-card-tags">
-        <span className="principal-category"><Icon name={categoryIcon(update.category)} />{nice(update.category)}</span>
-        {correctionOf && <span className="correction-badge">Correction</span>}
-        {corrected && <span className="corrected-badge">Corrected</span>}
+        <span className="principal-category"><Icon name={categoryIcon(update.category)} />{ui(nice(update.category))}</span>
+        {correctionOf && <span className="correction-badge"><UiText source={"Correction"} /></span>}
+        {corrected && <span className="corrected-badge"><UiText source={"Corrected"} /></span>}
         <span className={needsAcknowledgement ? 'principal-importance important' : 'principal-importance'}>
-          {needsAcknowledgement ? 'Important' : 'Normal'}
+          {needsAcknowledgement ? ui("Important") : ui("Normal")}
         </span>
       </div>
       <h4>{update.title}</h4>
-      {correctionOf && <p className="correction-reference">Corrects: {correctionOf}</p>}
-      {corrected && <p className="correction-reference">A newer correction is available in this history.</p>}
+      {correctionOf && <p className="correction-reference"><UiText source={"Corrects: "} />{correctionOf}</p>}
+      {corrected && <p className="correction-reference"><UiText source={"A newer correction is available in this history."} /></p>}
       <p className="principal-update-message">{update.message}</p>
       {!corrected && <TranslationManager source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} canApprove />}
       {!corrected && needsAcknowledgement && <FallbackDispatch kind="update" sourceId={update.id} />}
@@ -2248,11 +2288,11 @@ function PrincipalCommunicationCard({ update, corrected, correctionOf }: { updat
         <time dateTime={update.sent_at}>{displayDate(update.sent_at)}</time>
         {needsAcknowledgement && (
           acknowledged ? (
-            <span className="principal-acknowledgement acknowledged"><Icon name="check" />Acknowledged</span>
+            <span className="principal-acknowledgement acknowledged"><Icon name="check" /><UiText source={"Acknowledged"} /></span>
           ) : corrected ? (
-            <span className="principal-acknowledgement corrected">Corrected</span>
+            <span className="principal-acknowledgement corrected"><UiText source={"Corrected"} /></span>
           ) : (
-            <span className="principal-acknowledgement awaiting"><Icon name="important" />Awaiting acknowledgement</span>
+            <span className="principal-acknowledgement awaiting"><Icon name="important" /><UiText source={"Awaiting acknowledgement"} /></span>
           )
         )}
       </footer>
@@ -2271,6 +2311,7 @@ function Announcements({
   parentView?: boolean;
   speech?: { controller: ParentSpeechController; state: ReturnType<ParentSpeechController['getSnapshot']> };
 }) {
+  const ui = useUiText();
   const { language, t } = useI18n();
   const db = useMemo(() => createClient(), []);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -2333,8 +2374,8 @@ function Announcements({
       <div className="notice-section-heading">
         <span className="notice-section-icon" aria-hidden="true"><Icon name="notice" /></span>
         <div>
-          <p className="eyebrow">{parentView ? t('parent.schoolNotices') : publish ? 'CREATE NOTICE' : 'SCHOOL NOTICES'}</p>
-          <h2 id={publish ? 'notice-publish-heading' : 'school-notices-heading'}>{parentView ? t('parent.schoolNotices') : publish ? 'Publish a school notice' : 'Official updates from your school'}</h2>
+          <p className="eyebrow">{parentView ? t('parent.schoolNotices') : publish ? ui("CREATE NOTICE") : ui("SCHOOL NOTICES")}</p>
+          <h2 id={publish ? 'notice-publish-heading' : 'school-notices-heading'}>{parentView ? t('parent.schoolNotices') : publish ? ui("Publish a school notice") : ui("Official updates from your school")}</h2>
         </div>
       </div>
       {parentView && (
@@ -2345,35 +2386,32 @@ function Announcements({
       {publish && (
         <form className="notice-composer" onSubmit={submit}>
           <label>
-            Title
-            <input
+            <UiText source={"Title"} /><input
               name="title"
               required
               minLength={3}
               maxLength={120}
-              placeholder="Clear school notice title"
+              placeholder={ui("Clear school notice title")}
             />
           </label>
           <label>
-            Message
-            <textarea
+            <UiText source={"Message"} /><textarea
               name="body"
               required
               minLength={3}
               maxLength={1000}
               rows={3}
-              placeholder="Write a concise official notice"
+              placeholder={ui("Write a concise official notice")}
             />
           </label>
           <label>
-            Priority
-            <select name="priority">
-              <option value="normal">Normal</option>
-              <option value="important">Important</option>
+            <UiText source={"Priority"} /><select name="priority">
+              <option value="normal"><UiText source={"Normal"} /></option>
+              <option value="important"><UiText source={"Important"} /></option>
             </select>
           </label>
           <button disabled={publishing}>
-            {publishing ? 'Publishing notice…' : 'Publish notice'}
+            {publishing ? ui("Publishing notice…") : ui("Publish notice")}
           </button>
         </form>
       )}
@@ -2383,29 +2421,29 @@ function Announcements({
           role={noteIsError ? 'alert' : 'status'}
         >
           {!noteIsError && <Icon name="check" />}
-          {note}
+          {ui(note)}
         </p>
       )}
-      {publish && !loading && <div className="published-notices-heading"><span>RECENT SCHOOL NOTICES</span><p>Official messages already shared with your school community.</p></div>}
+      {publish && !loading && <div className="published-notices-heading"><span><UiText source={"RECENT SCHOOL NOTICES"} /></span><p><UiText source={"Official messages already shared with your school community."} /></p></div>}
       {loading ? (
-        <NoticeSkeleton label={parentView ? t('parent.loadingNotices') : 'Loading school notices'} />
+        <NoticeSkeleton label={parentView ? t('parent.loadingNotices') : ui("Loading school notices")} />
       ) : announcements.length ? (
         <div className="announcement-list">
           {announcements.map((announcement) => (
             <article className={`school-notice-card ${announcement.priority === 'important' ? 'important-notice' : ''}`} key={announcement.id}>
               <header>
                 <span className="notice-card-icon" aria-hidden="true"><Icon name="school" /></span>
-                <span className="notice-origin">{parentView ? t('parent.schoolWideNotice') : 'School-wide notice'}</span>
-                {announcement.priority === 'important' && <span className="notice-important"><Icon name="important" /> {parentView ? t('importance.important') : 'Important'}</span>}
+                <span className="notice-origin">{parentView ? t('parent.schoolWideNotice') : ui("School-wide notice")}</span>
+                {announcement.priority === 'important' && <span className="notice-important"><Icon name="important" /> {parentView ? t('importance.important') : ui("Important")}</span>}
               </header>
-              {parentView ? <NoticeContent source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} speech={speech} /> : <><h3>{announcement.title}</h3><p>{announcement.body}</p></>}
+              {parentView ? <NoticeContent source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} speech={speech} /> : <><h3>{announcement.title}</h3><p>{announcement.body}</p>{speech && <ParentSpeechControls noticeId={`notice:${profile.id}:${announcement.id}`} text={`${announcement.title}. ${announcement.body}`} requireLanguageChoice controller={speech.controller} state={speech.state} />}</>}
               {profile.role === 'principal' && <TranslationManager source={{ kind: 'announcement', id: announcement.id, title: announcement.title, body: announcement.body }} canApprove />}
               {profile.role === 'principal' && announcement.priority === 'important' && <FallbackDispatch kind="announcement" sourceId={announcement.id} />}
               <footer>
                 <Icon name="school" />
-                <span>{profile.school_name || 'Your school'}</span>
+                <span>{profile.school_name || ui("Your school")}</span>
                 <span aria-hidden="true">•</span>
-                <time dateTime={announcement.published_at}>{parentView ? t('parent.published', { date: displayDate(announcement.published_at, language) }) : `Published ${displayDate(announcement.published_at)}`}</time>
+                <time dateTime={announcement.published_at}>{parentView ? t('parent.published', { date: displayDate(announcement.published_at, language) }) : ui("Published {0}", [displayDate(announcement.published_at)])}</time>
               </footer>
             </article>
           ))}
@@ -2413,7 +2451,7 @@ function Announcements({
       ) : (
         <div className="notice-empty-state">
           <span className="notice-card-icon" aria-hidden="true"><Icon name="notice" /></span>
-          <div><h3>{parentView ? t('parent.schoolNotices') : publish ? 'No notices published yet' : 'No school notices yet'}</h3><p>{parentView ? t('parent.noticesEmpty') : publish ? 'Publish the first school notice above.' : 'New school-wide announcements will appear here.'}</p></div>
+          <div><h3>{parentView ? t('parent.schoolNotices') : publish ? ui("No notices published yet") : ui("No school notices yet")}</h3><p>{parentView ? t('parent.noticesEmpty') : publish ? ui("Publish the first school notice above.") : ui("New school-wide announcements will appear here.")}</p></div>
         </div>
       )}
     </section>
@@ -2452,6 +2490,7 @@ function Card({
   acknowledge?: (id: string) => void;
   speech?: { controller: ParentSpeechController; state: ReturnType<ParentSpeechController['getSnapshot']> };
 }) {
+  const ui = useUiText();
   const { language, t } = useI18n();
   const mine = update.acknowledgements?.find(
     (acknowledgement) => acknowledgement.parent_id === parent,
@@ -2465,18 +2504,18 @@ function Card({
           : `update-card${teacher ? ' teacher-update-card' : ''}${parent ? ' parent-update-card' : ''}${parent && acknowledged ? ' acknowledged-update' : ''}`
       }
     >
-      <div className="card-topline"><span className="update-icon" aria-hidden="true"><Icon name={teacher || parent ? categoryIcon(update.category) : 'updates'} /></span><span className="badge">{parent ? localizedCategory(update.category, t) : nice(update.category)}</span>
-      {correctionOf && <span className="correction-badge">{parent ? t('correction.label') : 'Correction'}</span>}
-      {corrected && <span className="corrected-badge">{parent ? t('correction.corrected') : 'Corrected'}</span>}
+      <div className="card-topline"><span className="update-icon" aria-hidden="true"><Icon name={teacher || parent ? categoryIcon(update.category) : 'updates'} /></span><span className="badge">{parent ? localizedCategory(update.category, t) : ui(nice(update.category))}</span>
+      {correctionOf && <span className="correction-badge">{parent ? t('correction.label') : ui("Correction")}</span>}
+      {corrected && <span className="corrected-badge">{parent ? t('correction.corrected') : ui("Corrected")}</span>}
       {update.importance === 'important' && (
-        <span className="important">{parent ? t('importance.important') : 'Important'}</span>
+        <span className="important">{parent ? t('importance.important') : ui("Important")}</span>
       )}</div>
       {!parent && <h3>{update.title}</h3>}
-      {correctionOf && <p className="correction-reference">{parent ? t('correction.corrects', { title: correctionOf }) : `Corrects: ${correctionOf}`}</p>}
-      {corrected && <p className="correction-reference">{parent ? t('correction.replaced') : 'This update was corrected by a newer communication.'}</p>}
+      {correctionOf && <p className="correction-reference">{parent ? t('correction.corrects', { title: correctionOf }) : ui("Corrects: {0}", [correctionOf])}</p>}
+      {corrected && <p className="correction-reference">{parent ? t('correction.replaced') : ui("This update was corrected by a newer communication.")}</p>}
       {parent && childContext && <p className="parent-update-context"><Icon name="student" /> {t('parent.aboutChild', { context: childContext })}</p>}
       {parent && corrected && <p className="original-message-label">{t('ack.originalMessage')}</p>}
-      {parent ? <NoticeContent source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} speech={speech} /> : <p>{update.message}</p>}
+      {parent ? <NoticeContent source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} speech={speech} /> : <><p>{update.message}</p>{speech && <ParentSpeechControls noticeId={`update:${update.id}`} text={`${update.title}. ${update.message}`} requireLanguageChoice controller={speech.controller} state={speech.state} />}</>}
       {teacher && !corrected && <TranslationManager source={{ kind: 'update', id: update.id, title: update.title, body: update.message }} />}
       {teacher && !corrected && update.importance === 'important' && <FallbackDispatch kind="update" sourceId={update.id} />}
       <small className={teacher ? 'teacher-update-meta' : undefined}>
@@ -2492,29 +2531,28 @@ function Card({
       )}
       {teacher && onCorrect && (
         <button type="button" className="send-correction" onClick={() => onCorrect(update)}>
-          Send correction
-        </button>
+          <UiText source={"Send correction"} /></button>
       )}
       {update.importance === 'important' && (
         <div className={`ack${teacher ? ' teacher-ack' : ''}`}>
           {acknowledged ? (
             parent ? (
-              <span className="parent-acknowledged" role="status"><Icon name="check" /><span><b>{parent ? t('ack.acknowledged') : 'Acknowledged'}</b>{mine && <small>{displayDate(mine.acknowledged_at, language)}</small>}</span></span>
-            ) : <b className="status present">{teacher && <Icon name="check" />}Acknowledged</b>
+              <span className="parent-acknowledged" role="status"><Icon name="check" /><span><b>{parent ? t('ack.acknowledged') : ui("Acknowledged")}</b>{mine && <small>{displayDate(mine.acknowledged_at, language)}</small>}</span></span>
+            ) : <b className="status present">{teacher && <Icon name="check" />}<UiText source={"Acknowledged"} /></b>
           ) : teacher && !corrected ? (
-            <span className="status pending"><Icon name="important" /> Awaiting acknowledgement</span>
+            <span className="status pending"><Icon name="important" /> <UiText source={"Awaiting acknowledgement"} /></span>
           ) : corrected ? (
-            <span className="status neutral">{parent ? t('correction.replacedStatus') : 'Replaced by a newer correction'}</span>
+            <span className="status neutral">{parent ? t('correction.replacedStatus') : ui("Replaced by a newer correction")}</span>
           ) : (
             <>
-              <span className="ack-copy">{parent ? t('ack.requested') : 'Acknowledgement requested'}</span>
+              <span className="ack-copy">{parent ? t('ack.requested') : ui("Acknowledgement requested")}</span>
               <button
                 disabled={acknowledging}
                 aria-busy={acknowledging}
-                aria-label={parent ? t('ack.ctaLabel', { title: update.title }) : `Acknowledge update: ${update.title}`}
+                aria-label={parent ? t('ack.ctaLabel', { title: update.title }) : ui("Acknowledge update: {0}", [update.title])}
                 onClick={() => acknowledge?.(update.id)}
               >
-                {acknowledging ? (parent ? t('ack.busy') : 'Acknowledging…') : (parent ? t('ack.cta') : 'Acknowledge')}
+                {acknowledging ? (parent ? t('ack.busy') : ui("Acknowledging…")) : (parent ? t('ack.cta') : ui("Acknowledge"))}
               </button>
             </>
           )}

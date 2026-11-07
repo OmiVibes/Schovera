@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+import { openOptionalTool } from './lib/open-optional-tool.mjs';
 import { canonicalEvent } from './rfid-simulator/core.ts';
 
 assertLocalTestEnvironment();
@@ -145,10 +146,11 @@ async function verifyDashboardViews(accounts, expectedStudentName, device, crede
     });
     await page.goto(parsedTestUrl.toString(), { waitUntil: 'networkidle' });
     if (role === 'Parent') await page.evaluate(([key, id]) => sessionStorage.setItem(key, id), [`schovera:selected-child:${accounts.parentId}`, accounts.childId]);
-    await page.locator('input[type="email"]').fill(email);
+    await page.locator('input[autocomplete="username"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button', { name: 'Sign in securely' }).click();
     const panel = page.locator('[data-testid="school-entry-panel"]');
+    await openOptionalTool(page);
     await panel.waitFor({ state: 'visible', timeout: 20000 });
     try { await page.locator('[data-testid="school-entry-panel"][data-loaded="true"]').waitFor({ timeout: 20000 }); }
     catch { throw new Error(`${role} dashboard did not finish loading: ${(await panel.innerText()).replace(/\s+/g, ' ').slice(-1200)}`); }

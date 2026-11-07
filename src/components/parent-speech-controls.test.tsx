@@ -94,9 +94,10 @@ describe('Parent speech lifecycle scope', () => {
       root?.render(createElement(ControlsHarness, { controller }));
     });
     expect(host.querySelector('[aria-label="Notice language"]')).not.toBeNull();
-    expect(host.textContent).toContain(translate('en', 'speech.listen'));
+    expect(host.textContent).toContain(translate('en', 'speech.listenShort'));
     const listen = host.querySelector('button');
-    expect(listen?.textContent).toBe(translate('en', 'speech.listen'));
+    expect(listen?.textContent).toBe(translate('en', 'speech.listenShort'));
+    expect(listen?.getAttribute('aria-label')).toBe(translate('en', 'speech.listen'));
     listen?.focus();
     expect(document.activeElement).toBe(listen);
     expect(played).toEqual([]);
@@ -111,8 +112,9 @@ describe('Parent speech lifecycle scope', () => {
         displayLanguage.value = language;
         displayLanguage.dispatchEvent(new Event('change', { bubbles: true }));
       });
-      expect(host.textContent).toContain(translate(language, 'speech.listen'));
-      expect(host.querySelector('button')?.textContent).toBe(translate(language, 'speech.listen'));
+      expect(host.textContent).toContain(translate(language, 'speech.listenShort'));
+      expect(host.querySelector('button')?.textContent).toBe(translate(language, 'speech.listenShort'));
+      expect(host.querySelector('button')?.getAttribute('aria-label')).toBe(translate(language, 'speech.listen'));
     }
     await act(async () => { root?.unmount(); root = undefined; });
   });

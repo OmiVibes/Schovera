@@ -181,7 +181,7 @@ try {
     const card = family.page.locator('.parent-updates .update-card').first();
     const content = card.locator('.notice-language-view');
     for (const language of ['en', 'hi', 'mr']) {
-      await content.locator('.notice-language-toolbar select').selectOption(language);
+      await content.locator('.notice-language-toolbar > label select').selectOption(language);
       await content.locator('.notice-visible-text').getByText(samples[language].body, { exact: true }).waitFor();
       assert.equal(await content.locator('img').count(), 0);
       await content.getByRole('button', { name: 'Listen to notice', exact: true }).click();
@@ -204,7 +204,7 @@ try {
     await family.page.locator('.parent-updates').getByText(sibling.message, { exact: true }).waitFor();
     assert.equal(await family.page.getByText(samples.mr.body, { exact: true }).count(), 0);
     const siblingView = family.page.locator('.parent-updates .notice-language-view').first();
-    await siblingView.locator('.notice-language-toolbar select').selectOption('mr');
+    await siblingView.locator('.notice-language-toolbar > label select').selectOption('mr');
     await siblingView.getByText('A reviewed translation is unavailable. Showing the original.', { exact: true }).waitFor();
     await noOverflow(family.page);
     assert.deepEqual([...t.external, ...p.external, ...family.external], []);

@@ -21,9 +21,10 @@ async function accessToken(context) {
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
   const page = await context.newPage();
+  page.setDefaultTimeout(30000);
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
-  if (await page.locator('input[type="email"]').count()) {
-    await page.locator('input[type="email"]').fill('teacher@schovera.demo');
+  if (await page.locator('input[autocomplete="username"]').count()) {
+    await page.locator('input[autocomplete="username"]').fill('teacher@schovera.demo');
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button', { name: 'Sign in securely' }).click();
     await page.locator('nav.app-section-nav').waitFor({ state: 'visible', timeout: 20000 }).catch(async () => {
@@ -49,6 +50,29 @@ try {
     check(typeof draftResult.draft === 'string' && draftResult.draft.length > 100, 'Live local AI returned no usable draft.');
     check(String(draftResult.provider).startsWith('Ollama'), `Expected local Ollama provider, received ${draftResult.provider}.`);
     console.log(`Live local generation passed with ${draftResult.provider}; editable draft length ${draftResult.draft.length}.`);
+    await page.getByLabel('Grade / level').fill('Grade 7');
+    await page.getByLabel('Subject', { exact: true }).fill('Science');
+    await page.getByLabel('Topic or unit').fill('Simple machines');
+    const editable = page.getByRole('textbox', { name: 'Generated editable teaching draft' });
+    for (const kind of ['syllabus', 'exam', 'worksheet', 'lesson-plan']) {
+      await page.getByLabel('What do you want to draft?').selectOption(kind);
+      const generated = page.waitForResponse(response => response.url().endsWith('/api/teacher-ai') && response.request().method() === 'POST', { timeout: 180000 });
+      await page.getByRole('button', { name: 'Generate a draft', exact: true }).click();
+      check((await generated).status() === 200, `${kind} Generate button failed.`);
+      await page.getByRole('button', { name: 'Generate a draft', exact: true }).waitFor({ timeout: 180000 });
+      await editable.waitFor();
+      check((await editable.inputValue()).length > 100, `${kind} returned no usable editable text.`);
+      console.log(`Live ${kind} form submission passed.`);
+    }
+    await editable.fill('Teacher-reviewed synthetic worksheet.');
+    await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { window.__qaCopiedDraft = text; } } }));
+    await page.getByRole('button', { name: 'Copy draft', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Draft copied to clipboard.' }).waitFor();
+    check(await page.evaluate(() => window.__qaCopiedDraft) === 'Teacher-reviewed synthetic worksheet.', 'Copy control did not use edited draft text.');
+    await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined }));
+    await page.getByRole('button', { name: 'Copy draft', exact: true }).click();
+    await page.getByRole('alert').filter({ hasText: 'copy it manually' }).waitFor();
+    console.log('Generate/edit controls passed with real Ollama output; copy success/unavailable branches passed using a browser clipboard stub.');
   }
   const dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   check(dimensions.content <= dimensions.viewport + 1, `Teacher AI workspace overflows at 390px (${dimensions.content}px).`);
@@ -60,17 +84,27 @@ try {
   await page.getByRole('region', { name: 'Planning editable worksheet' }).waitFor({ state: 'visible' });
   const topic = page.getByRole('textbox', { name: 'Row 2, column 2' });
   await topic.fill('Motion');
+  await page.locator('input[type="file"]').setInputFiles({ name: 'not-a-workbook.txt', mimeType: 'text/plain', buffer: Buffer.from('invalid') });
+  await page.getByRole('alert').filter({ hasText: 'Choose an Excel' }).waitFor();
+  check(await topic.inputValue() === 'Motion', 'Invalid upload erased the edited workbook.');
+  await page.locator('input[type="file"]').setInputFiles([]);
+  check(await topic.inputValue() === 'Motion', 'Cancelling file selection erased the edited workbook.');
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download edited .xlsx' }).click();
   const download = await downloadPromise;
   check(download.suggestedFilename().endsWith('-edited.xlsx'), 'Edited workbook did not download as .xlsx.');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const exported = XLSX.read(Buffer.concat(chunks), { type: 'buffer' });
+  check(exported.Sheets.Planning.B2.v === 'Motion', 'Downloaded workbook did not preserve the edited cell.');
 
   const unauthenticated = await page.request.post(`${baseUrl}/api/teacher-ai`, { data: { kind: 'exam' } });
   check(unauthenticated.status() === 401, `Unauthenticated API request returned ${unauthenticated.status()} instead of 401.`);
 
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
-  await page.locator('input[type="email"]').fill('parent@schovera.demo');
+  await page.locator('input[autocomplete="username"]').fill('parent@schovera.demo');
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: 'Sign in securely' }).click();
   await page.locator('nav.app-section-nav').waitFor({ state: 'visible', timeout: 20000 }).catch(async () => {

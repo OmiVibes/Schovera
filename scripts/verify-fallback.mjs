@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+import { openOptionalTool } from './lib/open-optional-tool.mjs';
 
 assertLocalTestEnvironment(); // Must run before constructing clients or requests.
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -182,8 +183,9 @@ try {
     console.log('Fallback HTTP checks passed: fake provider scenarios, timeout confirmation, terminal/concurrent deduplication, forged Host and identity/phone injection refusal.');
 
     browser = await chromium.launch({ headless: true });
-    const family = await login(parent, '/parent/notices'); const panel = family.page.getByTestId('fallback-preferences');
+    const family = await login(parent, '/parent/notices'); await openOptionalTool(family.page, 'notification-simulation-tools'); const panel = family.page.getByTestId('fallback-preferences');
     const sms = panel.getByLabel('I opt in to simulated SMS notices', { exact: true });
+    await panel.locator('fieldset:not([disabled])').waitFor({ state: 'visible' });
     await sms.waitFor(); await sms.uncheck(); await panel.getByLabel('I opt in to simulated voice-call notices', { exact: true }).check();
     await panel.getByLabel('Preferred notice language').selectOption('mr');
     await panel.getByRole('button', { name: 'Save my preferences', exact: true }).click(); await panel.getByText('Preferences saved.', { exact: false }).waitFor();
@@ -206,7 +208,7 @@ try {
     await panel.getByRole('button', { name: 'Save my preferences', exact: true }).click(); await panel.getByText('Preferences saved.', { exact: false }).waitFor();
     for (const lang of ['hi', 'mr', 'en']) {
       await family.page.evaluate((value) => { localStorage.setItem('schovera.language', value); }, lang);
-      await family.page.reload({ waitUntil: 'networkidle' }); await panel.waitFor();
+      await family.page.reload({ waitUntil: 'networkidle' }); await openOptionalTool(family.page, 'notification-simulation-tools'); await panel.waitFor();
       const headings = { en: 'SMS and call simulation preferences', hi: 'SMS और कॉल अनुकरण की प्राथमिकताएँ', mr: 'SMS आणि कॉल अनुकरण प्राधान्ये' };
       assert.equal(await panel.getByRole('heading', { level: 3 }).textContent(), headings[lang]);
       assert.equal(await panel.getByRole('checkbox').count(), 2);

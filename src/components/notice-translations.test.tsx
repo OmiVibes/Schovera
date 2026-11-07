@@ -44,8 +44,8 @@ it('switches approved languages, speaks the visible text, stops on language/sour
   }
   await act(async () => root.render(<Harness value={source} />));
   expect(fixture.reads).toEqual([]);
-  expect((host.querySelector('.parent-speech-button') as HTMLButtonElement).disabled).toBe(true);
-  const change = async (value: string) => { await act(async () => { const select = host.querySelector('.notice-language-toolbar select') as HTMLSelectElement; select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); }); };
+  expect((host.querySelector('.parent-speech-button') as HTMLButtonElement).disabled).toBe(false);
+  const change = async (value: string) => { await act(async () => { const select = host.querySelector('.notice-language-toolbar > label select') as HTMLSelectElement; select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); }); };
   fixture.rows.set('synthetic-a:hi', { id: 'hi', title: 'सूचना', body: 'पुस्तकालय नौ बजे खुलता है। <img src=x>', language: 'hi', status: 'approved' });
   await change('hi');
   expect(host.textContent).toContain('School-approved translation');
@@ -60,7 +60,7 @@ it('switches approved languages, speaks the visible text, stops on language/sour
   await change('en'); expect(host.textContent).toContain('reviewed translation is unavailable'); expect(host.textContent).toContain(source.body);
   await act(async () => root.render(<Harness value={{ ...source, id: 'synthetic-b', title: 'Child B', body: 'Only child B text' }} />));
   expect(host.textContent).not.toContain('वाचनालय'); expect(host.textContent).not.toContain(source.body); expect(host.textContent).toContain('Only child B text');
-  expect((host.querySelector('.notice-language-toolbar select') as HTMLSelectElement).value).toBe('original');
+  expect((host.querySelector('.notice-language-toolbar > label select') as HTMLSelectElement).value).toBe('original');
   await act(async () => root.render(<Harness value={source} duplicate />));
   await change('hi');
   await act(async () => { (host.querySelector('.parent-speech-button') as HTMLButtonElement).click(); });

@@ -58,13 +58,13 @@ function waitForRealtimeJoin(page, email) {
 async function login(page, email) {
   const joined = waitForRealtimeJoin(page, email);
   await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 45000 });
-  if (await page.locator('input[type="email"]').count()) {
-    await page.locator('input[type="email"]').fill(email);
+  if (await page.locator('input[autocomplete="username"]').count()) {
+    await page.locator('input[autocomplete="username"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button', { name: 'Sign in securely' }).click();
   }
   await page.locator('nav.app-section-nav').waitFor({ state: 'visible', timeout: 30000 });
-  await page.getByText(email.split('@')[0] === 'teacher' ? 'Teacher' : email.split('@')[0] === 'parent' ? 'Parent' : 'Principal', { exact: true }).first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.locator('.role-chip').filter({ hasText: email.split('@')[0] === 'teacher' ? 'Teacher' : email.split('@')[0] === 'parent' ? 'Parent' : 'Principal' }).waitFor({ state: 'visible', timeout: 15000 });
   await joined.readiness;
   return joined;
 }
@@ -134,7 +134,7 @@ try {
   await parentPage.locator('#parent-child-heading').waitFor({ state: 'visible', timeout: 20000 });
   const hindiChildSelector = parentPage.locator('.child-switcher select');
   if (await hindiChildSelector.count()) await hindiChildSelector.selectOption({ label: 'Aarav Patil' });
-  for (const section of ['प्रोफ़ाइल', 'अपडेट', 'उपस्थिति', 'गृहकार्य', 'समय-सारणी', 'स्कूल सूचनाएँ']) {
+  for (const section of ['बच्चे की प्रोफ़ाइल', 'अपडेट', 'उपस्थिति', 'गृहकार्य', 'समय-सारणी', 'स्कूल सूचनाएँ']) {
     await parentPage.locator('nav.app-section-nav').getByRole('link', { name: section, exact: true }).click();
     await parentPage.waitForFunction(() => document.documentElement.lang === 'hi');
   }

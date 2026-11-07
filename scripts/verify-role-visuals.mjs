@@ -12,7 +12,7 @@ const widths = [1440, 1024, 768, 390];
 const destinations = {
   teacher: ['home', 'students', 'profile', 'attendance', 'homework', 'timetable', 'ai', 'notices'],
   parent: ['home', 'profile', 'updates', 'attendance', 'homework', 'timetable', 'notices'],
-  principal: ['home', 'students', 'communication', 'attendance', 'homework', 'timetable', 'notices'],
+  principal: ['home', 'students', 'users', 'communication', 'attendance', 'homework', 'timetable', 'notices'],
 };
 const expectedContent = {
   teacher: {
@@ -24,7 +24,7 @@ const expectedContent = {
     attendance: '#parent-attendance', homework: '#parent-homework', timetable: '#parent-timetable', notices: '#parent-notices',
   },
   principal: {
-    home: '.workspace-shortcuts', students: '#principal-students', communication: '#principal-recent-communication',
+    home: '.workspace-shortcuts', students: '#principal-students', users: '.manage-users', communication: '#principal-recent-communication',
     attendance: '#principal-attendance', homework: '#principal-homework', timetable: '#principal-timetable', notices: '#principal-notices',
   },
 };
@@ -37,8 +37,8 @@ const browser = await chromium.launch({ headless: true });
 
 async function signIn(page, role) {
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
-  if (await page.locator('input[type="email"]').count()) {
-    await page.locator('input[type="email"]').fill(`${role}@schovera.demo`);
+  if (await page.locator('input[autocomplete="username"]').count()) {
+    await page.locator('input[autocomplete="username"]').fill(`${role}@schovera.demo`);
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button', { name: 'Sign in securely' }).click();
   }
@@ -60,7 +60,7 @@ async function signIn(page, role) {
       await page.locator('#parent-child-heading').getByText('Aarav Patil', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
       await page.waitForFunction(() => document.querySelectorAll('.skeleton, .principal-communication-skeleton, .notice-skeleton').length === 0, null, { timeout: 20000 });
       await page.locator('#parent-home[data-content-ready="true"]').waitFor({ state: 'visible', timeout: 20000 });
-      await page.locator('.parent-latest-update').waitFor({ state: 'visible', timeout: 20000 });
+      await page.locator('.attention-panel').waitFor({ state: 'visible', timeout: 20000 });
     }
   }
 }
@@ -95,7 +95,7 @@ async function checkWidth(page, role, section, width) {
   if (role === 'parent' && section === 'home') {
     await page.locator('#parent-child-heading').getByText('Aarav Patil', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
     await page.locator('#parent-home[data-content-ready="true"]').waitFor({ state: 'visible', timeout: 20000 });
-    await page.locator('.parent-latest-update').waitFor({ state: 'visible', timeout: 20000 });
+    await page.locator('.attention-panel').waitFor({ state: 'visible', timeout: 20000 });
   }
   if (role === 'principal' && section === 'home') {
     await page.locator('#principal-recent-communication').waitFor({ state: 'visible', timeout: 15000 });
@@ -120,6 +120,19 @@ async function checkWidth(page, role, section, width) {
   if (result.active !== `/${role}/${section}`) failures.push(`${role}/${section} at ${width}px lost active route state (active=${result.active || 'none'}).`);
   if (width === 390 && !result.activeVisible) failures.push(`${role}/${section} at 390px does not reveal the active navigation item.`);
   if (result.duplicateParentHomeProfile) failures.push('Parent home repeats the full profile underneath the child summary.');
+  if (width === 1440) {
+    const layout = await page.evaluate(({ role, section }) => {
+      const nav = document.querySelector('.app-section-nav').getBoundingClientRect();
+      const links = [...document.querySelectorAll('.app-section-nav a')].map(el => el.getBoundingClientRect());
+      const banner = role === 'parent' && section === 'home' ? document.querySelector('.child-identity-card').getBoundingClientRect() : null;
+      const classroom = role === 'teacher' && section === 'home' ? document.querySelector('.teacher-class-panel').getBoundingClientRect() : null;
+      const workspace = document.querySelector('main.app').getBoundingClientRect();
+      return { rightGap: nav.right - links.at(-1).right, widthSpread: Math.max(...links.map(r => r.width)) - Math.min(...links.map(r => r.width)), bannerWidth: banner?.width, bannerHeight: banner?.height, classroomWidth: classroom?.width, workspaceWidth: workspace.width };
+    }, { role, section });
+    if (layout.rightGap > 26 || layout.widthSpread > 2) failures.push(`${role}/${section}: desktop navigation does not spread evenly across its bar.`);
+    if (layout.bannerHeight && (layout.bannerHeight > 230 || layout.bannerWidth < layout.workspaceWidth * .9)) failures.push('Parent home child banner is not compact and full width.');
+    if (layout.classroomWidth && layout.classroomWidth < layout.workspaceWidth * .9) failures.push('Teacher home classroom controls leave a narrow sidebar rather than a full-width row.');
+  }
   if (result.parentHomeLayout) console.log(`Parent home grid at ${width}px: ${JSON.stringify(result.parentHomeLayout)}`);
   if (width === 1440 || width === 390) {
     const filename = `${role}-${section}-${width}.png`;

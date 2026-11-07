@@ -23,7 +23,7 @@ if(!existsSync(openssl)) throw new Error('Local HTTPS test requires an installed
 const directory=mkdtempSync(path.join(tmpdir(),'schovera-https-preflight-'));
 const key=path.join(directory,'localhost.key'),cert=path.join(directory,'localhost.pem');
 let server,child,browser;let phase='initialization';
-const errors=[],external=[],leaks=[],routes={teacher:['home','students','profile','attendance','homework','timetable','ai','notices'],parent:['home','profile','updates','attendance','homework','timetable','notices'],principal:['home','students','communication','attendance','homework','timetable','notices']};
+const errors=[],external=[],leaks=[],routes={teacher:['home','students','profile','attendance','homework','timetable','ai','notices'],parent:['home','profile','updates','attendance','homework','timetable','notices'],principal:['home','students','users','communication','attendance','homework','timetable','notices']};
 const diagnostics=[],pages=[];
 const screenshots=path.resolve('.local/schovera-rfid-gateway/task32s-browser');mkdirSync(screenshots,{recursive:true});
 try {
@@ -87,12 +87,12 @@ try {
       for(const width of [390,768,1024,1440]){await page.setViewportSize({width,height:1000});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${role}/${section}/${width} overflow`);}
     }
     await page.screenshot({path:path.join(screenshots,`${role}-hosted-1440.png`),fullPage:true});
-    if(role==='teacher')for(const endpoint of ['teacher-ai','device/v1/events','device/v2/events','device/v2/capabilities','device/v2/capability-keys','fallback-simulator']){const status=await page.evaluate(async endpoint=>(await fetch(`/api/${endpoint}`,{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,endpoint);assert.equal(status,endpoint==='teacher-ai'?503:404);}
+    if(role==='teacher')for(const endpoint of ['teacher-ai','device/v1/events','device/v2/events','device/v2/capabilities','device/v2/capability-keys','fallback-simulator','school/accounts']){const status=await page.evaluate(async endpoint=>(await fetch(`/api/${endpoint}`,{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,endpoint);assert.equal(status,endpoint==='teacher-ai'?503:404);}
     await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.getByLabel('Email').waitFor();await page.reload({waitUntil:'networkidle'});await page.getByLabel('Email').waitFor();assert.equal(await page.locator(`.role-${role}`).count(),0);
     await Promise.all(scans);await context.close();console.log(`${role}: local HTTPS login/session persistence/logout, guarded features and responsive destinations passed`);
   }
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(leaks,[]);
-  writeFileSync(path.join(screenshots,'result.json'),JSON.stringify({passed:true,localSelfSignedHttps:true,cloudVerified:false,routes:22,widths:4,audio:'NOT VERIFIED',secretScan:'passed',realtime:'blocked here; independently tested locally'},null,2));
+  writeFileSync(path.join(screenshots,'result.json'),JSON.stringify({passed:true,localSelfSignedHttps:true,cloudVerified:false,routes:23,widths:4,audio:'NOT VERIFIED',secretScan:'passed',realtime:'blocked here; independently tested locally'},null,2));
   console.log('Hosted-mode rehearsal passed: loopback HTTPS proxy + intercepted synthetic database origin only; no remote acceptance claimed.');
 } catch(error) {
   console.error(JSON.stringify({phase,requests:diagnostics,external,errors}));

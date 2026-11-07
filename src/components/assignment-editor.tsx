@@ -1,4 +1,5 @@
 'use client';
+import { UiText, useUiText } from '@/components/ui-text';
 
 import { useMemo, useState, type FormEvent } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -6,6 +7,7 @@ import { schoolToday } from '@/lib/school-date.mjs';
 
 type Assignment = { id: string; subject: string; title: string; description: string; due_date: string; updated_at: string };
 export function AssignmentEditor({ assignment, onSaved }: { assignment: Assignment; onSaved: () => void }) {
+  const ui = useUiText();
   const db = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [snapshot, setSnapshot] = useState(assignment);
@@ -22,14 +24,14 @@ export function AssignmentEditor({ assignment, onSaved }: { assignment: Assignme
     else { setOpen(false); onSaved(); }
   }
   return <div className="assignment-editor">
-    <button type="button" className="secondary" onClick={() => { if (!open) setSnapshot(assignment); setOpen(!open); setError(''); }} aria-expanded={open}>{open ? 'Cancel homework edit' : 'Edit homework'}</button>
+    <button type="button" className="secondary" onClick={() => { if (!open) setSnapshot(assignment); setOpen(!open); setError(''); }} aria-expanded={open}>{open ? ui("Cancel homework edit") : ui("Edit homework")}</button>
     {open && <form className="assignment-form" onSubmit={save}>
-      <label>Subject<input name="subject" required minLength={2} maxLength={80} defaultValue={snapshot.subject} /></label>
-      <label>Title<input name="title" required minLength={3} maxLength={140} defaultValue={snapshot.title} /></label>
-      <label className="assignment-description-field">Description<textarea name="description" required minLength={3} maxLength={1500} defaultValue={snapshot.description} /></label>
-      <label>Due date<input name="due_date" type="date" min={schoolToday()} defaultValue={snapshot.due_date} required /></label>
-      <button disabled={busy}>{busy ? 'Saving homework…' : 'Save homework changes'}</button>
-      {error && <p role="alert" className="error">{error}</p>}
+      <label><UiText source={"Subject"} /><input name="subject" required minLength={2} maxLength={80} defaultValue={snapshot.subject} /></label>
+      <label><UiText source={"Title"} /><input name="title" required minLength={3} maxLength={140} defaultValue={snapshot.title} /></label>
+      <label className="assignment-description-field"><UiText source={"Description"} /><textarea name="description" required minLength={3} maxLength={1500} defaultValue={snapshot.description} /></label>
+      <label><UiText source={"Due date"} /><input name="due_date" type="date" min={schoolToday()} defaultValue={snapshot.due_date} required /></label>
+      <button disabled={busy}>{busy ? ui("Saving homework…") : ui("Save homework changes")}</button>
+      {error && <p role="alert" className="error">{ui(error)}</p>}
     </form>}
   </div>;
 }

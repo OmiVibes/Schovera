@@ -4,6 +4,18 @@
 
 ## Choose your guide
 
+- **Current palette and typography:** [plum-and-rose visual identity](docs/52_PLUM_ROSE_VISUAL_IDENTITY.md).
+
+- **Software completion, staff localization and what external setup remains:** [current checklist](docs/51_SOFTWARE_COMPLETION_AND_SERVICE_SETUP.md).
+
+- **Blue design, mobile Profile menu, Recently added and academic-year graphs:** [simple portal guide](docs/49_SIMPLE_BLUE_PORTALS.md).
+
+- **Latest website usability fixes and local testing:** [website QA guide](docs/48_WEBSITE_QA_AND_SIMPLICITY.md). The current running school workspace is at **http://127.0.0.1:3103**; temporary-directory servers last only while their local processes and services remain running. Existing fixed account passwords are not published in source documents.
+
+- **Add Parent, Teacher or Principal accounts:** [Manage users](docs/47_MANAGE_SCHOOL_USERS.md).
+
+- **Simpler Parent, Teacher and Principal screens:** [workspace guide](docs/46_SIMPLER_WORKSPACES.md).
+
 - **Aarohi and the second presenter:** [student handbook](docs/SCHOVERA_INTERNATIONAL_DEMO_GUIDE_FOR_AAROHI.md).
 - **Current engineering results and limitations:** [Task 32R report](docs/43_TASK_32R_INTERNATIONAL_SOFTWARE_FINALIZATION.md).
 - **Local environment and build security:** [safe Supabase development](docs/25_SAFE_SUPABASE_DEVELOPMENT.md).
@@ -14,6 +26,18 @@
 - **Bound demo provisioning and lifecycle:** [Task 32T](docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md). Concrete operator tooling, local QA, session revocation, guarded reset/rotation and approval-only deployment procedure; no cloud action is authorized.
 
 ## Safe local launch (Windows PowerShell)
+
+### Existing school workspace
+
+The website currently running at **http://127.0.0.1:3103** uses the existing fixed school accounts. In its already configured isolated application directory, restart it with:
+
+```powershell
+npm run dev:accounts-local -- --port 3103
+```
+
+This does not create accounts or change passwords. It requires local Supabase, the approved local-only environment files and no production `.env.local` in that directory. Do not run fixture preparation, seeding, password rotation or cleanup merely to start school work. The original repository with production `.env.local` is not that launch directory; never copy its production file into the isolated directory. Local AI drafting additionally requires the configured Ollama service/model.
+
+### Separate engineering fixtures
 
 Use Node 22.13–22.x and the installed Docker Desktop Linux engine. Never read, copy, move or edit the original production `.env.local`. Start local Supabase using the existing loopback Docker network:
 

@@ -1,4 +1,4 @@
-export type NoticeLanguage = 'en' | 'hi' | 'mr';
+export type NoticeLanguage = 'en' | 'hi' | 'mr' | 'ko';
 export type NoticeLanguageChoice = NoticeLanguage | 'auto';
 export type PlaybackPhase = 'idle' | 'loading' | 'speaking' | 'paused' | 'unavailable' | 'error';
 
@@ -20,6 +20,7 @@ export interface SpeechUtteranceLike {
   onstart: (() => void) | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
+  volume?: number;
 }
 
 export interface SpeechSynthesisLike {
@@ -44,6 +45,7 @@ export function detectNoticeLanguage(text: string): NoticeLanguage | null {
   // Latin script is a conservative English default. Devanagari is shared by
   // Hindi and Marathi, so it must not be guessed from script alone.
   if (/[\u0900-\u097f]/u.test(text)) return null;
+  if (/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]/u.test(text)) return 'ko';
   if (/[A-Za-z]/u.test(text)) return 'en';
   return null;
 }
@@ -67,7 +69,7 @@ export function selectNoticeVoice(
       ?? matching[0]
       ?? null;
   }
-  const locale = language === 'hi' ? 'hi-in' : 'mr-in';
+  const locale = { hi: 'hi-in', mr: 'mr-in', ko: 'ko-kr' }[language];
   return matching.find((voice) => voice.lang.toLowerCase() === locale)
     ?? matching.find((voice) => voice.lang.toLowerCase().startsWith(`${language}-`))
     ?? matching[0]
@@ -81,6 +83,9 @@ export class ParentSpeechController {
   private generation = 0;
   private listeners = new Set<() => void>();
   private currentEnvironment: SpeechEnvironment | null = null;
+  // Keep the JS utterance alive until completion. Some browser engines do not
+  // retain its wrapper reliably while the native speech queue is running.
+  private currentUtterance: SpeechUtteranceLike | null = null;
   private cancelVoiceWait: (() => void) | null = null;
   private startTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -106,6 +111,7 @@ export class ParentSpeechController {
     this.cancelVoiceWait = null;
     if (andCancel) { try { this.currentEnvironment?.synthesis.cancel(); } catch { /* text fallback remains available */ } }
     this.currentEnvironment = null;
+    this.currentUtterance = null;
     return this.generation;
   }
 
@@ -143,6 +149,8 @@ export class ParentSpeechController {
 
     try {
       const utterance = environment.createUtterance(text);
+      this.currentUtterance = utterance;
+      utterance.volume = 1;
       utterance.lang = voice.lang;
       utterance.voice = voice;
       utterance.onstart = () => {
@@ -157,6 +165,7 @@ export class ParentSpeechController {
           if (this.startTimer) clearTimeout(this.startTimer);
           this.startTimer = null;
           this.currentEnvironment = null;
+          this.currentUtterance = null;
           this.update(emptyState);
         }
       };
@@ -168,6 +177,8 @@ export class ParentSpeechController {
       this.startTimer = setTimeout(() => {
         if (generation === this.generation) this.fail(noticeId);
       }, 8000);
+      // cancel() can leave Chromium's queue paused after Pause → Stop.
+      if (environment.synthesis.paused) environment.synthesis.resume();
       environment.synthesis.speak(utterance);
     } catch {
       if (generation === this.generation) {

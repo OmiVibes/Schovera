@@ -4,6 +4,11 @@ import { ParentFallbackPreferences } from './fallback-simulator';
 const state=vi.hoisted(()=>({language:'en'}));
 vi.mock('@/lib/i18n-provider',()=>({useI18n:()=>({language:state.language,t:(key:string)=>key})}));
 afterEach(()=>vi.unstubAllEnvs());
+it('renders no notification controls or empty disclosure in the normal website',()=>{
+  vi.stubEnv('NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO','false');
+  vi.stubEnv('NEXT_PUBLIC_SCHOVERA_FALLBACK_MODE','');
+  expect(renderToStaticMarkup(<ParentFallbackPreferences/>)).toBe('');
+});
 it.each(['en','hi','mr'])('shows an honest non-interactive hosted example in %s',language=>{
   state.language=language;vi.stubEnv('NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO','true');
   const html=renderToStaticMarkup(<ParentFallbackPreferences/>);

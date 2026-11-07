@@ -80,11 +80,11 @@ export function useI18n() {
   return context;
 }
 
-export function LanguageSelector() {
+export function LanguageSelector({ showLabel = false }: { showLabel?: boolean }) {
   const { language, setLanguage, t } = useI18n();
   return (
     <label className="language-selector">
-      <span className="sr-only">{t('language.label')}</span>
+      <span className={showLabel ? undefined : 'sr-only'}>{t(showLabel ? 'language.shortLabel' : 'language.label')}</span>
       <select
         aria-label={t('language.label')}
         value={language}

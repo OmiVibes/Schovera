@@ -10,8 +10,8 @@ const browser = await chromium.launch({ headless: true });
 
 async function signIn(page, email) {
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
-  if (await page.locator('input[type="email"]').count()) {
-    await page.locator('input[type="email"]').fill(email);
+  if (await page.locator('input[autocomplete="username"]').count()) {
+    await page.locator('input[autocomplete="username"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button', { name: 'Sign in securely' }).click();
     await page.waitForFunction(() =>
@@ -109,6 +109,8 @@ try {
   await page.getByRole('button', { name: 'Sign out' }).click();
 
   await signIn(page, 'principal@schovera.demo');
+  await navigate(page, 'principal', 'users');
+  await page.locator('#manage-users-title').waitFor({ state: 'visible' });
   await navigate(page, 'principal', 'home');
   await page.locator('.workspace-shortcuts').waitFor({ state: 'visible' });
   await page.locator('.principal-awaiting-metric').click();
@@ -126,7 +128,7 @@ try {
   await page.goto(`${baseUrl}/teacher/attendance`, { waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: 'That workspace is not available to this account.' }).waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Sign out and switch account' }).click();
-  await page.locator('input[type="email"]').waitFor({ state: 'visible' });
+  await page.locator('input[autocomplete="username"]').waitFor({ state: 'visible' });
   await signIn(page, 'teacher@schovera.demo');
   await page.locator('nav.app-section-nav').waitFor({ state: 'visible' });
   await assertNoHorizontalOverflow(page, 'teacher', 'home');

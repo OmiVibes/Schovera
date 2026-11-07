@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNo
 import { createClient } from '@/lib/supabase/client';
 import { languageOptions, type Language } from '@/lib/i18n';
 import { useI18n } from '@/lib/i18n-provider';
+import { OptionalSection } from '@/components/optional-section';
 
 const subscribe = () => () => {};
 const localBrowser = () => ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
@@ -29,8 +30,9 @@ function useLocalApi() {
 }
 
 export function ParentFallbackPreferences() {
+  const { t } = useI18n();
   return process.env.NEXT_PUBLIC_SCHOVERA_HOSTED_DEMO === 'true'
-    ? <HostedFallbackExample /> : <LocalOnly><Preferences /></LocalOnly>;
+    ? <HostedFallbackExample /> : <LocalOnly><OptionalSection id="notification-simulation-tools" title={t('fallback.preferences')} description={t('fallback.warning')}><Preferences /></OptionalSection></LocalOnly>;
 }
 function HostedFallbackExample() {
   const { language } = useI18n();

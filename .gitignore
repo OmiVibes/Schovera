@@ -17,6 +17,7 @@
 /.local/schovera-rfid-gateway/
 /.local/schovera-manual-demo/
 /.local/schovera-hosted-demo/
+/.local/windows-voice-setup/
 
 # next.js
 /.next/

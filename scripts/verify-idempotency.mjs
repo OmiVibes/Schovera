@@ -50,12 +50,13 @@ function realtimeStream(client, table, filter, label) {
       const index = received.findIndex(matches);
       if (index !== -1) return Promise.resolve(received.splice(index, 1)[0]);
       return new Promise((resolve, reject) => {
+        const deliverWaiter = (payload) => { clearTimeout(timer); resolve(payload); };
         const timer = setTimeout(() => {
-          const waiterIndex = waiters.findIndex((waiter) => waiter.resolve === resolve);
+          const waiterIndex = waiters.findIndex((waiter) => waiter.resolve === deliverWaiter);
           if (waiterIndex !== -1) waiters.splice(waiterIndex, 1);
           reject(new Error(`Realtime event timed out for ${eventLabel}.`));
         }, 12000);
-        waiters.push({ matches, resolve: (payload) => { clearTimeout(timer); resolve(payload); } });
+        waiters.push({ matches, resolve: deliverWaiter });
       });
     },
   };
@@ -107,7 +108,13 @@ try {
   const first = await teacher.rpc('send_student_update', payloadFor(assignment, student, requestId));
   if (first.error) throw first.error;
   temporary.updateIds.push(first.data);
-  await parentRealtime.waitFor((payload) => payload.new.id === first.data, 'Teacher-to-parent idempotent update');
+  try {
+    await parentRealtime.waitFor((payload) => payload.new.id === first.data, 'Teacher-to-parent idempotent update');
+  } catch (error) {
+    const persisted = await parent.from('student_updates').select('id').eq('id', first.data);
+    console.error(`Idempotency Realtime diagnostic: Parent authorized persisted read ${!persisted.error && persisted.data?.length === 1 ? 'passed' : 'failed'}; raw INSERT signal was not observed. This remains a failed check, not a persistence pass.`);
+    throw error;
+  }
   const retry = await teacher.rpc('send_student_update', payloadFor(assignment, student, requestId));
   if (retry.error) throw retry.error;
   expect(first.data === retry.data, 'Same-key retry did not return the original update.');

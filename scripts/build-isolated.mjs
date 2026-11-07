@@ -6,11 +6,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hostedBuildFixture, validateHostedDemoEnvironment } from '../src/lib/demo-deployment-policy.mjs';
+import { createHash } from 'node:crypto';
+import { workingBuildInput, regularBuildSource } from './lib/build-input-policy.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const tempPrefix = 'schovera-build-';
 const hostedPreflight = process.argv.slice(2).includes('--hosted-demo');
-if (process.argv.slice(2).some(arg => arg !== '--hosted-demo')) throw new Error('Unsupported isolated build option');
+const workingTree = process.argv.slice(2).includes('--working-tree');
+if (process.argv.slice(2).some(arg => !['--hosted-demo', '--working-tree'].includes(arg))) throw new Error('Unsupported isolated build option');
 const publicUrl = hostedPreflight ? hostedBuildFixture.NEXT_PUBLIC_SUPABASE_URL : 'http://127.0.0.1:54321';
 const publicKey = hostedPreflight ? hostedBuildFixture.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY : 'sb_publishable_local_build_only_not_a_credential';
 const secretSentinels = {
@@ -172,9 +175,11 @@ async function scanForSecretSentinels(directory) {
 
 async function main() {
   const trackedChanges = run('git', ['status', '--porcelain=v1', '--untracked-files=no']).trim();
-  if (trackedChanges) throw new Error('Commit or resolve tracked changes before building; the snapshot is always made from committed files.');
+  if (trackedChanges && !workingTree) throw new Error('Commit or resolve tracked changes before building, or explicitly use --working-tree for a fingerprinted source snapshot.');
   const commit = run('git', ['rev-parse', 'HEAD']).trim();
   const trackedFiles = run('git', ['ls-files', '-z']).split('\0').filter(Boolean);
+  const tracked = new Set(trackedFiles);
+  const inputs = workingTree ? [...new Set([...trackedFiles, ...run('git', ['ls-files', '--others', '--exclude-standard', '-z', '--', 'src', 'scripts']).split('\0').filter(Boolean)])].filter(file => workingBuildInput(file, tracked.has(file))).sort() : trackedFiles;
   if (!trackedFiles.includes('package-lock.json') || !trackedFiles.includes('package.json')) {
     throw new Error('The committed npm manifest and lockfile are required.');
   }
@@ -190,15 +195,36 @@ async function main() {
   try {
     const privateTemp = path.join(snapshotRoot, '.tmp');
     await mkdir(privateTemp);
-    for (const relativePath of trackedFiles) {
+    const fingerprints = new Map();
+    for (const relativePath of inputs) {
       if (!shouldCopy(relativePath)) continue;
       const sourcePath = path.join(repositoryRoot, ...relativePath.split('/'));
       const destinationPath = path.join(snapshotRoot, ...relativePath.split('/'));
-      const info = await lstat(sourcePath);
+      let info;
+      try { info = await lstat(sourcePath); } catch (error) { if (workingTree && error.code === 'ENOENT') continue; throw error; }
       if (!info.isFile()) throw new Error(`Refusing non-regular tracked build input: ${relativePath}`);
+      await regularBuildSource(repositoryRoot, relativePath);
       await mkdir(path.dirname(destinationPath), { recursive: true });
-      await cp(sourcePath, destinationPath);
+      if (workingTree) {
+        const bytes = await readFile(sourcePath);
+        fingerprints.set(relativePath, createHash('sha256').update(bytes).digest('hex'));
+        await writeFile(destinationPath, bytes, { flag: 'wx' });
+      } else await cp(sourcePath, destinationPath);
     }
+    const verifyFingerprint = async () => {
+      if (workingTree) {
+        const current = [...new Set([...run('git', ['ls-files', '-z']).split('\0'), ...run('git', ['ls-files', '--others', '--exclude-standard', '-z', '--', 'src', 'scripts']).split('\0')])].filter(file => file && workingBuildInput(file, tracked.has(file))).sort();
+        const actual = [];
+        for (const file of current) { try { await regularBuildSource(repositoryRoot, file); actual.push(file); } catch (error) { if (error.code !== 'ENOENT') throw error; } }
+        if (JSON.stringify(actual) !== JSON.stringify([...fingerprints.keys()].sort())) throw new Error('Source file set changed during isolated build; rerun after edits settle.');
+      }
+      for (const [file, hash] of fingerprints) {
+        await regularBuildSource(repositoryRoot, file);
+        if (createHash('sha256').update(await readFile(path.join(repositoryRoot, file))).digest('hex') !== hash) throw new Error('Source changed during isolated verification; rerun after edits settle.');
+      }
+    };
+    await verifyFingerprint();
+    const inputDigest = createHash('sha256').update(JSON.stringify([...fingerprints])).digest('hex');
 
     const envText = [
       `NEXT_PUBLIC_SUPABASE_URL=${publicUrl}`,
@@ -218,6 +244,7 @@ async function main() {
     await ensureOnlyGeneratedEnvironmentFile(snapshotRoot);
 
     console.log(`Isolated snapshot commit: ${commit}`);
+    if (workingTree) console.log(`Uncommitted source snapshot SHA-256: ${inputDigest}; ${fingerprints.size} approved files. This is not a committed release.`);
     console.log('Environment files: generated .env.production only; private and developer files excluded.');
     console.log('Installing exact lockfile dependencies offline inside the isolated snapshot...');
     const npmCli = process.env.npm_execpath;
@@ -262,10 +289,11 @@ async function main() {
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
     const builtRoutes = Object.keys(manifest);
     const expectedRoutes = ['/page', '/[role]/page', '/[role]/[section]/page', '/api/device/v1/events/route',
-      '/api/device/v2/capability-keys/route', '/api/device/v2/capabilities/route', '/api/device/v2/events/route', '/api/teacher-ai/route', '/api/fallback-simulator/route'];
+      '/api/device/v2/capability-keys/route', '/api/device/v2/capabilities/route', '/api/device/v2/events/route', '/api/teacher-ai/route', '/api/fallback-simulator/route', '/api/school/accounts/route'];
     const missingRoutes = expectedRoutes.filter((route) => !builtRoutes.includes(route));
     if (missingRoutes.length) throw new Error(`Expected application routes missing from build: ${missingRoutes.join(', ')}`);
     await scanForSecretSentinels(path.join(snapshotRoot, '.next'));
+    await verifyFingerprint();
     console.log(`Expected routes verified: ${expectedRoutes.join(', ')}`);
     console.log('Synthetic private-environment sentinels absent from all build output.');
     console.log(`Allowlisted build egress hosts observed: ${observedHosts.join(', ') || '(none)'}. Other requests through the build proxy are denied.`);

@@ -5,12 +5,14 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { prepareManualFixture, cleanManualFixture, actorClient, manualPaths, readManualFixture } from './manual-demo.mjs';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+import { openOptionalTool } from './lib/open-optional-tool.mjs';
 
 assertLocalTestEnvironment();
 const base = process.env.SCHOVERA_TEST_URL || 'http://127.0.0.1:3000';
 let browser, fixture;
 const views = [];
 async function login(account, speech = false) {
+  console.log(`Connected journey: sign in as ${account.role}`);
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } }); const external = [], errors = [];
   await context.route('**/*', (route) => { const u = new URL(route.request().url()); if (['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) || ['data:', 'blob:', 'about:'].includes(u.protocol)) return route.continue(); external.push(u.hostname); return route.abort(); });
   if (speech) await context.addInitScript(() => {
@@ -24,12 +26,12 @@ async function login(account, speech = false) {
     } });
     Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: class { constructor(text) { this.text = text; } } });
   });
-  const page = await context.newPage(); page.on('pageerror', (error) => errors.push(error.message));
+  const page = await context.newPage(); page.setDefaultTimeout(30000); page.setDefaultNavigationTimeout(45000); page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(base, { waitUntil: 'networkidle' }); await page.getByLabel('Email').fill(account.email); await page.getByLabel('Password', { exact: true }).fill(account.password);
   await page.getByRole('button', { name: 'Sign in securely' }).click(); await page.locator(`.role-${account.role}`).waitFor({ timeout: 30000 });
   const view = { page, context, external, errors }; views.push(view); return view;
 }
-const go = (page, role, route) => page.goto(`${base}/${role}/${route}`, { waitUntil: 'networkidle' });
+const go = (page, role, route) => { console.log(`Connected journey: ${role}/${route}`); return page.goto(`${base}/${role}/${route}`, { waitUntil: 'networkidle' }); };
 const signout = async (page) => { await page.getByRole('button', { name: 'Sign out', exact: true }).click(); await page.getByLabel('Email').waitFor(); };
 function entry(command) {
   const minimal = Object.fromEntries(['PATH', 'Path', 'PATHEXT', 'SystemRoot', 'TEMP', 'TMP'].flatMap((name) => process.env[name] ? [[name, process.env[name]]] : []));
@@ -38,6 +40,7 @@ function entry(command) {
   return JSON.parse(result.stdout);
 }
 try {
+  console.log('Connected journey: preparing isolated records');
   fixture = await prepareManualFixture({ onCreated: (created) => { fixture = created; } });
   await assert.rejects(prepareManualFixture(), /already exists/, 'A second preparation must preserve the existing fixture');
   assert.equal(readManualFixture().runId, fixture.runId);
@@ -71,13 +74,14 @@ try {
   const parent = await login(fixture.accounts.parent, true); await go(parent.page, 'parent', 'home'); await parent.page.locator('.child-switcher select').selectOption(fixture.students[0].id);
   await go(parent.page, 'parent', 'updates');
   const notice = parent.page.locator('.parent-updates .update-card').first(); await notice.getByText(title, { exact: true }).waitFor();
-  const content = notice.locator('.notice-language-view'); await content.locator('.notice-language-toolbar select').selectOption('mr');
+  const content = notice.locator('.notice-language-view'); await content.locator('.notice-language-toolbar > label select').selectOption('mr');
   await content.getByText('School-approved translation', { exact: true }).waitFor(); await content.getByRole('button', { name: 'Listen to notice', exact: true }).click();
   await content.getByRole('button', { name: 'Pause', exact: true }).click(); await content.getByRole('button', { name: 'Resume', exact: true }).click(); await content.getByRole('button', { name: 'Stop', exact: true }).click();
   assert.equal(await parent.page.evaluate(() => window.__finalSpeech.spoken.at(-1)?.lang), 'mr-IN');
   await notice.getByRole('button', { name: `Acknowledge update: ${title}`, exact: true }).click(); await notice.getByText('Acknowledged', { exact: true }).waitFor();
   for (const [route, selector] of [['homework', '.assignment-card'], ['attendance', '.attendance-card'], ['timetable', '.timetable-workspace'], ['profile', '.student-profile']]) { await go(parent.page, 'parent', route); await parent.page.locator(selector).first().waitFor(); }
-  await go(parent.page, 'parent', 'notices'); const prefs = parent.page.getByTestId('fallback-preferences');
+  await go(parent.page, 'parent', 'notices'); await openOptionalTool(parent.page, 'notification-simulation-tools'); const prefs = parent.page.getByTestId('fallback-preferences');
+  await prefs.locator('fieldset:not([disabled])').waitFor({ state: 'visible' });
   await prefs.getByLabel('I opt in to simulated SMS notices', { exact: true }).check(); await prefs.getByLabel('I opt in to simulated voice-call notices', { exact: true }).check(); await prefs.getByLabel('Preferred notice language').selectOption('mr'); await prefs.getByRole('button', { name: 'Save my preferences' }).click(); await prefs.getByText('Preferences saved.', { exact: false }).waitFor();
   await go(teacher.page, 'teacher', 'students'); await teacher.page.getByRole('button', { name: /Synthetic Child A/ }).first().click();
   await teacher.page.locator('.teacher-update-card').filter({ hasText: title }).getByText('Acknowledged', { exact: true }).waitFor();
@@ -86,7 +90,7 @@ try {
   await go(principal.page, 'principal', 'communication'); const overview = principal.page.locator('.principal-communication-card').filter({ hasText: title }).getByTestId('fallback-dispatch'); await overview.locator('summary').click(); await overview.getByText('SIMULATED delivered — not read', { exact: true }).waitFor();
   assert.equal(entry('queue').queue.pending, 1); assert.equal(entry('offline').queue.pending, 1); assert.equal(entry('status').queue.pending, 1);
   const synced = entry('sync'); assert.equal(synced.queue.delivered_to_local_server, 1); assert.equal(entry('duplicate').canonicalRetry.duplicate, true);
-  for (const view of [parent, teacher, principal]) { await go(view.page, view === parent ? 'parent' : view === teacher ? 'teacher' : 'principal', 'home'); const events = view.page.locator('.school-entry-panel .school-entry-event'); await events.getByText('Check-in recorded', { exact: true }).waitFor(); assert.equal(await events.count(), 1, 'One persisted observation must appear once in each authorized role'); }
+  for (const view of [parent, teacher, principal]) { await go(view.page, view === parent ? 'parent' : view === teacher ? 'teacher' : 'principal', 'home'); await openOptionalTool(view.page); const events = view.page.locator('.school-entry-panel .school-entry-event'); await events.getByText('Check-in recorded', { exact: true }).waitFor(); assert.equal(await events.count(), 1, 'One persisted observation must appear once in each authorized role'); }
   await parent.page.locator('.child-switcher select').selectOption(fixture.students[1].id); await parent.page.locator('.school-entry-panel').getByText('No entry record available', { exact: true }).waitFor();
   assert.equal(entry('queue').queue.pending, 1); const principalClient = await actorClient(fixture.accounts.principal);
   const revoked = await principalClient.rpc('revoke_student_credential', { p_credential_id: fixture.assignmentId }); assert.equal(revoked.error, null);

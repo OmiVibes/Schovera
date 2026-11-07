@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+import { openOptionalTool } from './lib/open-optional-tool.mjs';
 
 assertLocalTestEnvironment(process.env);
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -131,7 +132,7 @@ try {
     }
   });
   await page.goto(appUrl, { waitUntil: 'networkidle' });
-  await page.locator('input[type="email"]').fill(auth.user.email);
+  await page.locator('input[autocomplete="username"]').fill(auth.user.email);
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: 'Sign in securely' }).click();
   await page.waitForRequest((request) => {
@@ -139,6 +140,7 @@ try {
     return url.origin === supabaseUrl && url.pathname === '/rest/v1/parent_student_links';
   }, { timeout: 20_000 });
   if (!tokenB) throw new Error('browser Parent child query did not send an authenticated Bearer token');
+  await openOptionalTool(page);
   await page.waitForFunction(() => document.querySelector('[data-testid="school-entry-panel"]')?.getAttribute('data-loaded') === 'true', undefined, { timeout: 20_000 });
   await page.waitForLoadState('networkidle');
 
