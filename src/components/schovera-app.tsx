@@ -1,5 +1,6 @@
 'use client';
 import { UiText, useUiText } from '@/components/ui-text';
+import { schoolDisplayName } from '@/lib/school-brand';
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -276,7 +277,7 @@ export function SchoveraApp() {
         setCanRetryProfileLoad(false);
         return;
       }
-      profileRef.current = { ...data, school_name: (data as any).schools?.name || 'Your school' } as Profile;
+      profileRef.current = { ...data, school_name: schoolDisplayName((data as any).schools?.name || 'Your school') } as Profile;
       setProfile(profileRef.current);
       setError('');
       setCanRetryProfileLoad(false);
@@ -311,11 +312,12 @@ export function SchoveraApp() {
     const revealActiveLink = () => {
       if (!window.matchMedia('(max-width: 820px)').matches) return;
       const activeLink = document.querySelector('nav.app-section-nav a[aria-current="page"]');
-      activeLink?.scrollIntoView({
-        block: 'nearest',
-        inline: 'center',
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      });
+      if (activeLink instanceof HTMLElement && activeLink.parentElement) {
+        const nav = activeLink.parentElement;
+        const linkRect = activeLink.getBoundingClientRect(), navRect = nav.getBoundingClientRect();
+        nav.scrollTo({ left: nav.scrollLeft + linkRect.left - navRect.left - (navRect.width - linkRect.width) / 2,
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      }
     };
     revealActiveLink();
     window.addEventListener('resize', revealActiveLink);
@@ -454,6 +456,7 @@ export function SchoveraApp() {
             </button>
           </div>
         </div>
+        <div className="portal-navigation">
         <nav className="app-section-nav" aria-label={t('nav.label', { role: t(`common.${profile.role}`) })}>
           {roleNavigation[profile.role].map((item) => {
             const isActive = currentPage.slug === item.slug;
@@ -470,6 +473,15 @@ export function SchoveraApp() {
             );
           })}
         </nav>
+        <details className="portal-more-menu" key={pathname} onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); } }}>
+          <summary>{ui('More pages')} <span aria-hidden="true">⌄</span></summary>
+          <div aria-label={ui('All portal pages')}>
+            {roleNavigation[profile.role].map(item => <Link key={item.id} href={`/${profile.role}/${item.slug}`} aria-current={currentPage.slug === item.slug ? 'page' : undefined} onClick={event => event.currentTarget.closest('details')?.removeAttribute('open')}>
+              <Icon name={item.icon} /><span>{t(navigationKeys[item.id] || 'common.schoolNotices')}</span>
+            </Link>)}
+          </div>
+        </details>
+        </div>
       </header>
       {profile.role !== 'parent' && currentPage.slug === 'home' && (
         <section className="dashboard-hero">
@@ -2207,9 +2219,9 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
         ) : communicationLoading ? (
           <PrincipalCommunicationSkeleton />
         ) : visibleCommunication.length ? (
-          visibleCommunication.map((update) => (
+          <div className="principal-communication-feed">{visibleCommunication.map((update) => (
               <PrincipalCommunicationCard key={update.id} update={update} corrected={principalCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? all.find((item) => item.id === update.corrects_update_id)?.title : undefined} />
-            ))
+            ))}</div>
         ) : communicationFilter === 'awaiting' ? (
           <div className="principal-awaiting-empty" role="status">
             <span className="section-icon" aria-hidden="true"><Icon name="check" /></span>

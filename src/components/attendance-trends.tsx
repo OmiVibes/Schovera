@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { academicYearDisplayName } from '@/lib/school-brand';
 import { useI18n } from '@/lib/i18n-provider';
 import { schoolToday } from '@/lib/school-date.mjs';
 import {
@@ -340,6 +341,7 @@ export function AttendanceTrends({
         <label>
           {text.year}
           <select
+            aria-label={text.year}
             value={year}
             onChange={(e) => {
               setYear(e.target.value);
@@ -350,7 +352,7 @@ export function AttendanceTrends({
             {[
               ...new Set(options.map((c) => c.academic_year).filter(Boolean)),
             ].map((y) => (
-              <option key={y}>{y}</option>
+              <option key={y} value={y}>{academicYearDisplayName(y)}</option>
             ))}
           </select>
         </label>
@@ -358,6 +360,7 @@ export function AttendanceTrends({
           <label>
             {text.class}
             <select
+              aria-label={text.class}
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
             >
@@ -367,7 +370,7 @@ export function AttendanceTrends({
                 .map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.grade}
-                    {c.division} · {c.academic_year}
+                    {c.division} · {academicYearDisplayName(c.academic_year)}
                   </option>
                 ))}
             </select>

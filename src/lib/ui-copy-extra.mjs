@@ -393,4 +393,7 @@ you@school.org|you@school.org|you@school.org
 · P|· पीरियड|· तास
 · Roll|· अनुक्रमांक|· हजेरी क्रमांक
 · School time in India Standard Time|· स्कूल का समय भारतीय मानक समय में|· शाळेची वेळ भारतीय प्रमाणवेळेनुसार
+More pages|और पृष्ठ|आणखी पाने
+All portal pages|पोर्टल के सभी पृष्ठ|पोर्टलची सर्व पाने
+Live drafting is unavailable on this server. Use the school's configured local model. Spreadsheet editing below still works locally in your browser.|इस सर्वर पर AI प्रारूप उपलब्ध नहीं है। स्कूल का निर्धारित स्थानीय मॉडल इस्तेमाल करें। नीचे फ़ाइल का संपादन इसी ब्राउज़र में उपलब्ध है।|या सर्व्हरवर AI मसुदा उपलब्ध नाही. शाळेचे निश्चित स्थानिक मॉडेल वापरा. खाली फाइलचे संपादन याच ब्राउझरमध्ये उपलब्ध आहे.
 `;

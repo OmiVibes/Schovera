@@ -2,6 +2,8 @@
 
 Updated: 7 November 2026.
 
+**9 November follow-up:** [Readability, responsive refinement and branding cleanup](53_UI_READABILITY_AND_RESPONSIVE_REFINEMENT.md) supersedes the earlier typography/layout screenshots below. The existing palette and fonts remain; the new report includes test results and a before/after gallery.
+
 The current design uses the four colours encoded in the owner's [Color Hunt palette link](https://colorhunt.co/palette/7c0e44aa5e7ad49a9af2dace):
 
 | Colour | Purpose |

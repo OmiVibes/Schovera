@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   // Refuse before constructing even an Auth client: this disabled feature must
   // not amplify unauthenticated traffic or depend on a trainer's laptop.
   if (process.env.SCHOVERA_HOSTED_DEMO === 'true') {
-    return Response.json({ error: 'Live AI drafting is disabled in the online demo. Use the trainer’s local demonstration.' },
+    return Response.json({ error: 'Live AI drafting is unavailable on this server. Use the school’s configured local model.' },
       { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
   const authorization = request.headers.get('authorization');

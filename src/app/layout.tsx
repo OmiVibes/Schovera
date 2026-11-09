@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Noto_Sans_Devanagari } from "next/font/google";
 import { AppEntry } from "@/components/schovera-app";
 import "./globals.css";
 import "./theme.css";
+import "./refinement.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       className={`${geistSans.variable} ${geistMono.variable} ${devanagari.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {process.env.NEXT_PUBLIC_SCHOVERA_DEMO === 'true' && <aside className="demo-environment" aria-label="Demonstration environment" data-testid="demo-environment">Demo Environment <span>· Fictional school records · No real SMS or calls</span></aside>}
+        {process.env.NEXT_PUBLIC_SCHOVERA_DEMO === 'true' && <aside className="demo-environment" aria-label="Sample records" data-testid="demo-environment">Sample school records <span>· SMS and calls are simulated</span></aside>}
         <AppEntry />
         {children}
       </body>

@@ -16,15 +16,17 @@ async function login(account, speech = false) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } }); const external = [], errors = [];
   await context.route('**/*', (route) => { const u = new URL(route.request().url()); if (['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) || ['data:', 'blob:', 'about:'].includes(u.protocol)) return route.continue(); external.push(u.hostname); return route.abort(); });
   if (speech) await context.addInitScript(() => {
-    const state = { speaking: false, paused: false, spoken: [], cancels: 0 };
-    window.__finalSpeech = state;
-    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
-      getVoices: () => ['en-IN', 'hi-IN', 'mr-IN'].map((lang) => ({ lang })),
-      speak: (u) => { state.spoken.push({ text: u.text, lang: u.lang }); state.speaking = true; queueMicrotask(() => u.onstart?.()); },
-      cancel: () => { state.cancels++; state.speaking = false; }, pause: () => { state.paused = true; }, resume: () => { state.paused = false; },
-      addEventListener() {}, removeEventListener() {},
-    } });
-    Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: class { constructor(text) { this.text = text; } } });
+    window.__finalSpeech = { spoken: [] };
+    const originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+      if (typeof input === 'string' && input === '/api/communication/speech' && typeof init?.body === 'string') {
+        const body = JSON.parse(init.body); window.__finalSpeech.spoken.push({ text: body.text, lang: body.language });
+      }
+      return originalFetch.call(this, input, init);
+    };
+    const NativeAudio = window.Audio;
+    window.Audio = function(...args) { const audio = new NativeAudio(...args); window.__finalAudio = audio; return audio; };
+    window.Audio.prototype = NativeAudio.prototype;
   });
   const page = await context.newPage(); page.setDefaultTimeout(30000); page.setDefaultNavigationTimeout(45000); page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(base, { waitUntil: 'networkidle' }); await page.getByLabel('Email').fill(account.email); await page.getByLabel('Password', { exact: true }).fill(account.password);
@@ -63,12 +65,13 @@ try {
   await teacher.page.locator('input[name=title]').fill(title); await teacher.page.locator('textarea[name=message]').fill('Synthetic connected journey: bring a library notebook at 09:00.');
   await teacher.page.locator('input[name=important]').check(); await teacher.page.getByRole('button', { name: 'Send update to parent', exact: true }).click();
   const sent = teacher.page.locator('.teacher-update-card').filter({ hasText: title }); await sent.waitFor();
-  const draft = sent.locator('.translation-manager'); await draft.locator('summary').click(); await draft.locator('select').selectOption('mr');
-  await draft.getByLabel('Translated title', { exact: true }).fill('नमुना जोडलेली सूचना'); await draft.getByLabel('Translated message', { exact: true }).fill('नमुना सूचना: 09:00 वाजता वाचनालयाची वही आणा. ही फक्त चाचणी आहे.');
-  await draft.getByRole('button', { name: 'Save draft', exact: true }).click(); await draft.getByRole('button', { name: 'Submit for review', exact: true }).click(); await draft.getByText('Submitted for Principal review', { exact: true }).waitFor();
+  assert.equal(await sent.locator('.translation-manager').count(), 0, 'Teachers send their original once; optional review belongs to the Principal.');
   const principal = await login(fixture.accounts.principal); await go(principal.page, 'principal', 'communication');
   const reviewCard = principal.page.locator('.principal-communication-card').filter({ hasText: title }); const review = reviewCard.locator('.translation-manager');
-  await review.locator('summary').click(); await review.locator('select').selectOption('mr'); await review.getByLabel('I checked the meaning', { exact: false }).check();
+  await review.locator('summary').click(); await review.locator('select').selectOption('mr');
+  await review.getByLabel('Translated title', { exact: true }).fill('नमुना जोडलेली सूचना'); await review.getByLabel('Translated message', { exact: true }).fill('नमुना सूचना: 09:00 वाजता वाचनालयाची वही आणा. ही फक्त चाचणी आहे.');
+  await review.getByRole('button', { name: 'Save draft', exact: true }).click(); await review.getByRole('button', { name: 'Submit for review', exact: true }).click(); await review.getByText('Submitted for Principal review', { exact: true }).waitFor();
+  await review.getByLabel('I checked the meaning', { exact: false }).check();
   await review.getByRole('button', { name: 'Approve reviewed translation', exact: true }).click(); await review.getByText('School-approved translation', { exact: true }).waitFor();
   await go(principal.page, 'principal', 'attendance'); await principal.page.getByTestId('attendance-insights').getByRole('heading', { name: 'Classroom attendance insights' }).waitFor();
   const parent = await login(fixture.accounts.parent, true); await go(parent.page, 'parent', 'home'); await parent.page.locator('.child-switcher select').selectOption(fixture.students[0].id);
@@ -76,8 +79,9 @@ try {
   const notice = parent.page.locator('.parent-updates .update-card').first(); await notice.getByText(title, { exact: true }).waitFor();
   const content = notice.locator('.notice-language-view'); await content.locator('.notice-language-toolbar > label select').selectOption('mr');
   await content.getByText('School-approved translation', { exact: true }).waitFor(); await content.getByRole('button', { name: 'Listen to notice', exact: true }).click();
+  await parent.page.waitForFunction(() => window.__finalAudio?.currentTime > .1 && !window.__finalAudio.paused);
   await content.getByRole('button', { name: 'Pause', exact: true }).click(); await content.getByRole('button', { name: 'Resume', exact: true }).click(); await content.getByRole('button', { name: 'Stop', exact: true }).click();
-  assert.equal(await parent.page.evaluate(() => window.__finalSpeech.spoken.at(-1)?.lang), 'mr-IN');
+  assert.equal(await parent.page.evaluate(() => window.__finalSpeech.spoken.at(-1)?.lang), 'mr');
   await notice.getByRole('button', { name: `Acknowledge update: ${title}`, exact: true }).click(); await notice.getByText('Acknowledged', { exact: true }).waitFor();
   for (const [route, selector] of [['homework', '.assignment-card'], ['attendance', '.attendance-card'], ['timetable', '.timetable-workspace'], ['profile', '.student-profile']]) { await go(parent.page, 'parent', route); await parent.page.locator(selector).first().waitFor(); }
   await go(parent.page, 'parent', 'notices'); await openOptionalTool(parent.page, 'notification-simulation-tools'); const prefs = parent.page.getByTestId('fallback-preferences');
@@ -96,11 +100,11 @@ try {
   const revoked = await principalClient.rpc('revoke_student_credential', { p_credential_id: fixture.assignmentId }); assert.equal(revoked.error, null);
   assert.equal(entry('sync').queue.attention_required, 1);
   for (const [account, prompt] of [[fixture.accounts.unlinkedParent, /linked child|linked children|school has not linked|No child/i], [fixture.accounts.unassignedTeacher, /assigned class|No active class|No classes/i]]) {
-    const view = await login(account); await view.page.getByText(prompt).first().waitFor();
+    const view = await login(account); await view.page.getByText(prompt).filter({ visible: true }).first().waitFor();
   }
   for (const view of [parent, teacher, principal]) await signout(view.page);
   for (const view of views) { assert.deepEqual(view.external, []); assert.deepEqual(view.errors, []); }
-  console.log('Connected journeys passed: Teacher correction/insights/send/draft; Principal approval/review; Parent translated mocked speech/acknowledgement/homework/attendance/timetable/profile/consent/child switching; durable offline/restart/local sync/duplicate/revocation; empty contexts and logout.');
+  console.log('Connected journeys passed: Teacher insights/send; Principal draft/approval/review; Parent translated real-media playback/acknowledgement/homework/attendance/timetable/profile/consent/child switching; durable offline/restart/local sync/duplicate/revocation; empty contexts and logout.');
   console.log(`Private generated fixture was held only in its ignored run directory (${manualPaths().runDirectory}); no credentials printed.`);
 } catch (error) {
   console.error(`Connected journey assertion failed: ${error.message}`);

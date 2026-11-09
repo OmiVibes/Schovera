@@ -1,0 +1,150 @@
+/* Shared readability layer. Existing fonts, data, controls and palette remain. */
+:root {
+  --text-page: clamp(1.75rem, 2.4vw, 2.125rem);
+  --text-section: clamp(1.3rem, 1.7vw, 1.5rem);
+  --text-card: 1.125rem;
+  --text-body: 1rem;
+  --text-support: .875rem;
+  --text-meta: .8125rem;
+  --space-section: 24px;
+  --space-card: 22px;
+  --status-present: #166747;
+  --status-late: #885400;
+  --status-absent: #ac3047;
+}
+body { font-size: var(--text-body); }
+.app p { line-height: 1.6; }
+.app :is(h1,h2,h3,h4) { overflow-wrap: anywhere; }
+.app h1, .app .dashboard-hero h1, .app .teacher-home-heading h1, .app .principal-hero h1 { font-size: var(--text-page); line-height: 1.25; font-weight: 700; }
+.app :is(.card,.section-heading,.notice-section-heading,.right-now,.attention-panel,.parent-latest-heading) h2 { font-size: var(--text-section); line-height: 1.35; }
+.app .card h3, .app .school-notice-card h3, .app .parent-update-card h3 { font-size: var(--text-card); line-height: 1.4; font-weight: 650; }
+.app :is(.hint,.empty,.notice-language-status,.parent-speech-status,.teacher-sheet-limit,.teacher-ai-disclaimer) { font-size: var(--text-support); line-height: 1.55; }
+.app :is(.eyebrow,.parent-update-context,.parent-update-meta,.school-notice-meta,.principal-student-label,.student-profile-identity small) { font-size: var(--text-meta); line-height: 1.5; }
+.app :is(label,legend) { font-size: var(--text-support); line-height: 1.5; }
+.app :is(input:not([type=checkbox]):not([type=radio]),select,textarea), .login :is(input,select) { font-size: 1rem; min-width: 0; }
+.app :is(input,select,textarea)::placeholder, .login input::placeholder { color: #73656d; opacity: 1; }
+.app :is(button,.primary,.secondary), .login button { font-size: .9375rem; line-height: 1.4; min-height: 44px; }
+.app button:disabled { opacity: .72; }
+.app :is(.card,.attention-panel,.teacher-class-panel,.teacher-task-panel) { padding: var(--space-card); }
+.app .role-header { padding-block: 18px; }
+.app .role-school-lockup strong { font-size: 1.5rem; }
+.app .role-school-lockup span { font-size: var(--text-support); line-height: 1.4; }
+.header-page-context strong { font-size: 1.15rem; }
+.app .app-section-nav a { font-size: .9375rem; font-weight: 600; min-height: 48px; }
+.portal-navigation { position: relative; min-width: 0; }
+.portal-more-menu { display: none; }
+.app :is(button,a,summary,select):focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+.app button.secondary, .app .secondary { background: #fff; color: var(--brand); border: 1px solid var(--control-line); }
+.app button.secondary:hover:not(:disabled), .app .secondary:hover:not(:disabled) { background: var(--brand-soft); }
+.app .parent-dashboard.parent-dashboard-home { grid-template-areas: 'top top' 'attention latest' 'summary summary'; gap: var(--space-section); }
+.app .parent-top-grid .child-identity-card h1 { font-size: var(--text-page); line-height: 1.3; }
+.app .parent-top-grid .parent-class, .app .parent-top-grid .child-status { font-size: var(--text-support); }
+.app .parent-update-card .notice-visible-text p, .app .school-notice-card .notice-visible-text p { font-size: 1.0625rem; line-height: 1.65; max-width: 68ch; }
+.app .notice-visible-text h3 { margin-bottom: 10px; }
+.app .notice-language-toolbar { gap: 12px; }
+.app .notice-language-toolbar > label { flex-basis: 170px; }
+.app .notice-language-toolbar select, .app .parent-speech-button, .app .parent-speech-stop { font-size: .9375rem; }
+.app .parent-speech-status { min-block-size: 3.2em; }
+.app .parent-update-card .ack { gap: 12px; font-size: var(--text-support); }
+.app .parent-update-card .ack button { flex-shrink: 0; }
+.app .right-now-grid > * { min-height: 92px; padding: 18px; }
+.app .right-now-grid > * > span { font-size: var(--text-support); }
+.app .right-now-grid b { font-size: 1.25rem; line-height: 1.3; margin-top: 4px; }
+.app .teacher-home-actions a { padding: 20px; min-height: 100px; align-items: center; }
+.app .teacher-home-actions b, .app .workspace-shortcuts b { font-size: 1.0625rem; line-height: 1.4; }
+.app .teacher-home-actions small, .app .workspace-shortcuts small { font-size: var(--text-support); line-height: 1.5; margin-top: 4px; }
+.app .teacher-class-panel h2 { font-size: var(--text-card); }
+.app .student-name > span { font-size: 1rem; font-weight: 650; }
+.app .student-name small, .app .roster-row small { font-size: var(--text-meta); line-height: 1.5; }
+.app .roster-row { padding-block: 12px; gap: 12px; }
+.app .attendance-choice { min-height: 44px; font-size: .9375rem; }
+.app .attendance-choice.present[aria-pressed=true] { background: #e7f4ec; color: var(--status-present); border-color: var(--status-present); }
+.app .attendance-choice.absent[aria-pressed=true] { background: #fbecef; color: var(--status-absent); border-color: var(--status-absent); }
+.app .attendance-choice.late[aria-pressed=true] { background: #fff3db; color: var(--status-late); border-color: var(--status-late); }
+.app .principal-metric-card { padding: 20px; min-height: 148px; }
+.app .principal-metric-card small { font-size: var(--text-support); line-height: 1.4; letter-spacing: 0; }
+.app .principal-metric-card > b { font-size: 2rem; line-height: 1.2; margin-top: 8px; }
+.app .principal-metric-card p { font-size: var(--text-meta); line-height: 1.5; }
+.app .principal-metric-action { font-size: var(--text-support); line-height: 1.5; }
+.app .communication-coverage { font-size: var(--text-support); }
+.principal-communication-feed { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-items: start; }
+.app .principal-communication-card { padding: 20px; margin: 0; box-shadow: none; }
+.app .principal-communication-card h3 { font-size: 1.1875rem; line-height: 1.35; }
+.app .principal-student-label { font-weight: 500; letter-spacing: 0; }
+.app .principal-communication-card h4 { font-size: 1.0625rem; line-height: 1.4; margin-bottom: 8px; }
+.app .principal-update-message { font-size: 1rem; line-height: 1.6; color: var(--ink-soft); }
+.app :is(.principal-category,.principal-importance,.principal-acknowledgement,.correction-badge,.corrected-badge) { font-size: var(--text-meta); line-height: 1.4; font-weight: 600; padding: 4px 8px; }
+.app .principal-communication-card footer { font-size: var(--text-meta); gap: 10px; margin-top: 16px; }
+.app .principal-communication-card .translation-manager { margin-top: 14px; font-size: var(--text-support); }
+.app .principal-card-tags { gap: 6px; margin-block: 12px; }
+.app .principal-communication-filter { gap: 8px; flex-wrap: wrap; }
+.app .principal-communication-heading { gap: 18px; flex-wrap: wrap; align-items: start; }
+.app .attendance-metric > div > span, .app .attendance-panel-heading p, .app .attendance-range p, .app .attendance-point-detail { font-size: var(--text-support); }
+.app .attendance-metric strong { font-size: 1.875rem; }
+.app .attendance-status, .app .attendance-calendar-key, .app .attendance-calendar-weekdays, .app .attendance-chart-dates, .app .attendance-period-badge { font-size: var(--text-meta); }
+.app .attendance-line-chart text { font-size: 12px; }
+.app .attendance-record-item > div > strong, .app .attendance-mix-legend, .app .attendance-entry-total { font-size: .9375rem; }
+.app .attendance-calendar-day { font-size: .9375rem; min-height: 44px; }
+.app .attendance-ring-segment.present { stroke: var(--status-present); }
+.app .attendance-ring-segment.absent { stroke: var(--status-absent); }
+.app .attendance-status.present, .app .attendance-calendar-day.present { color: var(--status-present); background: #e7f4ec; }
+.app .attendance-status.absent, .app .attendance-calendar-day.absent { color: var(--status-absent); background: #fbecef; }
+.app .attendance-mix-legend .present, .app .attendance-calendar-key .present { background: var(--status-present); }
+.app .attendance-mix-legend .absent, .app .attendance-calendar-key .absent { background: var(--status-absent); }
+.app :is(th,td) { font-size: .875rem; line-height: 1.5; }
+.app .trend-table { min-width: 0; overflow: auto; }
+.app .trend-table table { min-width: 340px; }
+.app .account-fields, .app .teacher-ai-form-row, .app .timetable-form-grid { gap: 16px; }
+.app .account-create-form, .app .notice-composer, .app .timetable-form { min-width: 0; }
+.app .account-checkbox { font-size: .9375rem; min-height: 44px; gap: 10px; }
+.app .teacher-ai-output textarea { font-size: 1rem; line-height: 1.6; }
+.app .teacher-sheet-panel { grid-template-columns: minmax(0,1fr); }
+.app .teacher-sheet-scroll { min-width: 0; width: 100%; position: relative; }
+.app .teacher-ai-panel > p:not(.eyebrow), .app .teacher-sheet-panel > p:not(.eyebrow) { font-size: var(--text-support); line-height: 1.55; }
+.app .teacher-sheet-limit, .app .teacher-ai-provider-note, .app .teacher-ai-output > p { font-size: var(--text-meta) !important; line-height: 1.55; }
+.app .teacher-mode-home .teacher-class-panel:not(:has(.chips button)) .teacher-class-status,
+.app .teacher-mode-home .teacher-class-panel:not(:has(.chips button)) > .hint { display: block; }
+.login { align-items: center; }
+.login .login-topbar { align-self: start; }
+.login .login-intro .lead { font-size: 1.125rem; }
+.login .login-note, .login-card .hint, .login .login-features li { font-size: var(--text-support); line-height: 1.6; }
+.login .login-card label { font-size: .9375rem; font-weight: 600; }
+.login .login-card h2 { font-size: 1.5rem; }
+html:lang(hi) .app :is(h1,h2,h3,h4,.eyebrow,.principal-student-label), html:lang(mr) .app :is(h1,h2,h3,h4,.eyebrow,.principal-student-label) { letter-spacing: 0; line-height: 1.5; }
+@media (max-width: 1000px) { .principal-communication-feed { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 900px) { .app .parent-dashboard.parent-dashboard-home { grid-template-areas: 'top' 'attention' 'summary' 'latest'; } }
+@media (max-width: 820px) {
+  .portal-navigation { display: flex; align-items: stretch; }
+  .app .app-section-nav { flex: 1; min-width: 0; }
+  .portal-more-menu { display: block; flex: 0 0 auto; background: #fff; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .portal-more-menu > summary { list-style: none; display: flex; align-items: center; gap: 5px; min-height: 64px; padding: 10px; color: var(--brand); font-size: .875rem; font-weight: 650; cursor: pointer; }
+  .portal-more-menu > summary::-webkit-details-marker { display: none; }
+  .portal-more-menu > div { position: absolute; z-index: 40; top: 100%; right: 8px; width: min(310px,calc(100vw - 32px)); max-height: 65vh; overflow: auto; padding: 8px; background: white; border: 1px solid var(--control-line); border-radius: 12px; box-shadow: 0 8px 24px #30232b22; }
+  .portal-more-menu a { display: flex; gap: 12px; align-items: center; min-height: 46px; padding: 10px 12px; color: var(--ink); font-size: 1rem; border-radius: 8px; }
+  .portal-more-menu a[aria-current=page] { color: var(--brand); background: var(--brand-soft); font-weight: 650; }
+  .portal-more-menu a:hover { background: var(--brand-wash); }
+}
+@media (max-width: 760px) {
+  :root { --space-card: 18px; --space-section: 20px; --text-page: 1.625rem; }
+  .app .role-header { padding: 12px 14px; }
+  .app .parent-update-card .notice-visible-text p, .app .school-notice-card .notice-visible-text p { font-size: 1rem; }
+  .app .notice-language-toolbar > label { flex-basis: 100%; }
+  .app .parent-speech-status { font-size: var(--text-meta); }
+  .app .teacher-home-actions { gap: 12px; }
+  .app .teacher-home-actions a { min-height: 88px; padding: 16px; }
+  .app .principal-metrics { grid-template-columns: minmax(0,1fr); gap: 10px; }
+  .app .principal-metric-card { min-height: 0; display: grid; grid-template-columns: 36px minmax(0,1fr) auto; align-items: center; gap: 8px 12px; padding: 16px; text-align: left; }
+  .app .principal-metric-card .metric-icon { grid-column: 1; grid-row: 1; margin: 0; }
+  .app .principal-metric-card small { grid-column: 2; grid-row: 1; }
+  .app .principal-metric-card > b { grid-column: 3; grid-row: 1; font-size: 1.75rem; margin: 0; }
+  .app .principal-metric-card p { display: block; grid-column: 2 / -1; margin: 0; }
+  .app .principal-metric-action { grid-column: 2 / -1; justify-self: start; margin-top: 0; }
+  .app .attendance-metric { gap: 8px; padding: 12px; }
+  .app .attendance-metric > div > span { font-size: var(--text-meta); }
+  .app .attendance-calendar-weekdays { font-size: .75rem; }
+  .app .principal-communication-card { padding: 18px; }
+  .login .login-intro h1 { font-size: 2.5rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .portal-more-menu a, .app button, .app .secondary { transition: background-color 140ms ease, border-color 140ms ease; }
+}

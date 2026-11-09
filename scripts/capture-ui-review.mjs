@@ -76,11 +76,11 @@ async function login(page, account, role) {
 }
 async function expand(page) {
   for (let pass = 0; pass < 3; pass++) {
-    const summaries = page.locator('details:not([open]):not(.mobile-profile-menu) > summary');
+    const summaries = page.locator('details:not([open]):not(.mobile-profile-menu):not(.portal-more-menu) > summary');
     const count = await summaries.count(); if (!count) break;
     // Use actual clicks so OptionalSection mounts its content through React.
     for (let index = 0; index < count; index++) {
-      const summary = page.locator('details:not([open]):not(.mobile-profile-menu) > summary').first();
+      const summary = page.locator('details:not([open]):not(.mobile-profile-menu):not(.portal-more-menu) > summary').first();
       if (await summary.isVisible()) await summary.click(); else break;
     }
     await ready(page);
@@ -117,7 +117,7 @@ try {
         }
       }
       if (['home', 'profile', 'communication', 'notices', 'updates'].includes(section)) {
-        const count = await page.locator('details:not(.mobile-profile-menu)').count();
+        const count = await page.locator('details:not(.mobile-profile-menu):not(.portal-more-menu)').count();
         if (count) { await expand(page); await capture(page, role, section, 'expanded', [1440, 390]); }
       }
       if (section === 'home') {
@@ -125,6 +125,11 @@ try {
         await page.locator('.mobile-profile-menu summary').click();
         await capture(page, role, section, 'mobile-profile-menu', [390]);
         await page.locator('.mobile-profile-menu summary').click();
+        if (await page.locator('.portal-more-menu summary').count()) {
+          await page.locator('.portal-more-menu summary').click();
+          await capture(page, role, section, 'mobile-more-pages', [390]);
+          await page.locator('.portal-more-menu summary').click();
+        }
         for (const language of ['hi', 'mr']) {
           await page.locator('.language-selector select').selectOption(language);
           await capture(page, role, section, language, [1440, 390]);
@@ -183,7 +188,7 @@ finally {
       if (entries.length !== expected[role].length) manifest.errors.push({ missingBaseRoutes: role, width });
     }
   }
-  manifest.complete = manifest.errors.length === 0;
+  manifest.complete = manifest.errors.length === 0 && manifest.overflow.length === 0 && manifest.mutationsBlocked.length === 0;
   await writeFile(path.join(root, 'coverage.json'), JSON.stringify(manifest, null, 2));
   const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
   const gallery = `<html lang="en"><meta charset="utf-8"><title>Schovera UI review</title><style>body{font:16px system-ui;background:#faf6f8;color:#291e28;margin:32px}h1,h2{color:#7c0e44}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}article{background:white;border:1px solid #e5c8d5;padding:14px;border-radius:12px}img{width:100%;height:280px;object-fit:cover;object-position:top}a{color:#7c0e44}small{display:block}</style><h1>Schovera UI screenshot review</h1><p>${manifest.screenshots.length} captures. Complete: ${manifest.complete}. Click a preview for the full image. Passwords are masked. These are local presentation records.</p>${['sign-in', ...roles, 'parent-multi-child'].map(role => `<h2>${role}</h2><div class="grid">${manifest.screenshots.filter(item => item.role === role).map(item => `<article><a href="${escape(item.file)}"><img loading="lazy" src="${escape(item.file)}"><b>${escape(item.page)}</b><small>${escape(item.state)} · ${item.width}px</small></a></article>`).join('')}</div>`).join('')}</html>`;
