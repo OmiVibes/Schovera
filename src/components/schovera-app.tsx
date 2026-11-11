@@ -551,6 +551,8 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     [student, setStudent] = useState<any>(null),
     [studentSearch, setStudentSearch] = useState(''),
     [recentFirst, setRecentFirst] = useState(false),
+    [rosterExpanded, setRosterExpanded] = useState(false),
+    [historyLimit, setHistoryLimit] = useState(3),
     [updates, setUpdates] = useState<Update[]>([]),
     [classLoading, setClassLoading] = useState(true),
     [updatesLoading, setUpdatesLoading] = useState(false),
@@ -698,6 +700,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
       setUpdatesLoading(false);
       return;
     }
+    setHistoryLimit(3);
     setUpdatesLoading(true);
     refreshUpdates(targetStudentId, requestVersion);
   }, [student?.id]);
@@ -972,28 +975,32 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     pendingSend.studentId === student?.id
     ? pendingSend
     : null;
+  const chooseStudent = (studentId: string) => {
+    const row = students.find((item) => item.id === studentId);
+    if (!row) return;
+    activeStudentIdRef.current = row.id;
+    studentRequestVersionRef.current += 1;
+    setStudent(row);
+    setUpdates([]);
+    setUpdatesError('');
+    setCorrectionTarget(null);
+    setNote('');
+    setHistoryLimit(3);
+    setRosterExpanded(false);
+  };
   return (
     <section className="teacher-workspace" id="teacher-home">
-      <section className="teacher-today-card" aria-label={ui("Today's teaching context")}>
-        <div className="section-icon"><Icon name="school" /></div>
-        <div>
-          <p className="eyebrow"><UiText source={"TODAY AT SCHOVERA"} /></p>
-          <h2>{classId ? classDisplay({ grade: classes.find((row) => row.id === classId)?.grade, division: classes.find((row) => row.id === classId)?.division }, ui) : ui("Choose your class")}</h2>
-        <p>{classId ? `${classLoading ? ui('Loading class roster…') : ui('{0} students', [students.length])} · ${ui(mode === 'attendance' ? 'Attendance register open' : mode === 'timetable' ? 'Today’s schedule' : mode === 'notices' ? 'Official school notices' : 'Ready for parent updates')}` : ui("Select your assigned class to begin.")}</p>
-        </div>
-        <span className="today-status">{mode === 'attendance' ? ui("Attendance") : mode === 'timetable' ? ui("Schedule") : mode === 'notices' ? ui("School notices") : ui("Student updates")}</span>
-      </section>
     {(mode === 'attendance' || mode === 'updates') && <SchoolOperationStatus operations={schoolOperations} />}
     <section className={`two teacher-mode-${mode}`}>
       <aside className="card teacher-sidebar teacher-class-panel">
         <p className="eyebrow"><UiText source={"YOUR CLASSROOM"} /></p>
         <h2><UiText source={"Your classroom"} /></h2>
-        <p className="hint"><UiText source={"Choose the class you are working with now."} /></p>
-        <div className="teacher-class-status" aria-label={ui("Current class status")}>
+        {mode === 'profile' && <p className="hint"><UiText source={"Choose the class you are working with now."} /></p>}
+        {mode === 'profile' && <div className="teacher-class-status" aria-label={ui("Current class status")}>
           <span><small><UiText source={"Class"} /></small><b>{classId ? classDisplay({ grade: classes.find((row) => row.id === classId)?.grade, division: classes.find((row) => row.id === classId)?.division }, ui) : ui("Not selected")}</b></span>
           <span><small><UiText source={"Students"} /></small><b>{classLoading ? ui("Loading…") : classId ? students.length : '—'}</b></span>
           <span><small><UiText source={"Selected student"} /></small><b>{student ? student.full_name : ui("Choose a student")}</b></span>
-        </div>
+        </div>}
         <div className="chips" aria-label={ui("Assigned classes")}>
           {classes.map((row) => (
             <button
@@ -1032,7 +1039,16 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
               <h2><UiText source={"Select a student"} /></h2>
             </div>
             {classId ? (
-              <div className="teacher-roster-search-area">
+              <>
+              {mode === 'updates' && <div className="mobile-student-picker">
+                <label>{ui('Student')}<select value={student?.id || ''} disabled={classLoading} onChange={(event) => chooseStudent(event.target.value)}>
+                  <option value="">{ui('Choose a student')}</option>
+                  {students.map((row) => <option key={row.id} value={row.id}>{row.full_name} · {ui('Roll ')}{row.roll_number}</option>)}
+                </select></label>
+                <div className="mobile-picker-actions"><button type="button" aria-expanded={rosterExpanded} aria-controls="teacher-roster-browser" onClick={() => setRosterExpanded(!rosterExpanded)}>{ui(rosterExpanded ? 'Close student list' : 'Browse student list')}</button>
+                  {student && <a href="#teacher-update-form">{ui('Send an update')}</a>}</div>
+              </div>}
+              <div id="teacher-roster-browser" className="teacher-roster-search-area" data-mobile-expanded={rosterExpanded}>
                 <label className="teacher-roster-search">
                   <span className="sr-only"><UiText source={"Search students"} /></span>
                   <Icon name="search" />
@@ -1073,15 +1089,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                     key={row.id}
                     type="button"
                     aria-pressed={student?.id === row.id}
-                    onClick={() => {
-                      activeStudentIdRef.current = row.id;
-                      studentRequestVersionRef.current += 1;
-                      setStudent(row);
-                      setUpdates([]);
-                      setUpdatesError('');
-                      setCorrectionTarget(null);
-                      setNote('');
-                    }}
+                    onClick={() => chooseStudent(row.id)}
                   >
                     <span className="student-name"><i>{initials(row.full_name)}</i><span>{row.full_name}<small>{classDisplay(classes.find((item) => item.id === classId), ui)} <UiText source={"· Roll "} />{row.roll_number}</small></span></span>
                     <span className="student-chevron" aria-hidden="true">›</span>
@@ -1099,6 +1107,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                 )}
               </div>
               </div>
+              </>
             ) : (
               <p className="empty compact-empty">
                 <UiText source={"Select a class to view students."} /></p>
@@ -1132,13 +1141,13 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                 <div><h2>{student.full_name}</h2><span>{classDisplay(classes.find((row) => row.id === classId), ui)} <UiText source={"· Roll "} />{student.roll_number}</span></div>
                 <span className="selected-indicator"><Icon name="check" /> <UiText source={"Selected"} /></span>
               </div>
-              <div className="student-snapshot" aria-label={ui("Selected student context")}>
+              <details className="student-context-details"><summary>{ui("Student details")}</summary><div className="student-snapshot" aria-label={ui("Selected student context")}>
                 <span><small><UiText source={"Attendance"} /></small><b className={`status ${records[student.id] || 'present'}`}>{ui(nice(records[student.id] || 'present'))}</b></span>
                 <span><small><UiText source={"Latest update"} /></small><b>{updates[0] ? ui(nice(updates[0].category)) : ui("None yet")}</b></span>
                 <span><small><UiText source={"Last sent"} /></small><b>{updates[0] ? new Date(updates[0].sent_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '—'}</b></span>
                 <span><small><UiText source={"Important update"} /></small><b className={effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? 'snapshot-awaiting' : 'snapshot-acknowledged'}>{effectiveUpdates(updates).find((item) => item.importance === 'important' && !item.acknowledgements?.length) ? ui("Awaiting") : ui("Up to date")}</b></span>
               </div>
-              <button type="button" className="profile-link" onClick={() => setMode('profile')}><UiText source={"View student profile"} /></button>
+              <button type="button" className="profile-link" onClick={() => setMode('profile')}><UiText source={"View student profile"} /></button></details>
               <div className="teacher-form-heading">
                 <div><p className="eyebrow">{correctionTarget ? ui("CORRECTING SENT COMMUNICATION") : ui("NEW COMMUNICATION")}</p><h2 className="form-title">{correctionTarget ? ui("Send a correction") : ui("Send an update")}</h2></div>
                 <span><UiText source={"About "} />{student.full_name.split(' ')[0]}</span>
@@ -1214,13 +1223,14 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
               ) : updatesError ? (
                 <p className="error" role="alert">{ui(updatesError)}</p>
               ) : updates.length ? (
-                updates.map((update) => (
+                updates.slice(0, historyLimit).map((update) => (
                   <Card key={update.id} update={update} teacher speech={teacherSpeech} corrected={teacherCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? updates.find((item) => item.id === update.corrects_update_id)?.title : undefined} onCorrect={teacherCorrectedIds.has(update.id) ? undefined : setCorrectionTarget} />
                 ))
               ) : (
                 <p className="empty compact-empty">
                   <UiText source={"No updates have been sent for this student yet."} /></p>
               )}
+              {!updatesLoading && !updatesError && updates.length > historyLimit && <button type="button" className="secondary teacher-history-more" onClick={() => setHistoryLimit((limit) => limit + 5)}>{ui('View more updates ({0} remaining)', [updates.length - historyLimit])}</button>}
             </>
           ) : (
             <p className="empty">
@@ -1252,7 +1262,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
             setRecords((current) => ({ ...current, [studentId]: status }));
           }}
           onSave={saveAttendance}
-        />{classId && <><AttendanceTrends key={`${classId}:${attendanceNote}`} schoolId={profile.school_id} classId={classId} /><AttendanceInsights role="teacher" profileId={profile.id} schoolId={profile.school_id} classId={classId} revision={attendanceNote} /></>}</div>
+        />{classId && <div className="teacher-attendance-secondary"><OptionalSection id="teacher-attendance-history" title={ui('Attendance history & trends')} description={ui('Explore earlier registers and attendance patterns.')}><AttendanceTrends key={`${classId}:${attendanceNote}`} schoolId={profile.school_id} classId={classId} /></OptionalSection><OptionalSection id="teacher-attendance-insights" title={ui('Classroom attendance insights')} description={ui('Review explainable signals and their limitations.')}><AttendanceInsights role="teacher" profileId={profile.id} schoolId={profile.school_id} classId={classId} revision={attendanceNote} /></OptionalSection></div>}</div>
       ) : mode === 'homework' ? (
         <div id="teacher-homework"><TeacherAssignments key={classId} teacherId={profile.id} classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
       ) : mode === 'timetable' ? (
@@ -1305,6 +1315,9 @@ function AttendanceMarker({
 }: any) {
   const ui = useUiText();
   const saved = note.startsWith('Attendance saved');
+  const [rosterSearch, setRosterSearch] = useState('');
+  const rosterQuery = rosterSearch.trim().toLocaleLowerCase();
+  const shownStudents = students.filter((row: any) => !rosterQuery || `${row.full_name} ${row.roll_number || ''}`.toLocaleLowerCase().includes(rosterQuery));
   return (
     <div className="card teacher-attendance-register">
       {!classId ? (
@@ -1345,9 +1358,12 @@ function AttendanceMarker({
           {busy ? (
             <Skeleton label={ui("Loading attendance")} rows={4} />
           ) : (
-            <div className="roster">
+            <>
+            {students.length > 10 && <label className="attendance-roster-search">{ui('Find a student in this register')}<input type="search" value={rosterSearch} onChange={(event) => setRosterSearch(event.target.value)} placeholder={ui('Search by name or roll number')} /></label>}
+            <p className="attendance-scroll-help" id="attendance-scroll-help">{ui('Scroll within the register to review every student. Counts and Save cover the whole class.')}</p>
+            <div className="roster" role="region" tabIndex={0} aria-label={ui('Attendance register students')} aria-describedby="attendance-scroll-help">
               <div className="attendance-roster-heading" aria-hidden="true"><span><UiText source={"Student"} /></span><span><UiText source={"Status"} /></span></div>
-              {students.map((student: any) => (
+              {shownStudents.map((student: any) => (
                 <div className={`roster-row attendance-row ${records[student.id] || 'present'}`} key={student.id}>
                   <span className="attendance-student-identity">
                     <i aria-hidden="true">{initials(student.full_name)}</i>
@@ -1358,7 +1374,9 @@ function AttendanceMarker({
                   </span>
                 </div>
               ))}
+              {!shownStudents.length && <p className="empty" role="status">{ui('No students match this search. Clear the search to see the register.')}</p>}
             </div>
+            </>
           )}
           <div className="attendance-save-area">
             <div><b>{counts.present} <UiText source={"Present · "} />{counts.absent} <UiText source={"Absent · "} />{counts.late} <UiText source={"Late"} /></b><span>{saved ? ui("Attendance is saved for this date.") : ui("Review exceptions, then save the register.")}</span></div>
