@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
+import { navigatePortal } from './lib/navigate-portal.mjs';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 
 assertLocalTestEnvironment(process.env, { requireServiceRole: false });
@@ -46,7 +47,7 @@ async function signIn(page, role) {
   if (role === 'teacher') {
     await page.locator('.teacher-class-panel .chips button').first().waitFor({ state: 'visible', timeout: 15000 });
     await page.locator('.teacher-class-panel .chips button.active').waitFor({ state: 'visible', timeout: 15000 });
-    const demoClass = page.getByRole('button', { name: 'Grade 7A', exact: true });
+    const demoClass = page.getByRole('button', { name: 'Grade 7-A', exact: true });
     if (await demoClass.count() && !(await demoClass.getAttribute('class'))?.includes('active')) await demoClass.click();
   }
   if (role === 'parent') {
@@ -67,7 +68,7 @@ async function signIn(page, role) {
 
 async function navigate(page, role, section) {
   const path = `/${role}/${section}`;
-  await page.locator(`nav.app-section-nav a[href="${path}"]`).click();
+  await navigatePortal(page, role, section);
   await page.waitForURL((url) => url.pathname === path, { timeout: 15000 });
   await page.waitForFunction((expected) => {
     const active = document.querySelector('nav.app-section-nav a[aria-current="page"]');

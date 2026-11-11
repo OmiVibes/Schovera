@@ -148,11 +148,22 @@ try {
       await page.setViewportSize({ width, height: 1000 });
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
       assert.equal(overflow, false, `${language} layout overflows at ${width}px.`);
-      const navLinks = page.locator('.app-section-nav a');
+      const mobileMenu = page.locator('.portal-more-menu');
+      if (width <= 820) {
+        await mobileMenu.locator('summary').focus();
+        await page.keyboard.press('Enter');
+        assert.notEqual(await mobileMenu.getAttribute('open'), null, 'More pages must open from the keyboard.');
+      }
+      const navLinks = page.locator(width <= 820 ? '.portal-more-menu a' : '.app-section-nav a');
       const finalNavLink = navLinks.last();
       await navLinks.first().focus();
       for (let step = 1; step < await navLinks.count(); step++) await page.keyboard.press('Tab');
       assert.equal(await finalNavLink.evaluate((node) => node === document.activeElement), true, `${language} navigation's final section is not keyboard-reachable at ${width}px.`);
+      if (width <= 820) {
+        await page.keyboard.press('Escape');
+        assert.equal(await mobileMenu.getAttribute('open'), null, 'Escape must close More pages.');
+        assert.equal(await mobileMenu.locator('summary').evaluate(node => node === document.activeElement), true, 'Menu focus must return to its control.');
+      }
       await page.screenshot({ path: join(screenshotDir, `${language}-${width}.png`), fullPage: true });
     }
   }

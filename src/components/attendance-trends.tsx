@@ -1,4 +1,6 @@
 'use client';
+import { useUiText } from '@/components/ui-text';
+import { classDisplay } from '@/lib/class-display';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { academicYearDisplayName } from '@/lib/school-brand';
@@ -181,6 +183,7 @@ export function AttendanceTrends({
   studentId?: string;
 }) {
   const db = useMemo(() => createClient(), []);
+  const ui = useUiText();
   const { language } = useI18n();
   const text = copy[language];
   const [period, setPeriod] = useState<
@@ -369,8 +372,7 @@ export function AttendanceTrends({
                 .filter((c) => !year || c.academic_year === year)
                 .map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.grade}
-                    {c.division} · {academicYearDisplayName(c.academic_year)}
+                    {classDisplay(c, ui)} · {academicYearDisplayName(c.academic_year)}
                   </option>
                 ))}
             </select>

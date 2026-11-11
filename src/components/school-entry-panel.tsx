@@ -1,4 +1,6 @@
 'use client';
+import { useUiText } from '@/components/ui-text';
+import { classDisplay } from '@/lib/class-display';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -81,6 +83,7 @@ export function SchoolEntryPanel({
   onClassChange?: (classId: string) => void;
 }) {
   const db = useMemo(() => createClient(), []);
+  const ui = useUiText();
   const { language, t } = useI18n();
   const initialEndDate = schoolToday(new Date(), DEFAULT_TIME_ZONE);
   const [timeZone, setTimeZone] = useState(DEFAULT_TIME_ZONE);
@@ -297,7 +300,7 @@ export function SchoolEntryPanel({
       {connectionState !== 'online' && <p className="school-entry-connection" role="status">{t('entry.offline')}</p>}
       {role === 'teacher' && <label className="school-entry-control">{t('entry.class')}
         <select value={classId} onChange={(event) => onClassChange?.(event.target.value)} disabled={!classes.length}>
-          {classes.map((item) => <option key={item.id} value={item.id}>{t('entry.grade', { grade: item.grade, division: item.division })}</option>)}
+          {classes.map((item) => <option key={item.id} value={item.id}>{classDisplay(item, ui)}</option>)}
         </select>
       </label>}
       <form className="school-entry-filters" onSubmit={submitFilters}>
@@ -322,7 +325,7 @@ export function SchoolEntryPanel({
               const observed = new Date(item.observed_at).getTime();
               const delayed = item.timestamp_quality === 'clock_uncertain' || Math.abs(received - observed) > 5 * 60 * 1000;
               const student = item.students;
-              const grade = student?.classes?.grade && student.classes.division ? t('entry.grade', { grade: student.classes.grade, division: student.classes.division }) : '';
+              const grade = student?.classes?.grade && student.classes.division ? classDisplay(student.classes, ui) : '';
               const checkpoint = t('entry.checkpoint');
               return <li key={item.id} className={`school-entry-event ${item.event_type}`}>
                 <div className="school-entry-event-mark" aria-hidden="true">{item.event_type === 'check_in' ? '↘' : '↗'}</div>

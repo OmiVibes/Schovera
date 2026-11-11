@@ -1,4 +1,6 @@
 'use client';
+import {classDisplay} from '@/lib/class-display';
+import {useUiText} from '@/components/ui-text';
 
 import { useEffect, useId, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -12,6 +14,7 @@ export function AttendanceInsights(props: Props) {
   return <Insights key={`${props.role}:${props.profileId}:${props.schoolId}:${props.classId ?? 'school'}`} {...props} />;
 }
 function Insights({ role, profileId, schoolId, classId, revision }: Props) {
+  const ui = useUiText();
   const { t } = useI18n(); const id = useId();
   const db = useMemo(() => createClient(), []);
   const [result, setResult] = useState<{ key: string; data: Dataset | null; error: boolean; offline: boolean } | null>(null);
@@ -42,12 +45,12 @@ function Insights({ role, profileId, schoolId, classId, revision }: Props) {
   const selected = summaries.find((c) => c.id === choice) ?? summaries[0];
   return <section className="attendance-insights" data-testid="attendance-insights" aria-labelledby={`${id}-title`}>
     <header><h2 id={`${id}-title`}>{t('insights.title')}</h2><button type="button" disabled={loading || offline} onClick={() => setRefresh((v) => v + 1)}>{t('insights.refresh')}</button></header>
-    <p className="insights-notice">{t('insights.advisory')}</p><p>{t('insights.limitations')}</p>
+    <p className="insights-notice">{t('insights.advisory')}</p>
+    <details className="insights-explanation"><summary>{ui('How these insights work')}</summary><p>{t('insights.limitations')}</p><p>{t('insights.rules')}</p></details>
     {disconnected ? <p role="status">{t('insights.offline')}</p> : loading ? <p role="status">{t('common.loading')}</p> : error ? <p role="alert">{t('insights.error')}</p> : data && <>
       <p>{t('insights.range')}: <time>{data.range.from}</time> – <time>{data.range.to}</time> · {data.timezone}</p>
-      <p className="hint">{t('insights.rules')}</p>
-      {role === 'principal' && <div className="insights-classes">{summaries.map((c) => <article key={c.id}><h3>{c.grade}{c.division}</h3><p>{t('insights.recordedDates')}: {c.result.dates.length} · {t('insights.followupCount')}: {c.result.followup} · {t('insights.improvedCount')}: {c.result.improved}</p><p>{c.result.quality ? t('insights.incomplete') : !c.result.enough ? t('insights.insufficient') : t('insights.coverageCaution')}</p></article>)}</div>}
-      {summaries.length > 0 ? <><label htmlFor={`${id}-class`}>{t('insights.class')}</label><select id={`${id}-class`} value={selected?.id ?? ''} onChange={(e) => { setChoice(e.target.value); setPage(0); }}>{summaries.map((c) => <option key={c.id} value={c.id}>{c.grade}{c.division}</option>)}</select>
+      {role === 'principal' && <div className="insights-classes">{summaries.map((c) => <article key={c.id}><h3>{classDisplay(c, ui)}</h3><p>{t('insights.recordedDates')}: {c.result.dates.length} · {t('insights.followupCount')}: {c.result.followup} · {t('insights.improvedCount')}: {c.result.improved}</p><p>{c.result.quality ? t('insights.incomplete') : !c.result.enough ? t('insights.insufficient') : t('insights.coverageCaution')}</p></article>)}</div>}
+      {summaries.length > 0 ? <><label htmlFor={`${id}-class`}>{t('insights.class')}</label><select id={`${id}-class`} value={selected?.id ?? ''} onChange={(e) => { setChoice(e.target.value); setPage(0); }}>{summaries.map((c) => <option key={c.id} value={c.id}>{classDisplay(c, ui)}</option>)}</select>
         {selected && <>
           <p>{t('insights.recordedDates')}: {selected.result.dates.join(', ') || '—'}</p>
           {selected.result.quality && <p role="status" className="insights-notice">{t('insights.incomplete')}</p>}

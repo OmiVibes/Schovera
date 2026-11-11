@@ -48,9 +48,9 @@ try {
   assert.equal(readManualFixture().runId, fixture.runId);
   browser = await chromium.launch({ headless: true });
   const teacher = await login(fixture.accounts.teacher); await go(teacher.page, 'teacher', 'attendance');
-  await teacher.page.getByRole('button', { name: 'Grade 8A', exact: true }).click();
+  await teacher.page.getByRole('button', { name: 'Grade 8-A', exact: true }).click();
   await teacher.page.locator('.teacher-attendance-register .roster-row').filter({ hasText: 'Synthetic Child A' }).waitFor();
-  await teacher.page.getByRole('button', { name: 'Grade 8A', exact: true }).click();
+  await teacher.page.getByRole('button', { name: 'Grade 8-A', exact: true }).click();
   assert.equal(await teacher.page.locator('.teacher-attendance-register .roster-row').count(), 1, 'Re-selecting the active class must not clear its roster');
   const insights = teacher.page.getByTestId('attendance-insights'); await insights.getByText('Attendance Follow-up Suggested', { exact: true }).waitFor();
   await teacher.page.getByLabel('Date', { exact: true }).fill(fixture.dates.at(-1));

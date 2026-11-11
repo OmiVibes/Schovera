@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigatePortal } from './lib/navigate-portal.mjs';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import { uiText, uiCopy } from '../src/lib/ui-copy.ts';
@@ -35,7 +36,7 @@ try {
       await page.locator('.language-selector select').selectOption(language);
       await page.waitForFunction(lang => document.documentElement.lang === lang, language);
       for (const [section, selector] of Object.entries(sections[role])) {
-        await page.locator(`nav.app-section-nav a[href="/${role}/${section}"]`).click();
+        await navigatePortal(page, role, section);
         await page.waitForURL(url => url.pathname === `/${role}/${section}`);
         await page.locator(selector).waitFor();
         await page.waitForFunction(() => !document.querySelector('.skeleton, .notice-skeleton, .principal-communication-skeleton'));

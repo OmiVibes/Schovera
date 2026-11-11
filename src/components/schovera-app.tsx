@@ -1,6 +1,7 @@
 'use client';
 import { UiText, useUiText } from '@/components/ui-text';
 import { schoolDisplayName } from '@/lib/school-brand';
+import { classDisplay, compareClasses } from '@/lib/class-display';
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -21,6 +22,9 @@ import { OptionalSection } from '@/components/optional-section';
 import { ManageUsers } from '@/components/manage-users';
 import { AttendanceTrends } from '@/components/attendance-trends';
 import { detectNoticeLanguage, type ParentSpeechController } from '@/lib/parent-speech';
+import { usePrincipalCommunication } from '@/lib/use-principal-communication';
+import { PRINCIPAL_PAGE_SIZE } from '@/lib/principal-communication';
+import { useSchoolOperations, SchoolOperationStatus } from '@/lib/use-school-operations';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
 // Principals never need to download the Teacher-only workspace.
@@ -41,16 +45,17 @@ type Update = {
   message: string;
   importance: 'normal' | 'important';
   sent_at: string;
-  acknowledgements?: { acknowledged_at: string; parent_id: string }[];
+  acknowledgements?: { acknowledged_at: string; parent_id?: string }[];
   students?: {
     full_name: string;
     roll_number?: string;
-    classes?: { grade: string; division: string };
-  };
+    classes?: { grade: string; division: string } | null;
+  } | null;
   profiles?: { full_name: string };
 };
 type PendingTeacherSend = {
   requestId: string;
+  authoredAt?: string;
   classId: string;
   studentId: string;
   category: string;
@@ -466,6 +471,7 @@ export function SchoveraApp() {
                 className={isActive ? 'active' : ''}
                 href={`/${profile.role}/${item.slug}`}
                 aria-current={isActive ? 'page' : undefined}
+                data-mobile-current={isActive ? 'true' : undefined}
               >
                 <Icon name={item.icon} />
                 <span>{t(navigationKeys[item.id] || 'common.schoolNotices')}</span>
@@ -475,7 +481,7 @@ export function SchoveraApp() {
         </nav>
         <details className="portal-more-menu" key={pathname} onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); } }}>
           <summary>{ui('More pages')} <span aria-hidden="true">⌄</span></summary>
-          <div aria-label={ui('All portal pages')}>
+          <div role="navigation" aria-label={ui('All portal pages')}>
             {roleNavigation[profile.role].map(item => <Link key={item.id} href={`/${profile.role}/${item.slug}`} aria-current={currentPage.slug === item.slug ? 'page' : undefined} onClick={event => event.currentTarget.closest('details')?.removeAttribute('open')}>
               <Icon name={item.icon} /><span>{t(navigationKeys[item.id] || 'common.schoolNotices')}</span>
             </Link>)}
@@ -560,6 +566,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     [pendingSend, setPendingSend] = useState<PendingTeacherSend | null>(null),
     [note, setNote] = useState('');
   const pendingSendStorageKey = `schovera:pending-teacher-update:${profile.id}`;
+  const schoolOperations = useSchoolOperations(db, profile.id, classId, date);
   const attendanceDirtyRef = useRef(false);
   const clearPendingSend = () => {
     sessionStorage.removeItem(pendingSendStorageKey);
@@ -819,9 +826,10 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
       return;
     }
     const pending: PendingTeacherSend = matchingPending
-      ? pendingSend
+      ? { ...pendingSend, authoredAt: pendingSend.authoredAt || new Date().toISOString() }
       : {
           requestId: globalThis.crypto.randomUUID(),
+          authoredAt: new Date().toISOString(),
           classId: targetClassId,
           studentId: targetStudentId,
           category,
@@ -832,6 +840,17 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     const retrying = Boolean(matchingPending);
     persistPendingSend(pending);
     setSending(true);
+    if (schoolOperations.enabled && importance === 'important') {
+      try {
+        await schoolOperations.save('update', { student_id: targetStudentId, category, title, message }, pending.requestId, pending.authoredAt);
+        if (targetClassId === activeClassIdRef.current && targetStudentId === activeStudentIdRef.current) {
+          clearPendingSend(); formElement.reset(); setNote(schoolOperations.acceptedNote);
+          void refreshUpdates(targetStudentId, studentRequestVersionRef.current);
+        }
+      } catch { setNote(schoolOperations.failureNote); }
+      finally { setSending(false); }
+      return;
+    }
     const { error } = await db.rpc('send_student_update', {
       p_class_id: targetClassId,
       p_student_id: targetStudentId,
@@ -900,6 +919,17 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
       student_id: row.id,
       status: records[row.id] || 'present',
     }));
+    if (schoolOperations.enabled) {
+      try {
+        await schoolOperations.save('attendance', { records: p_records });
+        if (targetContext === activeAttendanceContextRef.current) {
+          attendanceDirtyRef.current = false;
+          setAttendanceNote(schoolOperations.acceptedNote);
+        }
+      } catch { setAttendanceNote(schoolOperations.failureNote); }
+      finally { setAttendanceSaving(false); }
+      return;
+    }
     const { error } = await db.rpc('save_class_attendance', {
       p_class_id: classId,
       p_attendance_date: date,
@@ -948,18 +978,19 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
         <div className="section-icon"><Icon name="school" /></div>
         <div>
           <p className="eyebrow"><UiText source={"TODAY AT SCHOVERA"} /></p>
-          <h2>{classId ? ui("Grade {0}{1}", [classes.find((row) => row.id === classId)?.grade, classes.find((row) => row.id === classId)?.division]) : ui("Choose your class")}</h2>
+          <h2>{classId ? classDisplay({ grade: classes.find((row) => row.id === classId)?.grade, division: classes.find((row) => row.id === classId)?.division }, ui) : ui("Choose your class")}</h2>
         <p>{classId ? `${classLoading ? ui('Loading class roster…') : ui('{0} students', [students.length])} · ${ui(mode === 'attendance' ? 'Attendance register open' : mode === 'timetable' ? 'Today’s schedule' : mode === 'notices' ? 'Official school notices' : 'Ready for parent updates')}` : ui("Select your assigned class to begin.")}</p>
         </div>
         <span className="today-status">{mode === 'attendance' ? ui("Attendance") : mode === 'timetable' ? ui("Schedule") : mode === 'notices' ? ui("School notices") : ui("Student updates")}</span>
       </section>
+    {(mode === 'attendance' || mode === 'updates') && <SchoolOperationStatus operations={schoolOperations} />}
     <section className={`two teacher-mode-${mode}`}>
       <aside className="card teacher-sidebar teacher-class-panel">
         <p className="eyebrow"><UiText source={"YOUR CLASSROOM"} /></p>
         <h2><UiText source={"Your classroom"} /></h2>
         <p className="hint"><UiText source={"Choose the class you are working with now."} /></p>
         <div className="teacher-class-status" aria-label={ui("Current class status")}>
-          <span><small><UiText source={"Class"} /></small><b>{classId ? ui("Grade {0}{1}", [classes.find((row) => row.id === classId)?.grade, classes.find((row) => row.id === classId)?.division]) : ui("Not selected")}</b></span>
+          <span><small><UiText source={"Class"} /></small><b>{classId ? classDisplay({ grade: classes.find((row) => row.id === classId)?.grade, division: classes.find((row) => row.id === classId)?.division }, ui) : ui("Not selected")}</b></span>
           <span><small><UiText source={"Students"} /></small><b>{classLoading ? ui("Loading…") : classId ? students.length : '—'}</b></span>
           <span><small><UiText source={"Selected student"} /></small><b>{student ? student.full_name : ui("Choose a student")}</b></span>
         </div>
@@ -991,7 +1022,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                 setAttendanceNote('');
                 setNote('');
               }}
-            >{ui("Grade {0}{1}", [row.grade, row.division])}</button>
+            >{classDisplay({ grade: row.grade, division: row.division }, ui)}</button>
           ))}
         </div>
         {(mode === 'updates' || mode === 'profile') && (
@@ -1052,7 +1083,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                       setNote('');
                     }}
                   >
-                    <span className="student-name"><i>{initials(row.full_name)}</i><span>{row.full_name}<small><UiText source={"Grade "} />{classes.find((item) => item.id === classId)?.grade}{classes.find((item) => item.id === classId)?.division} <UiText source={"· Roll "} />{row.roll_number}</small></span></span>
+                    <span className="student-name"><i>{initials(row.full_name)}</i><span>{row.full_name}<small>{classDisplay(classes.find((item) => item.id === classId), ui)} <UiText source={"· Roll "} />{row.roll_number}</small></span></span>
                     <span className="student-chevron" aria-hidden="true">›</span>
                   </button>
                 ))}
@@ -1074,11 +1105,11 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
             )}
           </>
         )}
-        {mode === 'home' && <div className="teacher-sidebar-notices"><OptionalSection id="teacher-home-notices" title={t('nav.notices')} description=""><Announcements profile={profile} speech={teacherSpeech} /></OptionalSection></div>}
       </aside>
       {mode === 'home' ? (
         <div className="teacher-home-stack">
           <TeacherHome classId={classId} classLabel={classes.find((row) => row.id === classId)} studentCount={students.length} />
+          <div className="teacher-sidebar-notices"><OptionalSection id="teacher-home-notices" title={t('nav.notices')} description=""><Announcements profile={profile} speech={teacherSpeech} /></OptionalSection></div>
           <OptionalSection id="school-entry-tools" title={t('simple.entry')} description={t('simple.entryHelp')}><SchoolEntryPanel role="teacher" profileId={profile.id} schoolId={profile.school_id} classes={classes} classId={classId} onClassChange={(nextClassId) => {
             activeClassIdRef.current = nextClassId;
             setClassId(nextClassId);
@@ -1098,7 +1129,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
               <p className="eyebrow"><UiText source={"PARENT UPDATE FOR"} /></p>
               <div className="selected-student">
                 <span className="student-avatar">{initials(student.full_name)}</span>
-                <div><h2>{student.full_name}</h2><span><UiText source={"Grade "} />{classes.find((row) => row.id === classId)?.grade}{classes.find((row) => row.id === classId)?.division} <UiText source={"· Roll "} />{student.roll_number}</span></div>
+                <div><h2>{student.full_name}</h2><span>{classDisplay(classes.find((row) => row.id === classId), ui)} <UiText source={"· Roll "} />{student.roll_number}</span></div>
                 <span className="selected-indicator"><Icon name="check" /> <UiText source={"Selected"} /></span>
               </div>
               <div className="student-snapshot" aria-label={ui("Selected student context")}>
@@ -1225,7 +1256,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
       ) : mode === 'homework' ? (
         <div id="teacher-homework"><TeacherAssignments key={classId} teacherId={profile.id} classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
       ) : mode === 'timetable' ? (
-        <TimetableView classId={classId} className={classes.find((row) => row.id === classId) ? `Grade ${classes.find((row) => row.id === classId)?.grade}${classes.find((row) => row.id === classId)?.division}` : 'Your class'} profile={profile} />
+        <TimetableView classId={classId} className={classes.find((row) => row.id === classId) ? classDisplay(classes.find((row) => row.id === classId), ui) : 'Your class'} profile={profile} />
       ) : (
         <div id="teacher-notices" className="teacher-notices-panel"><Announcements profile={profile} speech={teacherSpeech} /></div>
       )}
@@ -1242,14 +1273,14 @@ function TeacherHome({ classId, classLabel, studentCount }: { classId: string; c
         <span className="section-icon" aria-hidden="true"><Icon name="school" /></span>
         <div>
           <p className="eyebrow"><UiText source={"YOUR SCHOOL DAY"} /></p>
-          <h2 id="teacher-home-heading">{classId && classLabel ? ui("Grade {0}{1}", [classLabel.grade, classLabel.division]) : ui("Choose a class to get started")}</h2>
+          <h2 id="teacher-home-heading">{classId && classLabel ? classDisplay({ grade: classLabel.grade, division: classLabel.division }, ui) : ui("Choose a class to get started")}</h2>
           <p>{classId ? ui("{0} students in your selected classroom", [studentCount]) : ui("Choose one of your assigned classes to see the right actions for today.")}</p>
         </div>
       </div>
       <h3><UiText source={"Go to a task"} /></h3>
       <div className="teacher-home-actions">
-        <Link href="/teacher/students"><Icon name="student" /><span><b><UiText source={"Student updates"} /></b><small><UiText source={"Write or review family communication"} /></small></span><span aria-hidden="true">›</span></Link>
         <Link href="/teacher/attendance"><Icon name="attendance" /><span><b><UiText source={"Attendance"} /></b><small><UiText source={"Mark or review your class register"} /></small></span><span aria-hidden="true">›</span></Link>
+        <Link href="/teacher/students"><Icon name="student" /><span><b><UiText source={"Student updates"} /></b><small><UiText source={"Write or review family communication"} /></small></span><span aria-hidden="true">›</span></Link>
         <Link href="/teacher/homework"><Icon name="homework" /><span><b><UiText source={"Homework"} /></b><small><UiText source={"Share an assignment with your class"} /></small></span><span aria-hidden="true">›</span></Link>
         <Link href="/teacher/timetable"><Icon name="timetable" /><span><b><UiText source={"Today's schedule"} /></b><small><UiText source={"Check your class timetable"} /></small></span><span aria-hidden="true">›</span></Link>
         <Link href="/teacher/notices"><Icon name="notice" /><span><b><UiText source={"School notices"} /></b><small><UiText source={"Read official school information"} /></small></span><span aria-hidden="true">›</span></Link>
@@ -1288,7 +1319,7 @@ function AttendanceMarker({
             <div>
               <p className="eyebrow"><UiText source={"DAILY ATTENDANCE"} /></p>
               <h2><UiText source={"Attendance register"} /></h2>
-              <p>{classLabel ? ui("Grade {0}{1}", [classLabel.grade, classLabel.division]) : ui("Selected class")} · {students.length} <UiText source={"students"} /></p>
+              <p>{classLabel ? classDisplay({ grade: classLabel.grade, division: classLabel.division }, ui) : ui("Selected class")} · {students.length} <UiText source={"students"} /></p>
             </div>
             <label className="attendance-date-field">
               <span><UiText source={"Date"} /></span>
@@ -1354,7 +1385,7 @@ function AssignmentCard({ assignment, showClass = false, language: requestedLang
   const { language: interfaceLanguage } = useI18n();
   const language = requestedLanguage ?? interfaceLanguage;
   const ui = useUiText();
-  const className = assignment.classes ? ui('Grade {0}{1}', [assignment.classes.grade, assignment.classes.division]) : '';
+  const className = assignment.classes ? classDisplay({ grade: assignment.classes.grade, division: assignment.classes.division }, ui) : '';
   return <article className={`assignment-card${assignment.due_date < today() ? ' assignment-past' : ''}`}>
     <header><span className="assignment-icon" aria-hidden="true"><Icon name="homework" /></span><div><p>{assignment.subject}</p><h3>{assignment.title}</h3></div><time dateTime={assignment.due_date}>{dueLabel(assignment.due_date, language)}</time></header>
     <p className="assignment-description">{assignment.description}</p>
@@ -1394,10 +1425,11 @@ function TeacherAssignments({ classId, classLabel, studentsCount, teacherId }: {
     else { formElement.reset(); setNote('Homework assigned to the class.'); refresh(); }
   };
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
-  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow"><UiText source={"CLASS HOMEWORK"} /></p><h2 id="teacher-homework-heading"><UiText source={"Homework & assignments"} /></h2><p>{classId && classLabel ? ui("Grade {0}{1} · {2} students", [classLabel.grade, classLabel.division, studentsCount]) : ui("Select an assigned class to create homework.")}</p></div></header>{!classId ? <p className="empty compact-empty"><UiText source={"Choose a class in Your classroom to begin assigning homework."} /></p> : <><form className="assignment-form" onSubmit={create}><label><UiText source={"Subject"} /><input name="subject" required maxLength={80} placeholder={ui("Science")} /></label><label><UiText source={"Title"} /><input name="title" required maxLength={140} placeholder={ui("Plant Cell Diagram")} /></label><label className="assignment-description-field"><UiText source={"Description"} /><textarea name="description" required maxLength={1500} rows={3} placeholder={ui("Explain what students should complete.")} /></label><label><UiText source={"Due date"} /><input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? ui("Assigning…") : ui("Assign homework")}</button></form>{error && <p className="error" role="alert">{ui(error)}</p>}{note && <p className="success" role="status">{ui(note)}</p>}<div className="assignment-list-heading"><div><p className="eyebrow"><UiText source={"UPCOMING"} /></p><h2><UiText source={"Upcoming assignments"} /></h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label={ui("Loading homework")} rows={3} /> : upcoming.length ? upcoming.map((assignment) => <div key={assignment.id}><AssignmentCard assignment={assignment} />{assignment.teacher_id === teacherId && <AssignmentEditor assignment={assignment} onSaved={refresh} />}</div>) : <p className="empty compact-empty"><UiText source={"No homework assigned yet."} /></p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow"><UiText source={"EARLIER"} /></p><h2><UiText source={"Past assignments"} /></h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
+  return <section className="teacher-homework card" aria-labelledby="teacher-homework-heading"><header className="homework-heading"><span className="section-icon"><Icon name="homework" /></span><div><p className="eyebrow"><UiText source={"CLASS HOMEWORK"} /></p><h2 id="teacher-homework-heading"><UiText source={"Homework & assignments"} /></h2><p>{classId && classLabel ? `${classDisplay(classLabel, ui)} · ${ui("{0} students", [studentsCount])}` : ui("Select an assigned class to create homework.")}</p></div></header>{!classId ? <p className="empty compact-empty"><UiText source={"Choose a class in Your classroom to begin assigning homework."} /></p> : <><form className="assignment-form" onSubmit={create}><label><UiText source={"Subject"} /><input name="subject" required maxLength={80} placeholder={ui("Science")} /></label><label><UiText source={"Title"} /><input name="title" required maxLength={140} placeholder={ui("Plant Cell Diagram")} /></label><label className="assignment-description-field"><UiText source={"Description"} /><textarea name="description" required maxLength={1500} rows={3} placeholder={ui("Explain what students should complete.")} /></label><label><UiText source={"Due date"} /><input name="due_date" type="date" min={today()} defaultValue={today()} required /></label><button disabled={sending}>{sending ? ui("Assigning…") : ui("Assign homework")}</button></form>{error && <p className="error" role="alert">{ui(error)}</p>}{note && <p className="success" role="status">{ui(note)}</p>}<div className="assignment-list-heading"><div><p className="eyebrow"><UiText source={"UPCOMING"} /></p><h2><UiText source={"Upcoming assignments"} /></h2></div><span>{upcoming.length}</span></div>{loading ? <Skeleton label={ui("Loading homework")} rows={3} /> : upcoming.length ? upcoming.map((assignment) => <div key={assignment.id}><AssignmentCard assignment={assignment} />{assignment.teacher_id === teacherId && <AssignmentEditor assignment={assignment} onSaved={refresh} />}</div>) : <p className="empty compact-empty">{ui(past.length ? "No upcoming homework. Earlier assignments remain below." : "No homework assigned yet. Use the form above to share an assignment.")}</p>}{past.length > 0 && <><div className="assignment-list-heading"><div><p className="eyebrow"><UiText source={"EARLIER"} /></p><h2><UiText source={"Past assignments"} /></h2></div><span>{past.length}</span></div>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} />)}</>}</>}</section>;
 }
 
 function ParentHomework({ child, className }: { child?: any; className: string }) {
+  const ui = useUiText();
   const { language, t } = useI18n();
   const db = useMemo(() => createClient(), []); const [assignments, setAssignments] = useState<Assignment[]>([]), [loading, setLoading] = useState(false), [error, setError] = useState(''); const requestRef = useRef(0); const classId = child?.class_id;
   const refresh = async () => { const version = ++requestRef.current; if (!classId) { setAssignments([]); return; } setLoading(true); const { data, error: loadError } = await db.from('class_assignments').select('*').eq('class_id', classId).order('due_date', { ascending: true }); if (version === requestRef.current) { setAssignments(data || []); setError(loadError ? "We couldn't load homework right now." : ''); setLoading(false); } };
@@ -1406,7 +1438,7 @@ function ParentHomework({ child, className }: { child?: any; className: string }
   useEffect(() => { const channel = db.channel(`parent-homework-${classId || 'none'}`).on('postgres_changes', { event: '*', schema: 'public', table: 'class_assignments', ...(classId ? { filter: `class_id=eq.${classId}` } : {}) }, refresh).subscribe(onChannelStatus); return () => { db.removeChannel(channel); }; }, [db, classId, onChannelStatus]);
   const upcoming = assignments.filter((assignment) => assignment.due_date >= today()), past = assignments.filter((assignment) => assignment.due_date < today());
   const childName = child?.full_name?.split(' ')[0] || t('parent.childFallback');
-  return <section className="parent-homework" id="parent-homework" aria-labelledby="parent-homework-heading"><div className="section-heading"><p className="eyebrow">{t('parent.homework')}</p><h2 id="parent-homework-heading">{t('parent.homeworkFor', { name: childName })}</h2><p className="hint">{t('parent.classAssignments', { className })}</p></div>{error ? <p className="error" role="alert">{t('parent.homeworkError')}</p> : loading ? <Skeleton label={t('parent.loadingHomework')} rows={2} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} language={language} />) : <p className="empty compact-empty">{t('parent.noHomework', { name: childName })}</p>}{past.length > 0 && <details className="assignment-past-details"><summary>{t('parent.earlierHomework', { count: past.length })}</summary>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} language={language} />)}</details>}</section>;
+  return <section className="parent-homework" id="parent-homework" aria-labelledby="parent-homework-heading"><div className="section-heading"><p className="eyebrow">{t('parent.homework')}</p><h2 id="parent-homework-heading">{t('parent.homeworkFor', { name: childName })}</h2><p className="hint">{t('parent.classAssignments', { className })}</p></div>{error ? <p className="error" role="alert">{t('parent.homeworkError')}</p> : loading ? <Skeleton label={t('parent.loadingHomework')} rows={2} /> : upcoming.length ? upcoming.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} language={language} />) : <section className="empty homework-empty"><h3>{t('parent.noUpcomingHomework')}</h3><p>{t('parent.noHomework', { name: childName })}</p><p>{ui(past.length ? 'Earlier assignments are available below. Check school updates for new instructions.' : 'Assignments appear here when a teacher shares them with this class. Check school updates for other instructions.')}</p><Link href="/parent/updates">{t('nav.updates')}</Link></section>}{past.length > 0 && <details className="assignment-past-details" open={upcoming.length === 0}><summary>{t('parent.earlierHomework', { count: past.length })}</summary>{past.map((assignment) => <AssignmentCard key={assignment.id} assignment={assignment} language={language} />)}</details>}</section>;
 }
 
 function TimetableViewEnglish({ classId, className, profile, manage = false }: { classId?: string; className: string; profile: Profile; manage?: boolean }) {
@@ -1494,7 +1526,7 @@ function PrincipalTimetable({ profile }: { profile: Profile }) {
   const save = async (event: React.FormEvent) => { event.preventDefault(); setNote(''); setError(''); if (!form.subject.trim()) { setError('Subject is required.'); return; } const payloadKey = JSON.stringify({ classId, teacherId: form.teacherId, weekday: form.weekday, period: form.period, subject: form.subject.trim(), start: form.start, end: form.end, room: form.room.trim() }); if (!form.id && createRequestRef.current?.payload !== payloadKey) createRequestRef.current = { key: crypto.randomUUID(), payload: payloadKey }; setSaving(true); const { error: rpcError } = await db.rpc('save_timetable_entry', { p_entry_id: form.id || null, p_class_id: classId, p_teacher_id: form.teacherId, p_weekday: Number(form.weekday), p_period_number: Number(form.period), p_subject: form.subject, p_start_time: form.start, p_end_time: form.end, p_room: form.room || null, p_client_request_id: form.id ? null : createRequestRef.current!.key, p_expected_updated_at: form.expectedUpdatedAt || null }); setSaving(false); if (rpcError) setError(rpcError.message); else { if (!form.id) createRequestRef.current = null; setNote(form.id ? 'Timetable period updated.' : 'Timetable period added.'); setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' }); setTick((value) => value + 1); } };
   const edit = (entry: TimetableEntry) => { createRequestRef.current = null; setForm({ id: entry.id, teacherId: entry.teacher_id, weekday: String(entry.weekday), period: String(entry.period_number), subject: entry.subject, start: timeLabel(entry.start_time), end: timeLabel(entry.end_time), room: entry.room || '', expectedUpdatedAt: entry.updated_at }); };
   const remove = async (id: string) => { setError(''); const { error: rpcError } = await db.rpc('delete_timetable_entry', { p_entry_id: id }); if (rpcError) setError(rpcError.message); else { setNote('Timetable period removed.'); setTick((value) => value + 1); } };
-  const classLabel = classes.find((row) => row.id === classId); return <section className="principal-timetable" id="principal-timetable"><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow"><UiText source={"SCHOOL OPERATIONS"} /></p><h2><UiText source={"Timetable"} /></h2><p className="hint"><UiText source={"Configure weekly class periods for your school."} /></p></div></div><label className="timetable-select"><UiText source={"Class"} /><select value={classId} onChange={(event) => setClassId(event.target.value)}>{classes.map((row) => <option value={row.id} key={row.id}><UiText source={"Grade "} />{row.grade}{row.division}</option>)}</select></label><div className="principal-timetable-grid"><TimetableView classId={classId} className={classLabel ? `Grade ${classLabel.grade}${classLabel.division}` : 'Class'} profile={profile} manage /><form className="card timetable-form" onSubmit={save}><p className="eyebrow">{form.id ? ui("EDIT PERIOD") : ui("ADD PERIOD")}</p><h3>{form.id ? ui("Update timetable period") : ui("Add timetable period")}</h3><label><UiText source={"Teacher"} /><select required value={form.teacherId} onChange={(event) => setForm({ ...form, teacherId: event.target.value })}><option value=""><UiText source={"Select teacher"} /></option>{teachers.map((teacher) => <option value={teacher.id} key={teacher.id}>{teacher.full_name}</option>)}</select></label><label><UiText source={"Subject"} /><input value={form.subject} maxLength={80} onChange={(event) => setForm({ ...form, subject: event.target.value })} /></label><div className="timetable-form-grid"><label><UiText source={"Day"} /><select value={form.weekday} onChange={(event) => setForm({ ...form, weekday: event.target.value })}>{schoolDays.map((day, index) => <option value={index + 1} key={day}>{ui(day)}</option>)}</select></label><label><UiText source={"Period"} /><input type="number" min="1" max="20" value={form.period} onChange={(event) => setForm({ ...form, period: event.target.value })} /></label></div><div className="timetable-form-grid"><label><UiText source={"Start"} /><input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label><UiText source={"End"} /><input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div><label><UiText source={"Room "} /><span className="hint"><UiText source={"(optional)"} /></span><input value={form.room} maxLength={80} onChange={(event) => setForm({ ...form, room: event.target.value })} /></label>{error && <p className="error" role="alert">{ui(error)}</p>}{note && <p className="success" role="status">{ui(note)}</p>}<button className="primary" disabled={saving || !classId || !form.teacherId}>{saving ? ui("Saving…") : form.id ? ui("Save changes") : ui("Add period")}</button>{form.id && <button type="button" className="secondary" onClick={() => setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' })}><UiText source={"Cancel edit"} /></button>}</form></div><section className="card timetable-manage-list"><h3><UiText source={"Configured periods"} /></h3>{entries.length ? entries.map((entry) => <div key={entry.id}><span>{ui(weekdayNames[entry.weekday - 1])} <UiText source={"· P"} />{entry.period_number}</span><b>{entry.subject}</b><small>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)} · {entry.profiles?.full_name || ui("Teacher")}</small><button type="button" onClick={() => edit(entry)}><UiText source={"Edit"} /></button><button type="button" onClick={() => remove(entry.id)}><UiText source={"Remove"} /></button></div>) : <p className="empty compact-empty"><UiText source={"No timetable periods yet. Add the first period for this class."} /></p>}</section></section>;
+  const classLabel = classes.find((row) => row.id === classId); return <section className="principal-timetable" id="principal-timetable"><div className="section-heading"><span className="section-icon"><Icon name="timetable" /></span><div><p className="eyebrow"><UiText source={"SCHOOL OPERATIONS"} /></p><h2><UiText source={"Timetable"} /></h2><p className="hint"><UiText source={"Configure weekly class periods for your school."} /></p></div></div><label className="timetable-select"><UiText source={"Class"} /><select value={classId} onChange={(event) => setClassId(event.target.value)}>{classes.map((row) => <option value={row.id} key={row.id}>{classDisplay(row, ui)}</option>)}</select></label><div className="principal-timetable-grid"><TimetableView classId={classId} className={classLabel ? classDisplay(classLabel, ui) : 'Class'} profile={profile} manage /><form className="card timetable-form" onSubmit={save}><p className="eyebrow">{form.id ? ui("EDIT PERIOD") : ui("ADD PERIOD")}</p><h3>{form.id ? ui("Update timetable period") : ui("Add timetable period")}</h3><label><UiText source={"Teacher"} /><select required value={form.teacherId} onChange={(event) => setForm({ ...form, teacherId: event.target.value })}><option value=""><UiText source={"Select teacher"} /></option>{teachers.map((teacher) => <option value={teacher.id} key={teacher.id}>{teacher.full_name}</option>)}</select></label><label><UiText source={"Subject"} /><input value={form.subject} maxLength={80} onChange={(event) => setForm({ ...form, subject: event.target.value })} /></label><div className="timetable-form-grid"><label><UiText source={"Day"} /><select value={form.weekday} onChange={(event) => setForm({ ...form, weekday: event.target.value })}>{schoolDays.map((day, index) => <option value={index + 1} key={day}>{ui(day)}</option>)}</select></label><label><UiText source={"Period"} /><input type="number" min="1" max="20" value={form.period} onChange={(event) => setForm({ ...form, period: event.target.value })} /></label></div><div className="timetable-form-grid"><label><UiText source={"Start"} /><input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} /></label><label><UiText source={"End"} /><input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} /></label></div><label><UiText source={"Room "} /><span className="hint"><UiText source={"(optional)"} /></span><input value={form.room} maxLength={80} onChange={(event) => setForm({ ...form, room: event.target.value })} /></label>{error && <p className="error" role="alert">{ui(error)}</p>}{note && <p className="success" role="status">{ui(note)}</p>}<button className="primary" disabled={saving || !classId || !form.teacherId}>{saving ? ui("Saving…") : form.id ? ui("Save changes") : ui("Add period")}</button>{form.id && <button type="button" className="secondary" onClick={() => setForm({ id: '', teacherId: '', weekday: '1', period: '1', subject: '', start: '09:00', end: '09:45', room: '', expectedUpdatedAt: '' })}><UiText source={"Cancel edit"} /></button>}</form></div><section className="card timetable-manage-list"><h3><UiText source={"Configured periods"} /></h3>{entries.length ? entries.map((entry) => <div key={entry.id}><span>{ui(weekdayNames[entry.weekday - 1])} <UiText source={"· P"} />{entry.period_number}</span><b>{entry.subject}</b><small>{timeLabel(entry.start_time)}–{timeLabel(entry.end_time)} · {entry.profiles?.full_name || ui("Teacher")}</small><button type="button" onClick={() => edit(entry)}><UiText source={"Edit"} /></button><button type="button" onClick={() => remove(entry.id)}><UiText source={"Remove"} /></button></div>) : <p className="empty compact-empty"><UiText source={"No timetable periods yet. Add the first period for this class."} /></p>}</section></section>;
 }
 
 function PrincipalHomework({ profile }: { profile: Profile }) {
@@ -1659,7 +1691,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
   );
   const child = children.find((item) => item.id === childId);
   const className = child?.classes
-    ? t('parent.gradeLabel', { class: `${child.classes.grade}${child.classes.division}` })
+    ? classDisplay(child.classes, ui)
     : t('parent.childFallback');
   const parentCorrectedIds = correctedUpdateIds(updates);
   const awaitingAcknowledgement = effectiveUpdates(updates).filter(
@@ -1936,7 +1968,7 @@ function StudentOverview({ student, classLabel, role, parentId, speech, schoolNa
     : Boolean(item.acknowledgements?.length);
   const awaiting = currentUpdates.filter((item) => item.importance === 'important' && !isAcknowledged(item)).length;
   const upcoming = assignments.filter((item) => item.due_date >= today()); const next = upcoming[0];
-  const grade = classLabel ? ui('Grade {0}{1}', [classLabel.grade, classLabel.division]) : student.classes ? ui('Grade {0}{1}', [student.classes.grade, student.classes.division]) : text('parent.classFallback', 'Class');
+  const grade = classLabel ? classDisplay({ grade: classLabel.grade, division: classLabel.division }, ui) : student.classes ? classDisplay({ grade: student.classes.grade, division: student.classes.division }, ui) : text('parent.classFallback', 'Class');
   return <section className="student-profile" id={`${role}-profile`} aria-labelledby={`${role}-profile-heading`}>
     <header className="student-profile-identity"><span className="student-avatar" aria-hidden="true">{initials(student.full_name)}</span><div><p className="eyebrow">{text('parent.profileOverview', 'STUDENT OVERVIEW')}</p><h1 id={`${role}-profile-heading`}>{student.full_name}</h1><p>{grade} · {(role === 'parent' ? t('parent.roll', { number: student.roll_number || '—' }) : ui("Roll number {0}", [student.roll_number || '—']))}</p><small>{schoolName || ui("Your school")}</small></div></header>
     <OptionalSection id={`${role}-attendance-history`} title={language === 'hi' ? 'इतिहास देखें' : language === 'mr' ? 'इतिहास पाहा' : ui("View history")} description={language === 'hi' ? 'शैक्षणिक वर्ष के अनुसार उपस्थिति।' : language === 'mr' ? 'शैक्षणिक वर्षानुसार उपस्थिती.' : 'Attendance by academic year.'}><AttendanceTrends key={student.id} schoolId={student.school_id} studentId={student.id} /></OptionalSection>
@@ -1956,16 +1988,21 @@ function PrincipalStudentOverview({ profile }: { profile: Profile }) {
   const db = useMemo(() => createClient(), []); const requestRef = useRef(0);
   const [query, setQuery] = useState(''); const [students, setStudents] = useState<any[]>([]); const [selected, setSelected] = useState<any>(null);
   const [recent, setRecent] = useState(false); const [showAll, setShowAll] = useState(false);
+  const [directoryClass, setDirectoryClass] = useState('');
   useEffect(() => { const version = ++requestRef.current; db.from('students').select('*,classes(grade,division)').eq('school_id', profile.school_id).eq('active', true).order('full_name').then(({ data }) => { if (version === requestRef.current) setStudents(data || []); }); }, [db, profile.school_id]);
   const normalized = query.trim().toLocaleLowerCase();
-  const matches = students.filter(student => !normalized || student.full_name.toLocaleLowerCase().includes(normalized) || String(student.roll_number || '').toLocaleLowerCase().includes(normalized));
+  const directoryClasses = [...new Map(students.filter(student => student.classes).map(student => [student.class_id, { id: student.class_id, ...student.classes }])).values()].sort(compareClasses);
+  const matches = students.filter(student => (!directoryClass || student.class_id === directoryClass) && (!normalized || student.full_name.toLocaleLowerCase().includes(normalized) || String(student.roll_number || '').toLocaleLowerCase().includes(normalized)));
   const ordered = recent ? [...matches].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')) || a.full_name.localeCompare(b.full_name)) : matches;
   const results = showAll || normalized ? ordered : ordered.slice(0, 8);
   return <section className="principal-students" id="principal-students">
     <div className="section-heading"><h2><UiText source={"Find a student"} /></h2></div>
     <div className="directory-actions"><button type="button" aria-pressed={recent} onClick={() => setRecent(!recent)}><UiText source={"Recently added"} /></button><button type="button" className="link" onClick={() => setShowAll(!showAll)}>{showAll ? ui("Show fewer") : ui("View all")} ({matches.length})</button></div>
-    <label className="teacher-roster-search"><span className="sr-only"><UiText source={"Search students"} /></span><Icon name="search" /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={ui("Search name or roll number")} /></label>
-    <div className="principal-student-results">{results.map(student => <button type="button" key={student.id} className={selected?.id === student.id ? 'student active' : 'student'} onClick={() => setSelected(student)}><span className="student-name"><i>{initials(student.full_name)}</i><span>{student.full_name}<small><UiText source={"Grade "} />{student.classes?.grade}{student.classes?.division} <UiText source={"· Roll "} />{student.roll_number}</small></span></span><span className="student-chevron">›</span></button>)}{normalized && !results.length && <p className="empty compact-empty"><UiText source={"No students found."} /></p>}</div>
+    <div className="directory-filter">
+      <label><UiText source="Class" /><select value={directoryClass} onChange={event => { setDirectoryClass(event.target.value); setSelected(null); }}><option value="">{ui('All classes')}</option>{directoryClasses.map(row => <option key={row.id} value={row.id}>{classDisplay(row, ui)}</option>)}</select></label>
+      <label className="teacher-roster-search"><span className="sr-only"><UiText source={"Search students"} /></span><Icon name="search" /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={ui("Search name or roll number")} /></label>
+    </div>
+    <div className="principal-student-results">{results.map(student => <button type="button" key={student.id} className={selected?.id === student.id ? 'student active' : 'student'} onClick={() => setSelected(student)}><span className="student-name"><i>{initials(student.full_name)}</i><span>{student.full_name}<small>{classDisplay(student.classes, ui)} <UiText source={"· Roll "} />{student.roll_number}</small></span></span><span className="student-chevron">›</span></button>)}{normalized && !results.length && <p className="empty compact-empty"><UiText source={"No students found."} /></p>}</div>
     <StudentOverview schoolName={profile.school_name} student={selected} classLabel={selected?.classes} role="principal" />
   </section>;
 }
@@ -1975,34 +2012,19 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
   const { t } = useI18n();
   const router = useRouter();
   const db = useMemo(() => createClient(), []);
-  const communicationRequestVersionRef = useRef(0);
-  const communicationLoadedSchoolRef = useRef<string | null>(null);
-  const [all, setAll] = useState<Update[]>([]),
-    [classes, setClasses] = useState<any[]>([]),
+  const [classes, setClasses] = useState<any[]>([]),
     [todayAttendance, setTodayAttendance] = useState<Attendance[]>([]),
     [communicationFilter, setCommunicationFilter] = useState<'all' | 'awaiting'>('all'),
-    [communicationLoading, setCommunicationLoading] = useState(true),
-    [communicationError, setCommunicationError] = useState(''),
     [attendanceError, setAttendanceError] = useState('');
+  const { data: communication, error: communicationError, loading: communicationLoading,
+    loadingMore, refresh, loadMore } = usePrincipalCommunication(db, profile.school_id, communicationFilter,
+      page === 'home' ? 6 : PRINCIPAL_PAGE_SIZE);
+  const all = communication?.updates ?? [];
+  const summary = communicationError ? null : communication?.summary;
   useEffect(() => {
     const requestedFilter = new URLSearchParams(window.location.search).get('filter');
     setCommunicationFilter(page === 'communication' && requestedFilter === 'awaiting' ? 'awaiting' : 'all');
   }, [page]);
-  const refresh = async () => {
-    const version = ++communicationRequestVersionRef.current;
-    if (communicationLoadedSchoolRef.current !== profile.school_id) setCommunicationLoading(true);
-    const { data, error } = await db
-      .from('student_updates')
-      .select('*,students(full_name,roll_number,classes(grade,division)),acknowledgements(acknowledged_at)')
-      .eq('school_id', profile.school_id)
-      .order('sent_at', { ascending: false });
-    if (version !== communicationRequestVersionRef.current) return;
-    if (!error) { setAll(data || []); communicationLoadedSchoolRef.current = profile.school_id; }
-    setCommunicationError(
-      error ? 'Recent communication could not be loaded.' : '',
-    );
-    setCommunicationLoading(false);
-  };
   const loadAttendance = async () => {
     const [classResult, attendanceResult] = await Promise.all([
       db
@@ -2030,22 +2052,22 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
   const refreshPrincipalContext = async () => {
     await Promise.all([refresh(), loadAttendance()]);
   };
-  const { onChannelStatus: onPrincipalRealtimeStatus } = useRealtimeResync(
+  const { onChannelStatus: onPrincipalRealtimeStatus, reconcile: reconcilePrincipal } = useRealtimeResync(
     refreshPrincipalContext,
   );
   useEffect(() => {
-    refreshPrincipalContext();
+    void loadAttendance();
     const channel = db
       .channel('principal-coverage')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'student_updates' },
-        refresh,
+        reconcilePrincipal,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'acknowledgements' },
-        refresh,
+        reconcilePrincipal,
       )
       .on(
         'postgres_changes',
@@ -2056,25 +2078,15 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
     return () => {
       db.removeChannel(channel);
     };
-  }, [db, profile, onPrincipalRealtimeStatus]);
-  const principalCorrectedIds = correctedUpdateIds(all),
-    important = effectiveUpdates(all).filter((update) => update.importance === 'important'),
-    acknowledged = important.filter(
-      (update) => update.acknowledgements?.length,
-    ),
-    awaitingUpdates = important.filter((update) => !update.acknowledgements?.length),
-    awaiting = awaitingUpdates.length,
-    communicationCoverage = important.length
-      ? Math.round((acknowledged.length / important.length) * 100)
-      : null,
+  }, [db, profile, onPrincipalRealtimeStatus, reconcilePrincipal]);
+  const awaiting = summary?.awaiting_count,
+    communicationCoverage = summary?.coverage ?? null,
     attendanceCounts = todayAttendance.reduce(
       (total, row) => ({ ...total, [row.status]: total[row.status] + 1 }),
       { present: 0, absent: 0, late: 0 } as Record<Status, number>,
     ),
     markedClassIds = new Set(todayAttendance.map((row) => row.class_id)),
-    visibleCommunication = communicationFilter === 'awaiting'
-      ? awaitingUpdates
-      : page === 'communication' ? all : all.slice(0, 6);
+    visibleCommunication = all;
   const showAwaitingCommunication = () => {
     setCommunicationFilter('awaiting');
     router.push('/principal/communication?filter=awaiting');
@@ -2092,6 +2104,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
       {(page === 'home' || page === 'communication') && <section
         className="principal-communication-overview"
         id="principal-communication"
+        aria-busy={communicationLoading}
         aria-labelledby="communication-overview-heading"
       >
         <div className="principal-overview-heading">
@@ -2110,32 +2123,33 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
           <article className="principal-metric-card metric-important">
             <span className="metric-icon" aria-hidden="true"><Icon name="important" /></span>
             <small><UiText source={"Important sent"} /></small>
-            <b>{important.length}</b>
+            <b>{summary?.important_count ?? '—'}</b>
             <p><UiText source={"Updates requiring a parent response"} /></p>
           </article>
           <article className="principal-metric-card metric-acknowledged">
             <span className="metric-icon" aria-hidden="true"><Icon name="check" /></span>
             <small><UiText source={"Acknowledged"} /></small>
-            <b>{acknowledged.length}</b>
+            <b>{summary?.acknowledged_count ?? '—'}</b>
             <p><UiText source={"Confirmed by a parent"} /></p>
           </article>
           <button
             type="button"
             className="principal-metric-card metric-awaiting principal-awaiting-metric"
+            disabled={!summary}
             onClick={showAwaitingCommunication}
             aria-controls="principal-recent-communication"
-            aria-label={ui("View {0} important update{1} awaiting acknowledgement", [awaiting, awaiting === 1 ? '' : ui("s")])}
+            aria-label={ui("View {0} important update{1} awaiting acknowledgement", [awaiting ?? '—', awaiting === 1 ? '' : ui("s")])}
           >
             <span className="metric-icon" aria-hidden="true"><Icon name="updates" /></span>
             <small><UiText source={"Awaiting"} /></small>
-            <b>{awaiting}</b>
+            <b>{awaiting ?? '—'}</b>
             <p><UiText source={"Still awaiting acknowledgement"} /></p>
             <span className="principal-metric-action"><UiText source={"View details"} /></span>
           </button>
         </div>
       </section>}
-      <div className="principal-main-grid">
-        <div className="principal-primary-column">
+      <div className={`principal-main-grid${page === 'notices' ? ' principal-notice-workspace' : ''}`}>
+        {page !== 'notices' && <div className="principal-primary-column">
       {page === 'home' && <nav className="workspace-shortcuts" aria-label={ui("School workspace shortcuts")}>
         <Link href="/principal/students"><Icon name="student" /><span><b><UiText source={"Students"} /></b><small><UiText source={"Find a student profile"} /></small></span></Link>
         <Link href="/principal/communication"><Icon name="updates" /><span><b><UiText source={"Communication"} /></b><small><UiText source={"Review family updates"} /></small></span></Link>
@@ -2170,7 +2184,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
             <div className="history-list">
               {classes.map((row) => (
                 <p key={row.id}>
-                  <span>{ui("Grade {0}{1}", [row.grade, row.division])}</span>
+                  <span>{classDisplay({ grade: row.grade, division: row.division }, ui)}</span>
                   <b
                     className={
                       markedClassIds.has(row.id)
@@ -2210,17 +2224,18 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
           <div className="principal-communication-filter" role="group" aria-label={ui("Filter recent communication")}>
             {page === 'home' && <Link href="/principal/communication"><UiText source={"View all →"} /></Link>}
             <button type="button" className={communicationFilter === 'all' ? 'active' : ''} aria-pressed={communicationFilter === 'all'} onClick={showAllCommunication}><UiText source={"All"} /></button>
-            <button type="button" className={communicationFilter === 'awaiting' ? 'active' : ''} aria-pressed={communicationFilter === 'awaiting'} onClick={showAwaitingOnly}><UiText source={"Awaiting "} /><span>{awaiting}</span></button>
+            <button type="button" className={communicationFilter === 'awaiting' ? 'active' : ''} aria-pressed={communicationFilter === 'awaiting'} onClick={showAwaitingOnly}><UiText source={"Awaiting "} /><span>{awaiting ?? '—'}</span></button>
+            <button type="button" onClick={() => void refresh()} disabled={communicationLoading || loadingMore}><UiText source={"Refresh"} /></button>
           </div>
         </div>
         {communicationError && all.length > 0 && <p className="hint" role="status">{ui(communicationError)} <UiText source={"Previously loaded communication is still shown."} /></p>}
         {communicationError && !all.length ? (
-          <p className="error">{ui(communicationError)}</p>
-        ) : communicationLoading ? (
+          <p className="error" role="alert">{ui(communicationError)}</p>
+        ) : communicationLoading && !communication ? (
           <PrincipalCommunicationSkeleton />
         ) : visibleCommunication.length ? (
           <div className="principal-communication-feed">{visibleCommunication.map((update) => (
-              <PrincipalCommunicationCard key={update.id} update={update} corrected={principalCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? all.find((item) => item.id === update.corrects_update_id)?.title : undefined} />
+              <PrincipalCommunicationCard key={update.id} update={update} corrected={update.is_corrected} correctionOf={update.correction_title ?? undefined} />
             ))}</div>
         ) : communicationFilter === 'awaiting' ? (
           <div className="principal-awaiting-empty" role="status">
@@ -2231,8 +2246,9 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
           <p className="empty compact-empty">
             <UiText source={"No student updates have been sent yet. Communication activity will appear here when teachers share updates with families."} /></p>
         )}
+        {page === 'communication' && communication?.has_more && !communicationLoading && <button type="button" disabled={loadingMore} onClick={() => void loadMore()}><UiText source={loadingMore ? 'Loading recent communication' : 'Load more'} /></button>}
       </div>}
-        </div>
+        </div>}
         {page === 'notices' && <aside className="principal-support-column" id="principal-notices" aria-label={ui("School notices")}>
           <Announcements profile={profile} publish />
         </aside>}
@@ -2255,7 +2271,7 @@ function PrincipalCommunicationCard({ update, corrected, correctionOf }: { updat
   const ui = useUiText();
   const studentName = update.students?.full_name || 'Student';
   const studentClass = update.students?.classes
-    ? ui('Grade {0}{1}', [update.students.classes.grade, update.students.classes.division])
+    ? classDisplay({ grade: update.students.classes.grade, division: update.students.classes.division }, ui)
     : '';
   const studentContext = [studentClass, update.students?.roll_number ? ui('Roll number {0}', [update.students.roll_number]) : '']
     .filter(Boolean)

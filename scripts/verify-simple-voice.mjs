@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigatePortal } from './lib/navigate-portal.mjs';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import { translate } from '../src/lib/i18n.ts';
@@ -62,7 +63,7 @@ try {
     await page.locator('.language-selector select').selectOption('en');
     await controls.getByRole('button', { name: 'Listen to notice', exact: true }).click();
     await controls.getByRole('button', { name: 'Pause', exact: true }).waitFor();
-    await page.locator(`nav.app-section-nav a[href="/${role}/home"]`).click();
+    await navigatePortal(page, role, 'home');
     await page.waitForURL(url => url.pathname === `/${role}/home`);
     await page.waitForFunction(() => window.__speechTest.audio.at(-1)?.paused);
     assert.deepEqual(outside, []);

@@ -1,4 +1,5 @@
 'use client';
+import { classDisplay } from '@/lib/class-display';
 import { UiText, useUiText } from '@/components/ui-text';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -125,11 +126,11 @@ export function ManageUsers({
     <section className="manage-users" aria-labelledby="manage-users-title">
       <header className="section-heading">
         <p className="eyebrow"><UiText source={"SCHOOL ACCOUNTS"} /></p>
-        <h2 id="manage-users-title"><UiText source={"Manage users"} /></h2>
+        <h2 id="manage-users-title"><UiText source={"School accounts"} /></h2>
         <p>
           <UiText source={"Create an account, choose its portal and connect it to your school. Existing passwords are never changed here."} /></p>
       </header>
-      {error && (
+      {error && error !== 'Account management is not enabled on this server.' && (
         <p className="error" role="alert">
           {ui(error)}
         </p>
@@ -139,7 +140,14 @@ export function ManageUsers({
           {ui(notice)}
         </p>
       )}
-      {!options ? (
+      {!options && error === 'Account management is not enabled on this server.' ? (
+        <section className="account-mode-empty" aria-label={ui('School account access')}>
+          <span className="section-icon" aria-hidden="true">S</span>
+          <div><h3><UiText source="Account administration is closed here" /></h3>
+            <p><UiText source="Existing school accounts can still sign in. Creating accounts requires the separate, guarded administration service. Ask your school administrator to open that service." /></p>
+          </div>
+        </section>
+      ) : !options ? (
         <button
           type="button"
           disabled={busy}
@@ -285,8 +293,7 @@ export function ManageUsers({
                       checked={draft.classIds.includes(klass.id)}
                       onChange={() => toggle('classIds', klass.id)}
                     />
-                    <UiText source={"Grade "} />{klass.grade}
-                    {klass.division}
+                    {classDisplay(klass, ui)}
                   </label>
                 ))}
                 {!options.classes.length && (
@@ -310,7 +317,7 @@ export function ManageUsers({
                           onChange={() => toggle('childIds', student.id)}
                         />
                         {student.full_name} ·{' '}
-                        {klass ? `${klass.grade}${klass.division}` : ui("Class")} <UiText source={"· Roll "} />{student.roll_number}
+                        {klass ? classDisplay(klass, ui) : ui("Class")} <UiText source={"· Roll "} />{student.roll_number}
                       </label>
                     );
                   })}

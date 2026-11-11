@@ -1,6 +1,7 @@
 /* Browser-level missed-event acceptance test. Persisted rows are created through
  * authenticated RPCs while an already-open role session is genuinely offline. */
 import { randomUUID } from 'node:crypto';
+import {prepareManualFixture, cleanManualFixture, readManualFixture} from './manual-demo.mjs';
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
@@ -11,7 +12,9 @@ assertLocalTestEnvironment();
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-const password = process.env.SCHOVERA_DEMO_PASSWORD || 'SchoveraDemo2026!';
+let ownedFixture;
+const roleEmail = role => ownedFixture.accounts[role].email;
+const passwordFor = email => Object.values(ownedFixture.accounts).find(account => account.email === email)?.password;
 const baseUrl = process.env.SCHOVERA_TEST_URL || 'http://localhost:3000';
 if (!url || !serviceKey || !publishableKey)
   throw new Error('Required Supabase environment configuration is missing.');
@@ -46,7 +49,7 @@ const isSuccessfulRealtimeReply = (frame) => {
 
 async function signedIn(email) {
   const client = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { error } = await client.auth.signInWithPassword({ email, password });
+  const { error } = await client.auth.signInWithPassword({ email, password: passwordFor(email) });
   if (error) throw error;
   return client;
 }
@@ -93,10 +96,10 @@ async function login(page, email, heading) {
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   if (await page.locator('input[autocomplete="username"]').count()) {
     await page.locator('input[autocomplete="username"]').fill(email);
-    await page.locator('input[type="password"]').fill(password);
+    await page.locator('input[type="password"]').fill(passwordFor(email));
     await page.getByRole('button', { name: 'Sign in securely' }).click();
   }
-  if (email === 'parent@schovera.demo')
+  if (email === roleEmail('parent'))
     await page.locator('#parent-child-heading').waitFor({ state: 'visible', timeout: 15000 });
   else await page.getByText(heading).first().waitFor({ state: 'visible', timeout: 15000 });
   await realtimeReady;
@@ -104,7 +107,7 @@ async function login(page, email, heading) {
 
 async function openSection(page, role, section) {
   const path = `/${role}/${section}`;
-  const email = { teacher: 'teacher@schovera.demo', parent: 'parent@schovera.demo', principal: 'principal@schovera.demo' }[role];
+  const email = { teacher: roleEmail('teacher'), parent: roleEmail('parent'), principal: roleEmail('principal') }[role];
   const heading = { teacher: 'Good morning', parent: 'Aarav', principal: 'Welcome' }[role];
   if (await page.locator('input[autocomplete="username"]').isVisible().catch(() => false)) {
     console.log(`${role} session expired during extended offline acceptance; reauthenticating before opening ${section}.`);
@@ -229,11 +232,15 @@ let teacherClient;
 let parentClient;
 let principalClient;
 try {
-  const profiles = await must(admin.from('profiles').select('id,email,full_name,school_id').in('email', ['teacher@schovera.demo', 'parent@schovera.demo', 'principal@schovera.demo']));
+  ownedFixture = await prepareManualFixture({onCreated: fixture => { ownedFixture = fixture; }});
+  await must(admin.from('students').update({full_name:'Aarav Patil'}).eq('id',ownedFixture.students[0].id).eq('school_id',ownedFixture.schoolId));
+  // Keep fewer than ten initial profile dates, so adding one absence must increase the visible count.
+  await must(admin.from('attendance_records').delete().eq('school_id',ownedFixture.schoolId).lt('attendance_date',shiftSchoolDate(schoolToday(),-5)));
+  const profiles = await must(admin.from('profiles').select('id,email,full_name,school_id').in('email', [roleEmail('teacher'), roleEmail('parent'), roleEmail('principal')]));
   const profile = (email) => profiles.find((row) => row.email === email);
-  const teacherProfile = profile('teacher@schovera.demo');
-  const parentProfile = profile('parent@schovera.demo');
-  const principalProfile = profile('principal@schovera.demo');
+  const teacherProfile = profile(roleEmail('teacher'));
+  const parentProfile = profile(roleEmail('parent'));
+  const principalProfile = profile(roleEmail('principal'));
   expect(teacherProfile && parentProfile && principalProfile, 'Demo role profiles are missing.');
   const student = await must(admin.from('students').select('id,full_name,class_id').eq('school_id', parentProfile.school_id).eq('full_name', 'Aarav Patil').maybeSingle());
   expect(student, 'The linked Aarav Patil demo student is missing.');
@@ -278,16 +285,16 @@ try {
     await page.waitForFunction(() => document.querySelector('#parent-child-heading')?.textContent?.includes('Aarav Patil'), null, { timeout: 15000 });
   }
   await openSection(teacherPage, 'teacher', 'students');
-  const gradeSevenClass = teacherPage.locator('.teacher-class-panel .chips button').filter({ hasText: 'Grade 7A' }).first();
-  await gradeSevenClass.waitFor({ state: 'visible', timeout: 15000 });
-  if (!(await gradeSevenClass.getAttribute('class'))?.includes('active')) await gradeSevenClass.click();
-  await teacherPage.locator('.teacher-class-panel .chips button.active').getByText('Grade 7A', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+  const assignedClassButton = teacherPage.locator('.teacher-class-panel .chips button').filter({ hasText: 'Grade 8-A' }).first();
+  await assignedClassButton.waitFor({ state: 'visible', timeout: 15000 });
+  if (!(await assignedClassButton.getAttribute('class'))?.includes('active')) await assignedClassButton.click();
+  await teacherPage.locator('.teacher-class-panel .chips button.active').getByText('Grade 8-A', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
   await teacherPage.locator('#teacher-students').waitFor({ state: 'visible', timeout: 15000 });
   const aaravRosterRow = teacherPage.locator('#teacher-students button.student').filter({ hasText: 'Aarav Patil' }).first();
   try {
     await aaravRosterRow.waitFor({ state: 'visible', timeout: 20000 });
   } catch (error) {
-    console.error(`Teacher roster did not settle for Grade 7A; active class=${await teacherPage.locator('.teacher-class-panel .chips button.active').innerText().catch(() => 'none')}; rows=${JSON.stringify(await teacherPage.locator('#teacher-students button.student').allInnerTexts().catch(() => []))}.`);
+    console.error(`Teacher roster did not settle for Grade 8-A; active class=${await teacherPage.locator('.teacher-class-panel .chips button.active').innerText().catch(() => 'none')}; rows=${JSON.stringify(await teacherPage.locator('#teacher-students button.student').allInnerTexts().catch(() => []))}.`);
     throw error;
   }
   await aaravRosterRow.click();
@@ -491,7 +498,7 @@ try {
   // channel rehydrates communication, acknowledgements, attendance and homework.
   await waitForRealtimeSubscription(teacherPage, async () => {
     await openSection(teacherPage, 'teacher', 'profile');
-    const classButton = teacherPage.getByRole('button', { name: 'Grade 7A' }).first();
+    const classButton = teacherPage.getByRole('button', { name: 'Grade 8-A' }).first();
     await classButton.waitFor({ state: 'visible', timeout: 15000 });
     if (!(await classButton.getAttribute('class'))?.includes('active')) await classButton.click();
     await teacherPage.locator('#teacher-students').waitFor({ state: 'visible', timeout: 15000 });
@@ -596,7 +603,7 @@ try {
         new Promise((_, reject) => { staleRequestTimer = setTimeout(() => reject(new Error('Stale Aarav profile request was not observed.')), 15000); }),
       ]);
     } finally { clearTimeout(staleRequestTimer); }
-    await teacherPage.getByRole('button', { name: `Grade ${temporaryClass.grade}${temporaryClass.division}` }).click();
+    await teacherPage.getByRole('button', { name: `Grade ${temporaryClass.grade}-${temporaryClass.division}` }).click();
     await teacherPage.getByRole('button', { name: new RegExp(temporaryClassStudent.full_name) }).waitFor({ state: 'visible', timeout: 15000 });
     await teacherPage.getByRole('button', { name: new RegExp(temporaryClassStudent.full_name) }).click();
     await teacherPage.locator('#teacher-profile h1').getByText(temporaryClassStudent.full_name).waitFor({ state: 'visible', timeout: 15000 });
@@ -610,7 +617,7 @@ try {
     await teacherPage.unroute('**/rest/v1/student_updates*', delayedAaravRequest);
   }
   console.log('Teacher student/class context and out-of-order response isolation passed.');
-  await teacherPage.getByRole('button', { name: 'Grade 7A' }).click();
+  await teacherPage.getByRole('button', { name: 'Grade 8-A' }).click();
   await teacherPage.getByRole('button', { name: /Aarav Patil/ }).first().click();
   await teacherPage.locator('#teacher-profile').getByText(profileUpdateTitle).waitFor({ state: 'visible', timeout: 15000 });
   console.log('Teacher Student Profile context isolation passed.');
@@ -667,7 +674,7 @@ try {
   console.log('Parent timetable recovery passed.');
 
   await openSection(teacherPage, 'teacher', 'timetable');
-  const timetableClassButton = teacherPage.getByRole('button', { name: 'Grade 7A' }).first();
+  const timetableClassButton = teacherPage.getByRole('button', { name: 'Grade 8-A' }).first();
   await timetableClassButton.waitFor({ state: 'visible', timeout: 15000 });
   if (!(await timetableClassButton.getAttribute('class'))?.includes('active')) await timetableClassButton.click();
   await teacherPage.locator('#teacher-timetable').waitFor({ state: 'visible', timeout: 15000 });
@@ -717,5 +724,7 @@ try {
   if (teacherClient) teacherClient.realtime.disconnect();
   if (parentClient) parentClient.realtime.disconnect();
   if (principalClient) principalClient.realtime.disconnect();
-  await cleanup();
+  try { await cleanup(); } finally {
+    if (ownedFixture && readManualFixture().runId === ownedFixture.runId) await cleanManualFixture();
+  }
 }

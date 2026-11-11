@@ -1,5 +1,17 @@
 // Interface copy only. Student names and teacher-authored messages are never translated here.
 export const extraUiRows = String.raw`
+No upcoming homework. Earlier assignments remain below.|कोई आगामी गृहकार्य नहीं। पहले के गृहकार्य नीचे उपलब्ध हैं।|आगामी गृहपाठ नाही. मागील गृहपाठ खाली उपलब्ध आहे.
+No homework assigned yet. Use the form above to share an assignment.|अभी गृहकार्य नहीं दिया गया है। गृहकार्य साझा करने के लिए ऊपर का फ़ॉर्म भरें।|अजून गृहपाठ दिलेला नाही. गृहपाठ देण्यासाठी वरील फॉर्म वापरा.
+How these insights work|ये संकेत कैसे बनते हैं|हे संकेत कसे तयार होतात
+School accounts|स्कूल खाते|शाळेची खाती
+School account access|स्कूल खाते का उपयोग|शाळेच्या खात्यांचा प्रवेश
+Account administration is closed here|यहाँ खाता प्रबंधन बंद है|येथे खाते व्यवस्थापन बंद आहे
+Existing school accounts can still sign in. Creating accounts requires the separate, guarded administration service. Ask your school administrator to open that service.|मौजूदा स्कूल खाते साइन इन कर सकते हैं। नए खाते बनाने के लिए अलग, सुरक्षित प्रशासन सेवा चाहिए। स्कूल प्रशासक से वह सेवा खोलने को कहें।|शाळेची विद्यमान खाती साइन इन करू शकतात. नवीन खाती तयार करण्यासाठी स्वतंत्र, सुरक्षित प्रशासन सेवा आवश्यक आहे. शाळेच्या प्रशासकाला ती सेवा सुरू करण्यास सांगा.
+All classes|सभी कक्षाएँ|सर्व वर्ग
+Earlier assignments are available below. Check school updates for new instructions.|पहले के गृहकार्य नीचे उपलब्ध हैं। नए निर्देशों के लिए स्कूल अपडेट देखें।|मागील गृहपाठ खाली उपलब्ध आहे. नवीन सूचनांसाठी शाळेचे अपडेट पाहा.
+Assignments appear here when a teacher shares them with this class. Check school updates for other instructions.|शिक्षक इस कक्षा के साथ गृहकार्य साझा करेंगे तो वह यहाँ दिखेगा। अन्य निर्देशों के लिए स्कूल अपडेट देखें।|शिक्षक या वर्गासाठी गृहपाठ देतील तेव्हा तो येथे दिसेल. इतर सूचनांसाठी शाळेचे अपडेट पाहा.
+Load more|और दिखाएँ|आणखी दाखवा
+Refresh|फिर से देखें|पुन्हा पाहा
 AI studio|AI स्टूडियो|AI स्टुडिओ
 Create teaching materials|पढ़ाने की सामग्री तैयार करें|शिकवण्यासाठी साहित्य तयार करा
 Grade {0}|कक्षा {0}|इयत्ता {0}

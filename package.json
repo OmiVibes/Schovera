@@ -6,6 +6,11 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "verify:ui-refinement": "node --env-file=.env.test.local scripts/verify-ui-refinement.mjs",
+    "verify:school-operations": "node --env-file=.env.test.local scripts/verify-school-operations.mjs",
+    "school:sync-mode": "node --env-file=.env.test.local scripts/school-operations/cli.mjs",
+    "school:presentation": "node --env-file=.env.test.local scripts/school-operations/presentation.mjs",
+    "verify:principal-communication": "node --experimental-strip-types --env-file=.env.test.local scripts/verify-principal-communication.mjs",
     "verify:voice-native": "node --env-file=.env.test.local scripts/verify-native-voice.mjs",
     "verify:communication-local": "node --env-file=.env.test.local scripts/verify-local-communication.mjs",
     "test:automatic-translation": "vitest run src/lib/automatic-translation.test.ts src/lib/local-communication.test.ts",
@@ -101,14 +106,14 @@
     "@hookform/resolvers": "^5.2.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.87.1",
-    "next": "16.3.8",
+    "next": "16.4.1",
     "openai": "^6.49.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.66.0",
     "server-only": "^0.0.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
-    "zod": "^4.1.12"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
@@ -118,7 +123,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.0.4",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.1",
     "jsdom": "^27.0.1",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
