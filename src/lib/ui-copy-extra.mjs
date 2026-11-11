@@ -1,5 +1,16 @@
 // Interface copy only. Student names and teacher-authored messages are never translated here.
 export const extraUiRows = String.raw`
+Browse student list|विद्यार्थी सूची देखें|विद्यार्थी यादी पाहा
+Close student list|विद्यार्थी सूची बंद करें|विद्यार्थी यादी बंद करा
+Student details|विद्यार्थी का विवरण|विद्यार्थ्याचा तपशील
+View more updates ({0} remaining)|और संदेश देखें ({0} बाकी)|आणखी संदेश पाहा ({0} बाकी)
+Attendance history & trends|उपस्थिति का इतिहास और रुझान|उपस्थितीचा इतिहास आणि कल
+Explore earlier registers and attendance patterns.|पिछले रजिस्टर और उपस्थिति के रुझान देखें।|मागील नोंदवही आणि उपस्थितीचे कल पाहा.
+Review explainable signals and their limitations.|समझाए गए संकेत और उनकी सीमाएँ देखें।|स्पष्ट केलेले संकेत आणि त्यांच्या मर्यादा पाहा.
+Find a student in this register|इस रजिस्टर में विद्यार्थी खोजें|या नोंदवहीत विद्यार्थी शोधा
+Scroll within the register to review every student. Counts and Save cover the whole class.|हर विद्यार्थी को देखने के लिए रजिस्टर के अंदर स्क्रॉल करें। गिनती और सहेजना पूरी कक्षा के लिए हैं।|प्रत्येक विद्यार्थी पाहण्यासाठी नोंदवहीत स्क्रोल करा. मोजणी आणि जतन संपूर्ण वर्गासाठी आहेत.
+No students match this search. Clear the search to see the register.|कोई विद्यार्थी नहीं मिला। रजिस्टर देखने के लिए खोज हटाएँ।|विद्यार्थी सापडला नाही. नोंदवही पाहण्यासाठी शोध पुसा.
+Account management requires the guarded administration service. Existing school accounts can still sign in.|खाता प्रबंधन के लिए सुरक्षित प्रशासन सेवा चाहिए। मौजूदा स्कूल खाते साइन इन कर सकते हैं।|खाते व्यवस्थापनासाठी सुरक्षित प्रशासन सेवा आवश्यक आहे. शाळेची विद्यमान खाती साइन इन करू शकतात.
 No upcoming homework. Earlier assignments remain below.|कोई आगामी गृहकार्य नहीं। पहले के गृहकार्य नीचे उपलब्ध हैं।|आगामी गृहपाठ नाही. मागील गृहपाठ खाली उपलब्ध आहे.
 No homework assigned yet. Use the form above to share an assignment.|अभी गृहकार्य नहीं दिया गया है। गृहकार्य साझा करने के लिए ऊपर का फ़ॉर्म भरें।|अजून गृहपाठ दिलेला नाही. गृहपाठ देण्यासाठी वरील फॉर्म वापरा.
 How these insights work|ये संकेत कैसे बनते हैं|हे संकेत कसे तयार होतात

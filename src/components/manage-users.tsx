@@ -128,7 +128,7 @@ export function ManageUsers({
         <p className="eyebrow"><UiText source={"SCHOOL ACCOUNTS"} /></p>
         <h2 id="manage-users-title"><UiText source={"School accounts"} /></h2>
         <p>
-          <UiText source={"Create an account, choose its portal and connect it to your school. Existing passwords are never changed here."} /></p>
+          {options ? <UiText source="Create an account, choose its portal and connect it to your school. Existing passwords are never changed here." /> : <UiText source="Account management requires the guarded administration service. Existing school accounts can still sign in." />}</p>
       </header>
       {error && error !== 'Account management is not enabled on this server.' && (
         <p className="error" role="alert">
