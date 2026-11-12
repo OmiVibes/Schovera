@@ -104,6 +104,7 @@ body { overflow-x: visible; font-size: var(--text-body); }
 .app .student-name > span { font-size: 1rem; font-weight: 600; }
 .app .student-name small, .app .roster-row small { font-size: var(--text-meta); line-height: 1.5; white-space: normal; }
 .app .teacher-task-panel form { padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.app .selected-student::after { content: none; }
 .app .selected-student { background: var(--brand-wash); padding: 18px; border-radius: 12px; }
 .app .teacher-form-heading h2 { font-size: var(--text-section); }
 .app .teacher-form-heading + .hint { display: block; }
@@ -118,8 +119,13 @@ body { overflow-x: visible; font-size: var(--text-body); }
 .app .attendance-scroll-help { margin: 12px 0; font-size: var(--text-meta); color: var(--ink-soft); }
 .app .teacher-attendance-register .roster { max-height: clamp(240px,48svh,520px); overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; border-block: 1px solid var(--line); }
 .app .attendance-roster-search { display: grid; gap: 8px; margin-top: 16px; }
-.app .attendance-save-area { position: sticky; bottom: 12px; z-index: 12; padding: 16px; background: var(--surface); border: 1px solid var(--control-line); border-radius: 12px; box-shadow: 0 4px 18px #30232b12; }
+.app .attendance-save-area { position: static; padding: 16px; background: var(--surface); border: 1px solid var(--control-line); border-radius: 12px; box-shadow: 0 4px 18px #30232b12; }
 
+.app .attendance-register-guidance { display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 8px 12px; }
+.app .attendance-register-guidance p { font-size: var(--text-support); font-weight: 400; }
+.app .attendance-register-guidance .attendance-state { grid-column: 2; justify-self: start; }
+.app .attendance-save-area b { font-size: var(--text-support); }
+.app .attendance-save-area span { font-size: var(--text-meta); }
 .app .attendance-register-header { flex-wrap: wrap; align-items: end; gap: 16px; }
 .app .roster-row { padding: 12px 16px; gap: 16px; }
 .app .attendance-segments { gap: 8px; }
@@ -313,7 +319,9 @@ html:lang(hi) .app :is(h1,h2,h3,h4), html:lang(mr) .app :is(h1,h2,h3,h4) { lette
   .app .mobile-picker-actions button { background: white; color: var(--brand); border: 1px solid var(--control-line); }
   .app .mobile-picker-actions a { display: inline-flex; align-items: center; min-height: 44px; color: var(--brand); font-weight: 600; }
   .app .teacher-mode-updates .teacher-roster-search-area[data-mobile-expanded=false] { display: none; }
-  .app .teacher-mode-updates .selected-student { padding: 12px; gap: 12px; }
+  .app .teacher-mode-updates .selected-student { display: grid; grid-template-columns: 40px minmax(0,1fr); align-items: center; text-align: left; padding: 12px; gap: 12px; }
+  .app .teacher-mode-updates .selected-student::after { display: none; }
+  .app .teacher-mode-updates .selected-student > div { min-width: 0; text-align: left; }
   .app .teacher-mode-updates .selected-student h2 { font-size: var(--text-card); }
   .app .teacher-mode-updates .selected-student .selected-indicator { display: none; }
   .app .teacher-mode-updates .student-avatar { width: 40px; height: 40px; font-size: 1rem; }

@@ -2,6 +2,14 @@ import { expect, it } from 'vitest';
 import { uiCopy, uiText } from './ui-copy';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
+it('preserves translated scripts and rejects encoding replacement text', () => {
+  for (const [source, values] of Object.entries(uiCopy)) {
+    for (const value of values) expect(value, source).not.toMatch(/\?{2,}|\uFFFD/);
+  }
+  for (const language of ['hi', 'mr'] as const) {
+    expect(uiText('Attendance register students', language)).toMatch(/[\u0900-\u097f]/);
+  }
+});
 it('provides Hindi/Marathi interface copy with every placeholder retained', () => {
   for (const [source, values] of Object.entries(uiCopy)) for (const value of values) {
     expect(value.length > 0 || source === 's', source).toBe(true);

@@ -1,3 +1,4 @@
+import {selectTeacherStudent} from './lib/navigate-portal.mjs';
 // Own synthetic fixtures; real HTTP capture/restart/replay and authorized RPCs.
 import assert from 'node:assert/strict';
 import {createClient} from '@supabase/supabase-js';
@@ -118,7 +119,7 @@ try {
   await page.getByText('Saved locally — waiting to sync.',{exact:true}).waitFor();assert.equal((await attendanceRows(student,uiDay))[0].status,'absent');
   stop();await start();await until(async()=>{const s=openOperations(database);try{return s.rows(teacher.id,fixture.schoolId).some(r=>JSON.parse(r.canonical).attendance_date===uiDay&&r.state==='pending');}finally{s.close();}},'pending UI record after server restart');
   control('online');await until(async()=>(await attendanceRows(student,uiDay))[0].status==='late','automatic browser attendance replay');
-  await page.goto(`${base}/teacher/students`);await page.getByRole('button',{name:/Synthetic Child A/}).first().click();
+  await page.goto(`${base}/teacher/students`);await selectTeacherStudent(page,'Synthetic Child A');
   await page.getByText('Offline saving ready (30-minute permission).',{exact:true}).waitFor();
   const uiTitle=`Synthetic UI important ${randomUUID()}`,uiMessage='Original notice: bring a library book at 09:00.';
   const before=await must(principal.client.rpc('principal_communication_page',{p_filter:'all',p_limit:6}));

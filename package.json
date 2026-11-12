@@ -6,6 +6,8 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "verify:ui-polish": "node --env-file=.env.test.local scripts/verify-ui-polish.mjs",
+    "ui:rehearsal": "node --env-file=.env.test.local scripts/ui-rehearsal.mjs",
     "verify:ui-refinement": "node --env-file=.env.test.local scripts/verify-ui-refinement.mjs",
     "verify:school-operations": "node --env-file=.env.test.local scripts/verify-school-operations.mjs",
     "school:sync-mode": "node --env-file=.env.test.local scripts/school-operations/cli.mjs",

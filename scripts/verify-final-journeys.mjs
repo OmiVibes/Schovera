@@ -52,6 +52,7 @@ try {
   await teacher.page.locator('.teacher-attendance-register .roster-row').filter({ hasText: 'Synthetic Child A' }).waitFor();
   await teacher.page.getByRole('button', { name: 'Grade 8-A', exact: true }).click();
   assert.equal(await teacher.page.locator('.teacher-attendance-register .roster-row').count(), 1, 'Re-selecting the active class must not clear its roster');
+  await openOptionalTool(teacher.page, 'teacher-attendance-insights');
   const insights = teacher.page.getByTestId('attendance-insights'); await insights.getByText('Attendance Follow-up Suggested', { exact: true }).waitFor();
   await teacher.page.getByLabel('Date', { exact: true }).fill(fixture.dates.at(-1));
   const register = teacher.page.locator('.teacher-attendance-register');

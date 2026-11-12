@@ -1,5 +1,7 @@
 // Interface copy only. Student names and teacher-authored messages are never translated here.
 export const extraUiRows = String.raw`
+Attendance register students|उपस्थिति रजिस्टर के विद्यार्थी|उपस्थिती नोंदवहीतील विद्यार्थी
+Classroom attendance insights|कक्षा की उपस्थिति के संकेत|वर्गाच्या उपस्थितीचे संकेत
 Browse student list|विद्यार्थी सूची देखें|विद्यार्थी यादी पाहा
 Close student list|विद्यार्थी सूची बंद करें|विद्यार्थी यादी बंद करा
 Student details|विद्यार्थी का विवरण|विद्यार्थ्याचा तपशील

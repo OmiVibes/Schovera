@@ -22,11 +22,13 @@ try{
     const geometry=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,active:(()=>{const r=document.querySelector('.app-section-nav a[aria-current=page]')?.getBoundingClientRect();return r?{left:r.left,right:r.right,height:r.height}:null;})()}));
     result.layouts.push({role,section,width,...geometry});
     if(section==='attendance'&&width===1440){
+      if(role==='teacher'){await page.locator('#teacher-attendance-history > summary').click();await page.locator('.attendance-trends[data-loaded=true]').waitFor();}
       const colors=await page.evaluate(()=>['present','absent'].map(status=>{
         const ring=document.querySelector('.attendance-ring-segment.'+status),legend=document.querySelector('.attendance-mix-legend .'+status);
         return {status,stroke:ring?getComputedStyle(ring).stroke:null,swatch:legend?getComputedStyle(legend).backgroundColor:null};
       }));
       for(const color of colors)if(color.stroke&&color.swatch&&color.stroke!==color.swatch)result.errors.push({role,section,legendMismatch:color});
+      if(role==='teacher')await page.locator('#teacher-attendance-history > summary').click();
     }
     if(geometry.document>width+1)result.errors.push({role,section,width,overflow:geometry.document});
     if(width<=820&&(!geometry.active||geometry.active.left<0||geometry.active.right>width+1||geometry.active.height<44))result.errors.push({role,section,width,activeNavigation:geometry.active});

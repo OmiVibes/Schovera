@@ -51,14 +51,18 @@ try{
  assert.ok((await actorClient().rpc('principal_communication_page')).error,'Anonymous must be denied');
  assert.ok((await principal.client.rpc('principal_communication_page',{p_school_id:b})).error,'School injection must be rejected');
  for(const args of [{p_filter:'invalid'},{p_limit:0},{p_limit:101},{p_before_id:randomUUID()}])assert.ok((await principal.client.rpc('principal_communication_page',args)).error);
- browser=await chromium.launch({headless:true});const view=await login(principal);
+ browser=await chromium.launch({headless:true});let view=await login(principal);
  for(const size of [0,1,999,1000,1001,1002,2005]){
+  // Bulk fixture setup is not a Realtime load test: close the prior UI subscription.
+  // Preserve the local 100-events/sec limit; reconnect the real browser before assertions.
+  await view.context.close();
   const added=[];while(rows.length<size){const index=rows.length;const row={id:randomUUID(),school_id:a,class_id:klass.id,student_id:student.id,teacher_id:teacher.id,category:'general',importance:index<1002||index%3?'important':'normal',title:`Synthetic update ${index}`,message:'Synthetic AUD-01 body. No personal data.',sent_at:index?'2026-01-01T09:00:00.123456Z':'2025-12-31T09:00:00.123456Z'};rows.push(row);added.push(row);}
   for(let i=0;i<added.length;i+=100)await must(admin.from('student_updates').insert(added.slice(i,i+100)));
-  await compare(principal,a,`size-${size}`);await view.p.goto(`${base}/principal/home`);await uiCounts(view.p,oracle());
+  await compare(principal,a,`size-${size}`);view=await login(principal);await view.p.goto(`${base}/principal/home`);await uiCounts(view.p,oracle());
   await view.p.goto(`${base}/principal/communication`);await uiCounts(view.p,oracle());
   if(size===1002){const old=await must(principal.client.from('student_updates').select('id').eq('school_id',a));assert.equal(old.length,1000);evidence.push({label:'AUD-01 before/after',expected:1002,oldCappedRows:old.length,newDisplayedImportant:1002});await view.p.screenshot({path:`${output}/1002-communication.png`,fullPage:true});}
  }
+ await view.context.close();
  const ackRows=rows.filter((_,i)=>i%2===0).map(r=>({update_id:r.id,parent_id:parent.id}));for(let i=0;i<ackRows.length;i+=100)await must(admin.from('acknowledgements').insert(ackRows.slice(i,i+100)));for(const r of ackRows)acknowledgements.add(r.update_id);
  await must(admin.from('acknowledgements').insert({update_id:rows[0].id,parent_id:parent2.id}));
  const original=rows[0];const correctedId=await must(teacher.client.rpc('send_student_update_correction',{p_original_update_id:original.id,p_title:'Synthetic correction one',p_message:'Synthetic corrected body one.'}));
@@ -83,6 +87,7 @@ try{
  assert.equal((await page(foreign)).summary.important_count,1);await compare(principal,a,'cross-school-isolation');assert.equal((await page(foreign)).updates[0].id,foreignRow.id);
  assert.equal((await must(parent.client.from('student_updates').select('id').eq('id',foreignRow.id))).length,0);
  assert.equal((await must(teacher.client.from('student_updates').select('id').eq('id',foreignRow.id))).length,0);
+ view=await login(principal);
  await view.p.goto(`${base}/principal/communication`);await uiCounts(view.p,oracle());await view.p.waitForFunction(()=>document.querySelectorAll('.principal-communication-card').length===40);assert.equal(await view.p.locator('.principal-communication-card').count(),40);await view.p.getByRole('button',{name:'Load more',exact:true}).click();await view.p.waitForFunction(()=>document.querySelectorAll('.principal-communication-card').length===80);await uiCounts(view.p,oracle());
  await view.p.getByRole('button',{name:/^Awaiting \d/}).click();await uiCounts(view.p,oracle());assert.equal(await view.p.locator('.principal-communication-card .principal-acknowledgement.acknowledged').count(),0);
  await view.context.setOffline(true);const newId=await must(teacher.client.rpc('send_student_update',{p_class_id:klass.id,p_student_id:student.id,p_category:'general',p_title:'Synthetic missed update',p_message:'Synthetic refresh after reconnect.',p_importance:'important',p_client_request_id:randomUUID()}));rows.push(await must(admin.from('student_updates').select('*').eq('id',newId).single()));

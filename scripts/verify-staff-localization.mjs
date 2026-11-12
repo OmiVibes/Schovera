@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { navigatePortal } from './lib/navigate-portal.mjs';
+import { navigatePortal, selectTeacherStudent } from './lib/navigate-portal.mjs';
 import { chromium } from 'playwright';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 import { uiText, uiCopy } from '../src/lib/ui-copy.ts';
@@ -10,7 +10,7 @@ try {
   assert.equal(health.status, 200);
 } catch { throw new Error('Local Supabase is unavailable; start Docker and the isolated local stack before browser verification.'); }
 const sections = {
-  teacher: { home: '.teacher-home-dashboard', students: '#teacher-students', profile: '#teacher-profile', attendance: '#teacher-attendance', homework: '#teacher-homework', timetable: '#teacher-timetable', ai: '.teacher-ai-workspace', notices: '#teacher-notices' },
+  teacher: { home: '.teacher-home-dashboard', students: '.teacher-mode-updates', profile: '#teacher-profile', attendance: '#teacher-attendance', homework: '#teacher-homework', timetable: '#teacher-timetable', ai: '.teacher-ai-workspace', notices: '#teacher-notices' },
   principal: { home: '.workspace-shortcuts', students: '#principal-students', users: '.manage-users', communication: '#principal-recent-communication', attendance: '#principal-attendance', homework: '#principal-homework', timetable: '#principal-timetable', notices: '#principal-notices' },
 };
 const browser = await chromium.launch();
@@ -41,8 +41,7 @@ try {
         await page.locator(selector).waitFor();
         await page.waitForFunction(() => !document.querySelector('.skeleton, .notice-skeleton, .principal-communication-skeleton'));
         if (role === 'teacher' && ['profile', 'students'].includes(section)) {
-          const student = page.locator('#teacher-students button.student').first();
-          await student.waitFor(); if (await student.getAttribute('aria-pressed') !== 'true') await student.click();
+          await selectTeacherStudent(page);
         }
         const marked = await page.locator(`${selector} h1, ${selector} h2, ${selector} h3, ${selector} button, ${selector} label`).evaluateAll(nodes => nodes.filter(node => {
           // Database-authored titles and people's names may happen to match a
@@ -56,7 +55,7 @@ try {
           if (uiCopy[text] && uiText(text, language) !== text) assert.fail(`${role}/${section}: untranslated interface string: ${text}`);
         }
         if (language !== 'en' && role === 'teacher' && section !== 'ai') {
-          const contextText = await page.locator('.teacher-today-card').innerText();
+          const contextText = await page.locator('.teacher-class-panel').innerText();
           assert.ok(!/students|register open|Official school notices|Ready for parent updates/.test(contextText), `${role}/${section}: class context was not localized`);
         }
         if (language !== 'en' && section === 'timetable') {

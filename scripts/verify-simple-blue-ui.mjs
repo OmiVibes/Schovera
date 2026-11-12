@@ -23,6 +23,7 @@ try {
     assert.equal(await page.locator('.role-header').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)');
     assert.equal(await page.locator('.role-header').evaluate(el => getComputedStyle(el).getPropertyValue('--brand').trim()), '#7c0e44');
     await page.goto(`${base}/${role}/attendance`);
+    if (role === 'teacher') await page.locator('#teacher-attendance-history > summary').click();
     const chart = page.locator('.attendance-trends'); await chart.waitFor();
     for (const period of ['7 days', '1 month', '6 months', 'All saved records']) {
       await chart.getByRole('button', { name: period, exact: true }).click();

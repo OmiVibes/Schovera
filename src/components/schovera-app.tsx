@@ -511,7 +511,7 @@ export function SchoveraApp() {
           <p className="eyebrow">{ui(nice(profile.role))} <UiText source={"workspace"} /></p>
           <h1 id="workspace-page-title">{t(navigationKeys[currentPage.id] || 'common.schoolNotices')}</h1>
         </div>
-        <p>{profile.role === 'parent'
+        {!(profile.role === 'teacher' && ['students', 'attendance', 'homework'].includes(currentPage.slug)) && !(profile.role === 'principal' && currentPage.slug === 'users') && <p>{profile.role === 'parent'
           ? currentPage.slug === 'updates' ? t('parent.childSpecific')
             : currentPage.slug === 'attendance' ? t('parent.attendanceHistory')
               : currentPage.slug === 'homework' ? t('parent.homeworkFor', { name: t('parent.child') })
@@ -519,7 +519,7 @@ export function SchoveraApp() {
                   : currentPage.slug === 'notices' ? t('parent.noticeContext')
                     : currentPage.slug === 'profile' ? t('parent.profileOverview')
                       : t('parent.child')
-          : ui("{0} · Your school workspace", [profile.school_name || ui("Your school")])}</p>
+          : ui("{0} · Your school workspace", [profile.school_name || ui("Your school")])}</p>}
       </section>}
       <div className="dashboard-content">
           {profile.role === 'teacher' ? (
@@ -978,6 +978,8 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
   const chooseStudent = (studentId: string) => {
     const row = students.find((item) => item.id === studentId);
     if (!row) return;
+    setRosterExpanded(false);
+    if (student?.id === row.id) return;
     activeStudentIdRef.current = row.id;
     studentRequestVersionRef.current += 1;
     setStudent(row);
@@ -1224,7 +1226,14 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                 <p className="error" role="alert">{ui(updatesError)}</p>
               ) : updates.length ? (
                 updates.slice(0, historyLimit).map((update) => (
-                  <Card key={update.id} update={update} teacher speech={teacherSpeech} corrected={teacherCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? updates.find((item) => item.id === update.corrects_update_id)?.title : undefined} onCorrect={teacherCorrectedIds.has(update.id) ? undefined : setCorrectionTarget} />
+                  <Card key={update.id} update={update} teacher speech={teacherSpeech} corrected={teacherCorrectedIds.has(update.id)} correctionOf={update.corrects_update_id ? updates.find((item) => item.id === update.corrects_update_id)?.title : undefined} onCorrect={teacherCorrectedIds.has(update.id) ? undefined : (target) => {
+                    setCorrectionTarget(target);
+                    requestAnimationFrame(() => {
+                      const form = document.getElementById('teacher-update-form');
+                      form?.scrollIntoView({ block: 'start', behavior: 'instant' });
+                      form?.querySelector<HTMLInputElement>('input[name="title"]')?.focus({ preventScroll: true });
+                    });
+                  }} />
                 ))
               ) : (
                 <p className="empty compact-empty">
@@ -1241,6 +1250,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
         <div className="teacher-profile-panel"><StudentOverview schoolName={profile.school_name} student={student} classLabel={classes.find((row) => row.id === classId)} role="teacher" /></div>
       ) : mode === 'attendance' ? (
         <div id="teacher-attendance" className="teacher-attendance-panel"><AttendanceMarker
+          key={classId}
           classId={classId}
           classLabel={classes.find((row) => row.id === classId)}
           students={students}

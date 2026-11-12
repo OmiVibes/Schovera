@@ -36,6 +36,7 @@ it('local synthetic attendance scope, corrections, advisory UI and cleanup', asy
     const page = await context.newPage(); await page.goto(base, { waitUntil: 'networkidle' });
     await page.getByLabel('Email').fill(actor.email); await page.getByLabel('Password', { exact: true }).fill(password); await page.getByRole('button', { name: 'Sign in securely' }).click();
     await page.locator(`.role-${actor.role}`).waitFor({ timeout: 30000 }); await page.goto(`${base}/${actor.role}/attendance`, { waitUntil: 'networkidle' });
+    if (actor.role === 'teacher') await page.locator('#teacher-attendance-insights > summary').click();
     return { page, context, external };
   }
   const panel = (page: Page) => page.getByTestId('attendance-insights');
@@ -74,11 +75,13 @@ it('local synthetic attendance scope, corrections, advisory UI and cleanup', asy
       expect(await child.locator('details[open]').count()).toBe(1); expect(await child.getByText(dates[9], { exact: true }).count()).toBeGreaterThan(0);
       for (const language of ['en', 'hi', 'mr']) {
         await staff.page.evaluate((lang) => localStorage.setItem('schovera.language', lang), language); await staff.page.reload({ waitUntil: 'networkidle' });
+        await staff.page.locator('#teacher-attendance-insights > summary').click();
         const headings = { en: 'Classroom attendance insights', hi: 'कक्षा उपस्थिति की समीक्षा', mr: 'वर्ग उपस्थिती आढावा' };
         await panel(staff.page).getByRole('heading', { name: headings[language as keyof typeof headings], exact: true }).waitFor();
         expect(await staff.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
       }
       await staff.page.evaluate(() => localStorage.setItem('schovera.language', 'en')); await staff.page.reload({ waitUntil: 'networkidle' });
+        await staff.page.locator('#teacher-attendance-insights > summary').click();
       await staff.context.setOffline(true); await panel(staff.page).getByText('Offline.', { exact: false }).waitFor();
       expect(await panel(staff.page).getByText(students[0].full_name, { exact: true }).count()).toBe(0);
       await staff.context.setOffline(false); await panel(staff.page).getByText('Attendance Follow-up Suggested', { exact: true }).waitFor();

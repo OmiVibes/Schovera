@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
-import { navigatePortal } from './lib/navigate-portal.mjs';
+import { navigatePortal, selectTeacherStudent } from './lib/navigate-portal.mjs';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
 
 assertLocalTestEnvironment(process.env, { requireServiceRole: false });
@@ -17,7 +17,7 @@ const destinations = {
 };
 const expectedContent = {
   teacher: {
-    home: '.teacher-home-dashboard', students: '#teacher-students', profile: '#teacher-profile',
+    home: '.teacher-home-dashboard', students: '.teacher-mode-updates', profile: '#teacher-profile',
     attendance: '#teacher-attendance', homework: '#teacher-homework', timetable: '#teacher-timetable', ai: '.teacher-ai-workspace', notices: '#teacher-notices',
   },
   parent: {
@@ -78,9 +78,7 @@ async function navigate(page, role, section) {
   if (role === 'teacher' && section !== 'ai') await page.locator('.teacher-class-panel .chips button.active').waitFor({ state: 'visible', timeout: 15000 });
   await page.waitForFunction(() => document.querySelectorAll('.skeleton, .principal-communication-skeleton, .notice-skeleton').length === 0, null, { timeout: 20000 });
   if (role === 'teacher' && ['students', 'profile'].includes(section)) {
-    const student = page.locator('#teacher-students button.student').first();
-    await student.waitFor({ state: 'visible', timeout: 15000 });
-    if ((await student.getAttribute('aria-pressed')) !== 'true') await student.click();
+    await selectTeacherStudent(page);
     if (section === 'profile') await page.locator('#teacher-profile h1').waitFor({ state: 'visible', timeout: 10000 });
   }
   if (role === 'principal' && section === 'students') {
