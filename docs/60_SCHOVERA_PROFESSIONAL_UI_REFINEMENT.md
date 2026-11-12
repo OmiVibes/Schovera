@@ -1,6 +1,6 @@
-# AUD-60 â€” Professional UI refinement
+# AUD-60 - Professional UI refinement
 
-12 November 2026. **PARTIAL CHECKPOINT ? UI changes implemented; final acceptance blocked by the local Docker engine.** This is a local UI milestone, not production or hardware acceptance. The owner clarified that the interface must remain English/Hindi/Marathi. Korean remains available through the existing message translation and speech features only.
+12 November 2026. **PARTIAL CHECKPOINT - UI changes implemented; final acceptance blocked by the local Docker engine.** This is a local UI milestone, not production or hardware acceptance. The owner clarified that the interface must remain English/Hindi/Marathi. Korean remains available through the existing message translation and speech features only.
 
 ## Changes and visual evidence
 
@@ -11,10 +11,11 @@ The four owner screenshots were extracted from `Schovera_Parent_4_Screenshots_20
 | Attendance card has a large blank area and misaligned statistics | The summary's heading, latest record and counts occupied incompatible explicit grid rows. Use two aligned heading/content rows, responsive stacking and equal statistic columns. Remove the duplicate attendance status from the child identity on this page and the duplicate history heading. Preserve charts, filters and all saved records. | `parent/1440px/attendance.png`, `parent/390px/attendance.png` |
 | Absent is green and Late is red | Legacy positional color rules assumed the Teacher register's different counter order. Give Parent summary counters explicit Present/Absent/Late classes and semantic color rules. | Attendance captures above |
 | Latest status has no recorded date; identity has an unused third column | Include the actual `attendance_date`, including its year. Reserve the third identity column only when a child switcher exists. On Attendance, the single latest-status/date summary sits below the compact identity. No date or record is fabricated. | Parent Home, Updates and Attendance captures |
-| Audio guidance repeats under every message and dominates card footers | Replace the idle live-region helper with an optional, keyboard-accessible native help disclosure. Preserve reserved status space so playback messages do not shift the buttons. Required language choices and playback/error messages still appear in the live region. Preserve all Stop and playback state logic. | Parent Home/Updates/Notices; expanded audio-help capture |
+| Audio guidance repeats under every message and dominates card footers | Replace the idle live-region helper with an optional, keyboard-accessible native help disclosure. Preserve reserved status space so playback messages do not shift the buttons. Required language choices and playback/error messages still appear in the live region. Preserve all Stop and playback state logic. | Parent Home/Updates/Notices; expanded-help capture pending |
 | Plain language selector | Reuse the existing native select and language preference logic. Add a decorative globe, consistent plum borders/surfaces, readable padding, hover feedback and focus rings. Adjust width/padding so the icon does not consume the selected label's space. | All portal headers; `sign-in/` and selector focus examples |
-| Sticky header can cover anchored content at different sizes | Fixed 136/280px offsets do not follow the responsive header or localized wrapping. Measure the actual shell with a cleaned-up ResizeObserver and use its height for anchor offsets, including the Teacher update composer. | `scroll/`, `zoom/`, Teacher anchor capture |
-| Inconsistent interactions | Adjust the existing component rules in place to 180ms color/border/shadow transitions. Keep visible focus, restrained pressed feedback and hover affordances on actual task links. Remove the notice-card lift/border hover that implies the whole informational card is clickable. Existing reduced-motion rules suppress motion. | Hover/focus captures and computed interactive checks |
+| Sticky header can cover anchored content at different sizes | Fixed 136/280px offsets do not follow the responsive header or localized wrapping. Measure the actual shell with a cleaned-up ResizeObserver and use its height for anchor offsets, including the Teacher update composer. | `scroll/`, `zoom/`; Teacher anchor probe pending |
+| Mobile account-mode emblem stretches across the card | Final contact-sheet review exposed an unconstrained grid child in the one-column mobile layout. Bound the decorative emblem to 40px with start alignment; preserve the account-mode explanation. | Earlier Principal Users capture shows the defect; post-fix reshoot pending |
+| Inconsistent interactions | Adjust the existing component rules in place to 180ms color/border/shadow transitions. Keep visible focus, restrained pressed feedback and hover affordances on actual task links. Remove the notice-card lift/border hover that implies the whole informational card is clickable. Existing reduced-motion rules suppress motion. | Sign-in focus captures; portal hover/reduced-motion probe pending |
 
 The cropped notices screenshot does not establish its original browser viewport or zoom. Fresh measured notice/card states did not reproduce horizontal clipping before the environment interruption. No `overflow-x: hidden` concealment was added. Actual scroll captures retain sticky positioning; full-page stitched captures temporarily unstick the shell solely for screenshot stitching and are labelled accordingly.
 
@@ -33,7 +34,7 @@ Executed passing checks so far:
 - RFID v2 and durable gateway integration, including process restart/replay, local synchronization and role visibility.
 - Real local Hindi/Marathi/Korean translation and English/Hindi/Marathi/Korean WAV generation. Hindi/Marathi/Korean browser audio advanced unmuted, and Pause/Resume/Stop passed. Parent/Teacher speech controls also passed position stability, keyboard and navigation-stop checks. These do not certify physical speaker output or fluent pronunciation.
 - Twelve actual 200% browser zoom views: four per role. Measured CSS viewport 713px, outer width 1442px and device ratio 2.5. The external owned browser profile was cleaned.
-- Final current-source isolated Next 16.4.1 build: expected routes, TypeScript, generated `.env.production` only, private sentinel scan, unchanged inputs and temporary-snapshot cleanup. Fingerprint `a6c30f377f549d9f09d73263a99e60865e4b6a6b86200881eefc079f5f41d07d`, 190 approved files. Only the two allowlisted Google Fonts hosts were observed through the limited proxy; this is not an OS network sandbox.
+- Final current-source isolated Next 16.4.1 build: expected routes, TypeScript, generated `.env.production` only, private sentinel scan, unchanged inputs and temporary-snapshot cleanup. Fingerprint `9d94f7ff6c14fb251c3bbecfe65d4f14193e0bec0076d8b6561afc6da2bab8c6`, 190 approved files. Only the two allowlisted Google Fonts hosts were observed through the limited proxy; this is not an OS network sandbox.
 
 Failures are retained, not converted into passing runs:
 
@@ -49,7 +50,7 @@ The pre-interruption protected-school check passed all 20 dataset hashes. Source
 
 The dated synthetic rehearsal remains separate from historical October messages; neither was rewritten for presentation. The Grade 6 question remains pending exact account/environment evidence. Existing unrelated untracked `CLAUDE.md` and `review/` remain preserved.
 
-The authorized WSL recovery restored WslService and ordinary distribution commands. Docker Desktop remained stuck at Starting the Docker Engine after subsequent restarts, and Auth remained unavailable. No Windows reboot, Docker factory reset, distribution unregister, database reset, reseed, resource recreation or dependency upgrade was attempted. The last owned QA web server was stopped for isolated compilation. This report does not certify the complete AUD-60 acceptance matrix. Physical RFID/Pi, public deployment, real notification delivery, fluent-language review and assistive-technology acceptance remain outside this verification.
+The authorized WSL recovery restored WslService and ordinary distribution commands. Docker diagnostics subsequently reported a missing Windows helper-service pipe; starting com.docker.service succeeded without changing its startup type. A further normal Desktop restart still timed out. Docker Desktop remained stuck at Starting the Docker Engine, and Auth remained unavailable. No Windows reboot, Docker factory reset, distribution unregister, database reset, reseed, resource recreation or dependency upgrade was attempted. The last owned QA web server was stopped for isolated compilation. This report does not certify the complete AUD-60 acceptance matrix. Physical RFID/Pi, public deployment, real notification delivery, fluent-language review and assistive-technology acceptance remain outside this verification.
 
 
 ## Delivered checkpoint and remaining work
@@ -60,7 +61,7 @@ The interrupted capture measured 179 of 184 English route/width combinations and
 
 Fresh real sticky captures cover top/middle/bottom of seven long role/page combinations, 21 positions. Twelve representative real browser-zoom captures are retained. The separate sign-in check passed English/Hindi/Marathi at 320/390/768/1440px: text fits, keyboard focus is visible, targets are at least 44px, entered email survives language changes and preference survives reload. Its first attempt correctly caught a genuine 320px overflow caused by the visible Language caption plus globe/select beside the brand. The mobile caption is now screen-reader-only, and the full native language name remains visible without reducing font size. The corrected check passed.
 
-The additional authenticated interaction probe remains failed at sign-in while Auth was unavailable. Consequently its portal-selector canvas measurements, computed hover/reduced-motion checks and Teacher anchor measurements are **NOT completed evidence**. Source/CSS review and earlier passing keyboard/speech suites do not replace that probe. New offline-operation status screenshots, the guarded account-mode UI refresh and a new live AI/workbook acceptance run were not completed in this phase. Earlier functional checks and existing AUD-58/59 evidence remain historical, not fresh substitutes.
+The additional authenticated interaction probe remains failed at sign-in while Auth was unavailable. Consequently its portal-selector canvas measurements, computed hover/reduced-motion checks and Teacher anchor measurements are **NOT completed evidence**. Source/CSS review and earlier passing keyboard/speech suites do not replace that probe. The Principal Users images also predate the final bounded-emblem CSS correction and need a post-fix reshoot. New offline-operation status screenshots, the guarded account-mode UI refresh and a new live AI/workbook acceptance run were not completed in this phase. Earlier functional checks and existing AUD-58/59 evidence remain historical, not fresh substitutes.
 
 Resume safely after Docker is healthy:
 
@@ -69,7 +70,7 @@ Resume safely after Docker is healthy:
 3. Complete targeted offline-status/account-mode and AI/workbook checks as appropriate, retain scoped fixture cleanup, regenerate the pack from one final manifest, then review full-size images and contact sheets.
 4. Repeat the final current-source isolated build only if source changes; review/publish the completed milestone to main through the standing workflow. This checkpoint belongs on a clearly labelled feature branch while acceptance remains incomplete.
 
-No physical RFID, Raspberry Pi, public hosting, real SMS/call delivery, human pronunciation quality or production release was certified. A Windows restart may be the next environment-recovery step after saving other work; it was not authorized or performed by this task.
+No physical RFID, Raspberry Pi, public hosting, real SMS/call delivery, human pronunciation quality or production release was certified. The restart/WSL recovery guidance was checked against [Docker troubleshooting documentation](https://docs.docker.com/desktop/troubleshoot-and-support/troubleshoot/) and [Docker WSL guidance](https://docs.docker.com/desktop/features/wsl). A Windows restart may be the next environment-recovery step after saving other work; it was not authorized or performed by this task.
 
 ## Executed command ledger
 
@@ -104,7 +105,10 @@ Times are UTC on 12 November 2026. Add 05:30 for IST. Commands ran in isolated Q
 | `node --env-file=.env.test.local .local/ui60/signin.mjs` | 07:16:26.838 | 1 | FAIL |
 | `node --env-file=.env.test.local .local/ui60/signin.mjs` | 07:17:09.661 | 0 | PASS |
 | `npm run build:isolated -- --working-tree` | 07:19:09.080 | 0 | PASS |
+| `npm run build:isolated -- --working-tree` | 10:40:22.061 | 0 | PASS |
 
 ## Git checkpoint
 
-Base main revision: `67f9153d48f8c0cedc087ceef553c4ab1b611600`. The standing workflow permits unfinished work only as a clearly labelled feature checkpoint. Planned branch: `checkpoint/aud60-ui-refinement`; main remains unchanged while the Docker-dependent acceptance gaps are open. Only the six UI/test source files and this report belong in the checkpoint. Screenshots, ZIPs, local logs, environment files, service-recovery helpers and unrelated artifacts remain ignored or unstaged. No force-push or deployment is involved.
+Base main revision: `67f9153d48f8c0cedc087ceef553c4ab1b611600`. The standing workflow permits unfinished work only as a clearly labelled feature checkpoint. Published branch: `checkpoint/aud60-ui-refinement`; main remains unchanged while the Docker-dependent acceptance gaps are open. Only the six UI/test source files and this report belong in the checkpoint. Screenshots, ZIPs, local logs, environment files, service-recovery helpers and unrelated artifacts remain ignored or unstaged. No force-push or deployment is involved.
+
+Published UI checkpoint: [`ebdb9c5186ab756606fe400b8d81df3e6b12ca2d`](https://github.com/OmiVibes/Schovera/commit/ebdb9c5186ab756606fe400b8d81df3e6b12ca2d). Git push, remote branch SHA and the connected GitHub commit API agreed. Publication is a backup/checkpoint, not a passing full-acceptance release.

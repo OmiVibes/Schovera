@@ -230,6 +230,7 @@ body { overflow-x: visible; font-size: var(--text-body); }
 .app .account-table-scroll { border: 1px solid var(--line); border-radius: 12px; }
 .app .account-table-scroll th { background: var(--brand-wash); }
 .app .account-mode-empty { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 14px; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--brand-wash); }
+.app .account-mode-empty > .section-icon { display: grid; place-items: center; justify-self: start; width: 40px; height: 40px; border-radius: 12px; }
 .app .account-mode-empty h3 { margin: 0 0 8px; }
 .app .account-mode-empty p { margin: 0; max-width: 70ch; }
 /* Attendance and profiles preserve the underlying meanings, with clearer visual hierarchy. */
