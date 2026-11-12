@@ -233,6 +233,7 @@ export function SchoveraApp() {
   const db = useMemo(() => createClient(), []);
   const authLoadVersionRef = useRef(0);
   const profileRef = useRef<Profile | null>(null);
+  const shellRef = useRef<HTMLElement | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null),
     [busy, setBusy] = useState(true),
     [error, setError] = useState(''),
@@ -241,6 +242,16 @@ export function SchoveraApp() {
     [showPassword, setShowPassword] = useState(false),
     [signingIn, setSigningIn] = useState(false),
     [canRetryProfileLoad, setCanRetryProfileLoad] = useState(false);
+  useEffect(() => {
+    const shell = shellRef.current;
+    const app = shell?.parentElement;
+    if (!shell || !app) return;
+    const measure = () => app.style.setProperty('--portal-shell-height', `${shell.getBoundingClientRect().height}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(shell);
+    return () => { observer.disconnect(); app.style.removeProperty('--portal-shell-height'); };
+  }, [profile?.id]);
   const load = async () => {
     const version = ++authLoadVersionRef.current;
     // Keep an already-rendered workspace on screen during auth resyncs (such
@@ -433,7 +444,7 @@ export function SchoveraApp() {
   const currentPage = roleNavigation[profile.role].find((item) => item.slug === routeSlug) || roleNavigation[profile.role][0];
   return (
     <main className={`app role-${profile.role}`}>
-      <header className="application-shell">
+      <header className="application-shell" ref={shellRef}>
         <div className="role-header">
           <div className="role-school-lockup">
             <div className="logo small" aria-hidden="true">S</div>
@@ -1763,7 +1774,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
         <p className="eyebrow">{t('parent.yourChild')}</p>
           <h1 id="parent-child-heading">{child?.full_name || t('parent.childFallback')}</h1>
           <p className="parent-class">{className}</p>
-          <p className="child-status">{t('parent.latestAttendance')}: {attendanceLoading ? t('parent.loadingAttendance') : attendance[0] ? <b className={`status ${attendance[0].status}`}>{localizedStatus(attendance[0].status, t)}</b> : t('parent.notMarked')}</p>
+          {page !== 'attendance' && <p className="child-status">{t('parent.latestAttendance')}: {attendanceLoading ? t('parent.loadingAttendance') : attendance[0] ? <><b className={`status ${attendance[0].status}`}>{localizedStatus(attendance[0].status, t)}</b> <time dateTime={attendance[0].attendance_date}>{displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric', year: 'numeric' }, language)}</time></> : t('parent.notMarked')}</p>}
         </div>
         {children.length > 1 && (
           <label className="child-switcher">
@@ -1920,21 +1931,20 @@ function AttendanceSummary({
     );
   return (
     <div className="card attendance-card">
-      <p className="eyebrow">{t('parent.attendance')}</p>
-      <h2>{t('parent.attendanceHistory')}</h2>
+      <h2>{t('parent.latestAttendance')}</h2>
       <div className={`attendance-latest ${attendance[0].status}`}>
         <span className="attendance-latest-icon" aria-hidden="true"><Icon name={attendance[0].status === 'present' ? 'check' : attendance[0].status === 'absent' ? 'important' : 'attendance'} /></span>
-        <div><span>{t('parent.latestAttendance')}</span><b>{localizedStatus(attendance[0].status, t)}</b><time dateTime={attendance[0].attendance_date}>{displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric' }, language)}</time></div>
+        <div><b>{localizedStatus(attendance[0].status, t)}</b><time dateTime={attendance[0].attendance_date}>{displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric', year: 'numeric' }, language)}</time></div>
       </div>
       <h3 className="attendance-recent-heading">{t('parent.attendanceRecent')}</h3>
       <div className="attendance-counts">
-        <span>
+        <span className="present">
           <b>{counts.present}</b>{t('attendance.present')}
         </span>
-        <span>
+        <span className="absent">
           <b>{counts.absent}</b>{t('attendance.absent')}
         </span>
-        <span>
+        <span className="late">
           <b>{counts.late}</b>{t('attendance.late')}
         </span>
       </div>

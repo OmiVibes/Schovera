@@ -101,10 +101,17 @@ describe('Parent speech lifecycle scope', () => {
     listen?.focus();
     expect(document.activeElement).toBe(listen);
     expect(played).toEqual([]);
+    expect(host.querySelector('[role="status"]')?.textContent).toBe('');
+    expect(host.querySelector('.speech-help')?.hasAttribute('open')).toBe(false);
+    expect(host.querySelector('.speech-help summary')?.getAttribute('aria-label')).toBe(translate('en', 'speech.voiceHint'));
+    expect(host.querySelector('.parent-speech-stop')?.hasAttribute('disabled')).toBe(true);
     await act(async () => { listen?.click(); });
     expect(played).toEqual(['Synthetic original notice']);
     expect(host.textContent).toContain(translate('en', 'speech.playing'));
+    expect(host.querySelector('.parent-speech-stop')?.hasAttribute('disabled')).toBe(false);
     await act(async () => { controller.stop(); });
+    expect(host.querySelector('.parent-speech-stop')?.hasAttribute('disabled')).toBe(true);
+    expect(host.querySelector('[role="status"]')?.textContent).toBe('');
 
     const displayLanguage = host.querySelector('.language-selector select') as HTMLSelectElement;
     for (const language of ['hi', 'mr'] as const) {

@@ -84,6 +84,7 @@ export function LanguageSelector({ showLabel = false }: { showLabel?: boolean })
   const { language, setLanguage, t } = useI18n();
   return (
     <label className="language-selector">
+      <svg className="language-globe" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9" /><ellipse cx="12" cy="12" rx="4" ry="9" /><path d="M3 12h18M5 6.5h14M5 17.5h14" /></svg>
       <span className={showLabel ? undefined : 'sr-only'}>{t(showLabel ? 'language.shortLabel' : 'language.label')}</span>
       <select
         aria-label={t('language.label')}

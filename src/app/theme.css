@@ -233,7 +233,7 @@ input, textarea, select { accent-color: var(--brand); }
   .teacher-mode-home .teacher-home-actions { grid-template-columns: minmax(0,1fr); }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .app .teacher-home-actions a, .app .workspace-shortcuts a, .app .app-section-nav a { transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease; }
+  .app .teacher-home-actions a, .app .workspace-shortcuts a, .app .app-section-nav a { transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
   .app .teacher-home-actions a:hover, .app .workspace-shortcuts a:hover { box-shadow: 0 3px 12px rgb(124 14 68 / .06); }
 }
 
@@ -339,12 +339,16 @@ input, textarea, select { accent-color: var(--brand); }
 .attendance-empty { display: grid; justify-items: center; text-align: center; padding: 40px 20px; background: #faf5f7; border: 1px dashed #dbc2ce; border-radius: 16px; gap: 12px; }
 .attendance-empty > span { font-size: 2.4rem; color: #aa5e7a; }
 .attendance-empty p { max-width: 440px; margin: 0; color: #6b6068; }
-.app #parent-attendance .attendance-card { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: center; gap: 10px 24px; }
-.app #parent-attendance .attendance-card > .eyebrow { grid-column: 1; margin: 0; }
-.app #parent-attendance .attendance-card > h2 { grid-column: 1; margin: 0; }
-.app #parent-attendance .attendance-latest { grid-column: 1; margin: 6px 0 0; }
-.app #parent-attendance .attendance-recent-heading { grid-column: 2; grid-row: 1 / 3; align-self: end; margin: 0; }
-.app #parent-attendance .attendance-counts { grid-column: 2; grid-row: 3; margin: 0; }
+.app #parent-attendance .attendance-card { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; gap: 16px 24px; }
+.app #parent-attendance .attendance-card > h2 { grid-column: 1; grid-row: 1; margin: 0; }
+.app #parent-attendance .attendance-latest { grid-column: 1; grid-row: 2; margin: 0; height: 100%; }
+.app #parent-attendance .attendance-recent-heading { grid-column: 2; grid-row: 1; align-self: center; margin: 0; }
+.app #parent-attendance .attendance-counts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-column: 2; grid-row: 2; margin: 0; height: 100%; }
+.app #parent-attendance .attendance-counts span { min-width: 0; padding: 16px; font-size: var(--text-meta); }
+.app #parent-attendance .attendance-counts b { font-size: 1.5rem; }
+.app #parent-attendance .attendance-counts .present b { color: var(--status-present); }
+.app #parent-attendance .attendance-counts .absent b { color: var(--status-absent); }
+.app #parent-attendance .attendance-counts .late b { color: var(--status-late); }
 @media (max-width: 1100px) {
   .attendance-chart-grid { grid-template-columns: minmax(0,1.4fr) minmax(240px,1fr); }
   .attendance-metric { padding: 14px; gap: 8px; }
@@ -367,6 +371,6 @@ input, textarea, select { accent-color: var(--brand); }
   .app .attendance-calendar-day { min-height: 42px; border-radius: 6px; padding: 3px; }
   .attendance-calendar-weekdays { font-size: .63rem; }
   .app #parent-attendance .attendance-card { grid-template-columns: minmax(0,1fr); }
-  .app #parent-attendance .attendance-recent-heading, .app #parent-attendance .attendance-counts { grid-column: 1; grid-row: auto; }
+  .app #parent-attendance .attendance-card > h2, .app #parent-attendance .attendance-latest, .app #parent-attendance .attendance-recent-heading, .app #parent-attendance .attendance-counts { grid-column: 1; grid-row: auto; }
   .app #parent-attendance .attendance-recent-heading { margin-top: 12px; }
 }

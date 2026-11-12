@@ -77,8 +77,9 @@ export function ParentSpeechControls({
       )}
       <button type="button" className="parent-speech-stop" disabled={!isActive || state.phase === 'unavailable' || state.phase === 'error'} onClick={() => controller.stop()}>{t('speech.stop')}</button>
       <span className="parent-speech-status" role="status" aria-live="polite">
-        {t(koreanMismatch ? 'speech.koreanTextRequired' : needsChoice ? 'speech.chooseLanguage' : isActive && state.messageKey ? state.messageKey : 'speech.voiceHint')}
+        {koreanMismatch ? t('speech.koreanTextRequired') : needsChoice ? t('speech.chooseLanguage') : isActive && state.messageKey ? t(state.messageKey) : null}
       </span>
+      <details className="speech-help"><summary aria-label={t('speech.voiceHint')}>ⓘ</summary><p>{t('speech.voiceHint')}</p></details>
     </div>
   );
 }
