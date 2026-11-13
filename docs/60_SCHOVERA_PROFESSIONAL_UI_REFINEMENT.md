@@ -1,114 +1,149 @@
 # AUD-60 - Professional UI refinement
 
-12 November 2026. **PARTIAL CHECKPOINT - UI changes implemented; final acceptance blocked by the local Docker engine.** This is a local UI milestone, not production or hardware acceptance. The owner clarified that the interface must remain English/Hindi/Marathi. Korean remains available through the existing message translation and speech features only.
+Completed 13 November 2026, following execution on 12-13 November. **The local UI milestone is verified in the executed synthetic states.** This supersedes the earlier incomplete checkpoint verdict; all original failed attempts remain recorded below and in Git history. It is not production, hardware, language-quality or full accessibility certification.
 
-## Changes and visual evidence
+The owner's clarification is preserved: the interface supports English, Hindi and Marathi. Korean remains confined to existing message translation and speech. No full Korean interface, new dependency or new stylesheet layer was added.
 
-The four owner screenshots were extracted from `Schovera_Parent_4_Screenshots_2026-11-12.zip` into `UI_REVIEW_SCREENSHOTS/2026-11-12-parent-feedback/` and inspected individually. The earlier refined and polish archives were accessible; their Parent attendance, Teacher overview and Principal overview/contact-sheet evidence was reviewed alongside current browser captures. Documents inside archives were treated as evidence, not additional instructions.
+## Evidence reviewed and changes implemented
 
-| Problem | Root cause and implementation | Fresh evidence in the review folder |
-|---|---|---|
-| Attendance card has a large blank area and misaligned statistics | The summary's heading, latest record and counts occupied incompatible explicit grid rows. Use two aligned heading/content rows, responsive stacking and equal statistic columns. Remove the duplicate attendance status from the child identity on this page and the duplicate history heading. Preserve charts, filters and all saved records. | `parent/1440px/attendance.png`, `parent/390px/attendance.png` |
-| Absent is green and Late is red | Legacy positional color rules assumed the Teacher register's different counter order. Give Parent summary counters explicit Present/Absent/Late classes and semantic color rules. | Attendance captures above |
-| Latest status has no recorded date; identity has an unused third column | Include the actual `attendance_date`, including its year. Reserve the third identity column only when a child switcher exists. On Attendance, the single latest-status/date summary sits below the compact identity. No date or record is fabricated. | Parent Home, Updates and Attendance captures |
-| Audio guidance repeats under every message and dominates card footers | Replace the idle live-region helper with an optional, keyboard-accessible native help disclosure. Preserve reserved status space so playback messages do not shift the buttons. Required language choices and playback/error messages still appear in the live region. Preserve all Stop and playback state logic. | Parent Home/Updates/Notices; expanded-help capture pending |
-| Plain language selector | Reuse the existing native select and language preference logic. Add a decorative globe, consistent plum borders/surfaces, readable padding, hover feedback and focus rings. Adjust width/padding so the icon does not consume the selected label's space. | All portal headers; `sign-in/` and selector focus examples |
-| Sticky header can cover anchored content at different sizes | Fixed 136/280px offsets do not follow the responsive header or localized wrapping. Measure the actual shell with a cleaned-up ResizeObserver and use its height for anchor offsets, including the Teacher update composer. | `scroll/`, `zoom/`; Teacher anchor probe pending |
-| Mobile account-mode emblem stretches across the card | Final contact-sheet review exposed an unconstrained grid child in the one-column mobile layout. Bound the decorative emblem to 40px with start alignment; preserve the account-mode explanation. | Earlier Principal Users capture shows the defect; post-fix reshoot pending |
-| Inconsistent interactions | Adjust the existing component rules in place to 180ms color/border/shadow transitions. Keep visible focus, restrained pressed feedback and hover affordances on actual task links. Remove the notice-card lift/border hover that implies the whole informational card is clickable. Existing reduced-motion rules suppress motion. | Sign-in focus captures; portal hover/reduced-motion probe pending |
+The four owner PNGs were extracted from the supplied Parent feedback ZIP and inspected individually. The existing refined/polish archives were accessible and reviewed through their Parent attendance, Teacher overview, Principal overview/contact-sheet and selected full-page images. Archive documents were treated as evidence rather than additional instructions. Final contact sheets and representative full-size desktop/mobile, translated, scrolling, account, offline and AI states were reviewed after capture.
 
-The cropped notices screenshot does not establish its original browser viewport or zoom. Fresh measured notice/card states did not reproduce horizontal clipping before the environment interruption. No `overflow-x: hidden` concealment was added. Actual scroll captures retain sticky positioning; full-page stitched captures temporarily unstick the shell solely for screenshot stitching and are labelled accordingly.
+| Original issue | Root cause and final change | Files | Actual browser evidence, relative to the review folder |
+|---|---|---|---|
+| Attendance whitespace, repeated status/headings and unbalanced statistics | Explicit grid rows placed the latest record and counters at different heights. Align heading/content rows, stack on mobile, use equal counters and remove duplicate status on the Attendance identity. Keep all charts, dates, history and filters. | `theme.css`, `refinement.css`, `schovera-app.tsx` | `parent/1440px/attendance.png`, `parent/390px/attendance.png` |
+| Absent displayed green and Late red, including child profiles and Principal overview | Positional counter rules assumed different counter orders. Replace them with explicit status classes across profile/summary/Principal views, retain existing Teacher status classes, and check computed colors in the verifier. Present is green, Absent rose/red and Late amber, always with text labels. | `globals.css`, `refinement.css`, `schovera-app.tsx`, verifier | Parent profile/attendance; Teacher/Principal attendance; semantic counter assertions |
+| Child summary has an unused third column and no dated latest record | Reserve a third column only when a child switcher exists. Show actual saved attendance date/year in the latest summary and Home identity, without inventing a current record. | `refinement.css`, `schovera-app.tsx` | Parent Home/Attendance; dated saved record remains 6 November 2026 |
+| Repeated long audio troubleshooting text and oversized footers | Move idle guidance into optional native help disclosures. Keep required language/error/playback messages in the live region and reserve status space so buttons remain stable. Controller/translation/review logic is unchanged. | speech component/test, `refinement.css` | Home/Updates/Notices, expanded audio help, real playback/geometry tests |
+| Plain or clipped language control | Reuse native selection/persistence with a decorative globe and chevron, plum border/surface, readable type and focus states. A platform arrow consumed extra text space in narrow Principal headers; explicit native appearance/padding resolves it. At 320px the visible caption becomes screen-reader-only while the selected language stays visible. | i18n provider, `refinement.css` | `sign-in/`, all role headers, keyboard-focus examples; canvas text-fit and persistence checks |
+| Sticky header obscures anchor destinations | Old 136/280px offsets did not follow responsive or localized header height. A cleaned-up ResizeObserver supplies the actual shell height to scroll margins, including the Teacher composer. | app component, `refinement.css` | `scroll/`, `zoom/`, `interactive/teacher-update-anchor.png` |
+| Account-mode emblem stretches across the mobile card | A grid child had no fixed dimensions when the layout stacked. Bound the decorative emblem to 40px and align it to the start; retain the clear account-mode explanation. | `refinement.css` | `principal/390px/users.png`; eight-width 40px geometry assertion and guarded forms |
+| Unprofessional hover feedback and inconsistent motion | Correct existing rules to 180ms color/border/shadow transitions, retain focus/pressed/disabled states, and remove the informational notice-card lift/border hover. Important notice borders now remain unchanged on hover. Existing reduced-motion rules remain effective. | `globals.css`, `theme.css`, `refinement.css`, verifier | Hover/focus examples, computed transition/reduced-motion checks and required Important-notice hover assertions |
 
-Files changed: `src/app/refinement.css`, `src/app/theme.css`, `src/lib/i18n-provider.tsx`, `src/components/schovera-app.tsx`, `src/components/parent-speech-controls.tsx`, its existing component test, and this report. No new stylesheet layer, dependency, translation dictionary, schema, migration, account, password, attendance calculation, communication aggregate, offline queue or authorization rule was introduced.
+The cropped notices feedback did not establish its viewport or zoom, and horizontal clipping was not reproduced in the measured fresh notice states. No page-level `overflow-x: hidden` concealment was added. Sticky headers legitimately remain visible while preceding content scrolls behind them; anchor destinations now account for their real height.
 
-## Verification and failures
+## Executed acceptance
 
-All checks use the existing isolated QA checkout and its approved local environment. The developer `.env.local` was not opened, copied, hashed or modified. Root builds use only `npm run build:isolated -- --working-tree`. Private execution logs and probes are retained at `.local/schovera-manual-demo/ui60-20261112/`; no credentials belong in this report or archive.
+| Area | Result and limit |
+|---|---|
+| All portals | 23 routes at 320/360/390/414/768/1024/1440/1920px: 184 English route/width checks, no page overflow or runtime errors. Solid-background HTML contrast checks found no violations in their measured subset; this is not exhaustive contrast certification. |
+| Interface languages | Fresh Hindi/Marathi samples for all 23 routes at 1440/390px, plus English: 276 complete planned localized layouts. The earlier 96-case staff suite also passed. Authored names and messages remain original content. |
+| Sign-in/header controls | Three interface languages at four sign-in widths; selected text fits, focus is visible, targets meet 44px, typed email survives language changes and preference survives reload. Portal label fit, menu/Escape focus behavior and localized layouts pass. |
+| Real scrolling/zoom | 24 actual top/middle/bottom sticky views across eight long role/page combinations. Twelve selected pages passed actual 200% Chrome zoom (713 CSS px versus outer 1442, device ratio 2.5). Other routes at actual zoom are not separately certified. |
+| Interactions | 180ms navigation transitions, reduced-motion suppression, hover/focus states, outer/inner disclosures, stable speech buttons, disabled/enabled Stop and Teacher anchor behavior pass. Native help is optional; translation-review and acknowledgement states stay visible. |
+| Unit/source checks | 329 passing unit/component tests in 38 files, TypeScript and lint. Existing speech assertions remain; added assertions cover idle status/help and Stop state. The layout verifier now checks semantic counter colors and stable Important-notice hover. |
+| Accounts | All 18 guarded account-management scenario groups pass with scoped cleanup. An additional 18 account-role/interface-language/width capture states pass without submitting accounts. Fixed presentation accounts/passwords are unchanged. |
+| Connected workflows | Attendance, homework, school notices, Teacher/Parent/Principal journeys, acknowledgement/reconnect, translation approval/original preservation and authorization checks pass. AUD-01 exact counts pass through 2,005 rows and the 2,007-row correction dataset. |
+| Offline/RFID | RFID v2 and durable gateway integration pass. Fresh school-operation acceptance passes real SQLite capture, server restart, same-Teacher replay, lost responses, conflicts held for review, revocation/role/Origin denial and three-portal views. It remains a local synthetic outage simulation, not a separate hosted replica or physical network test. |
+| AI/workbook | Actual local Ollama/gemma3:1b generation returned a 3,414-character first draft; syllabus/exam/worksheet/lesson-plan form submissions pass with editable output. Workbook edit/export/reopen and invalid/cancelled upload preservation pass at 390px. Clipboard success/unavailable branches use a stub; no OS clipboard certification is claimed. Educational correctness still requires Teacher review. |
+| Speech/translation | Fresh local Hindi/Marathi/Korean automatic translation preserves tested facts and originals. Real en/hi/mr/ko WAVs and hi/mr/ko browser media/Pause/Resume/Stop pass. Ten native samples pass original text, matched locale, volume and start/end callbacks. Audibility, naturalness and fluent pronunciation remain human acceptance tasks. |
+| Dated rehearsal | Six read-only captures use the retained synthetic rehearsal dated 12 November. Its data/journal and historical October messages were not rewritten; the competition date remains unconfirmed. |
 
-Executed passing checks so far:
+## Preservation, environment and build
 
-- 329 unit/component tests in 38 files; TypeScript and lint. The existing speech component test additionally verifies an empty idle live region, accessible collapsed help, and disabled/enabled/disabled Stop behavior across play/stop. Existing assertions remain intact.
-- Attendance, assignments, school announcements, cross-role navigation, accessibility/i18n and 96 staff language/width cases.
-- AUD-01 exact communication totals through 2,005 updates and the 2,007-row correction dataset; acknowledgement, translation and school isolation checks.
-- Connected Teacher/Parent/Principal journeys, reconnect, translation approval, original preservation and acknowledgement persistence.
-- RFID v2 and durable gateway integration, including process restart/replay, local synchronization and role visibility.
-- Real local Hindi/Marathi/Korean translation and English/Hindi/Marathi/Korean WAV generation. Hindi/Marathi/Korean browser audio advanced unmuted, and Pause/Resume/Stop passed. Parent/Teacher speech controls also passed position stability, keyboard and navigation-stop checks. These do not certify physical speaker output or fluent pronunciation.
-- Twelve actual 200% browser zoom views: four per role. Measured CSS viewport 713px, outer width 1442px and device ratio 2.5. The external owned browser profile was cleaned.
-- Final current-source isolated Next 16.4.1 build: expected routes, TypeScript, generated `.env.production` only, private sentinel scan, unchanged inputs and temporary-snapshot cleanup. Fingerprint `9d94f7ff6c14fb251c3bbecfe65d4f14193e0bec0076d8b6561afc6da2bab8c6`, 190 approved files. Only the two allowlisted Google Fonts hosts were observed through the limited proxy; this is not an OS network sandbox.
+All browser/database execution used the existing isolated QA checkout, its approved local files, loopback Supabase and owned web ports. The developer `.env.local` was not opened, copied, hashed or modified. No reset, seed, migration, dependency upgrade, existing account/password change, hosted write, public tunnel, paid provider activation or deployment occurred. Test-created synthetic accounts/records were scoped and cleaned.
 
-Failures are retained, not converted into passing runs:
+All 20 protected-school dataset hashes still match. The normal sample-school rows match the previously authorized AUD-58 cleanup exactly, with no additional business-record changes; the school-operation fixture queue is empty. Source integrity verifies 78 protected implementation/configuration files unchanged from base main, 183 executable QA files matching, 38 migrations and HTTP 200 Auth. Next/eslint-config-next 16.4.1, Zod 4.6.6 and sharp 0.35.5 remain installed in QA; manifests/lockfile are unchanged.
 
-1. A new capture probe incorrectly required the shell to start at y=0 even at the page top, where the existing sample-records ribbon precedes it. The probe was corrected to distinguish top-of-page from genuinely scrolled sticky positioning.
-2. One early capture timed out waiting for navigation. Another stopped with Chrome's `Page.captureScreenshot` failure after 302 successful images. Their partial measurements are retained; an interrupted run is not a completed matrix.
-3. The first isolated build failed during offline installation with a Node memory-allocation error. A development worker also reported an out-of-memory failure during the same heavy-test period. Running the build alone with the owned dev server stopped subsequently passed, including the final CSS revision.
-4. Later interaction probes stalled at Signing in. Independent Auth health requests timed out and Docker returned engine errors; these were environment failures, not evidence that the fixed account passwords had changed. Docker's normal restart timed out. The owner explicitly authorized restarting WSL. A non-elevated attempt was denied; the elevated restart encountered a stuck stop and one failed service start. A subsequent controlled start returned WSL to Running. No reset, reseed or volume deletion was used.
-5. Preliminary probe copying/PowerShell quoting errors changed no application files. Corrected invocations retain the same product assertions.
+The final current-source isolated build passed expected application/API routes, TypeScript, generated `.env.production` only, private sentinels absent, unchanged inputs and exact current-snapshot cleanup. Source fingerprint: `a8b774b121155d75b487e3538ccff9867d71bf49893a015e7b21ea5c100100d2` (190 approved files). Only allowlisted Google Fonts hosts were observed through the limited build proxy; it is not an OS network sandbox. No raw developer build was used.
 
-## Preservation and remaining acceptance
+Docker/Auth became unavailable during the first heavy-test period. WSL recovery and normal Docker restart attempts did not initially restore the engine; the owner manually restarted Windows. Subsequent startup returned Docker/Auth to health, protected data matched, and the formerly blocked checks completed. No Windows reboot was initiated by the agent. Services were switched between simulator/account modes only for the required checks; the final normal local server uses the guarded simulator launcher.
 
-The pre-interruption protected-school check passed all 20 dataset hashes. Source integrity compared 183 executable QA inputs with no mismatch. Dependency versions remain Next/eslint-config-next 16.4.1, Zod 4.6.6 and sharp 0.35.5. Existing dependency findings are not re-audited or resolved by this UI task.
+## Failures and interrupted attempts retained
 
-The dated synthetic rehearsal remains separate from historical October messages; neither was rewritten for presentation. The Grade 6 question remains pending exact account/environment evidence. Existing unrelated untracked `CLAUDE.md` and `review/` remain preserved.
+1. The first scroll probe incorrectly expected y=0 at the page top despite the existing sample-records ribbon. It now distinguishes initial and genuinely scrolled sticky positions; sticky assertions remain.
+2. An early capture timed out waiting for navigation; its precise timing cause was not isolated. A later capture stopped with Chrome's screenshot-protocol failure after 302 images. Neither is represented as a completed matrix. A fresh full final capture now passes all 276 layouts.
+3. The first isolated build failed with a Node memory-allocation error; a dev worker also reported out-of-memory during the same period. Standalone frozen-source builds subsequently passed. A later build was interrupted by a session/system restart without a final result; its completion is not claimed.
+4. Auth sign-in probes stalled while independent health requests timed out and Docker returned engine errors. Docker/WSL attempts included a normal-restart timeout, denied non-elevated service access, a stuck stop and a failed service start before recovery. These observations do not establish a single certified OS root cause or a credential defect.
+5. The first narrow sign-in check correctly found 320px overflow. The caption/padding fix passed its unchanged geometry assertions. Visual review then caught native-arrow label clipping and the shared profile counter-color issue; both were corrected and the fresh matrix rerun.
+6. The old layout probe's broad summary selector matched new nested speech-help disclosures. Targeting the outer direct-child summary preserves the original disclosure/width assertions; the original failed run remains. A preliminary optional hover selector used the wrong class; the final probe requires the actual Important notice and checks its border/transform rather than silently skipping it.
+7. The additional account screenshot probe timed out with exact getByLabel(Portal); the exact accessible combobox role/name locator passed all 18 states. The existing 18-group account suite and application code were not changed for that repair.
+8. Preliminary shell/copy/encoding/metadata errors changed no business logic or protected data. Initial runner revision-label metadata was corrected with the original ledger retained. Automatic approval review blocked removal of the exact interrupted temporary build folder `schovera-build-UFBX2f`; it was left intact. Other historical temporary directories were preserved. The successful final build's own snapshot was cleaned.
 
-The authorized WSL recovery restored WslService and ordinary distribution commands. Docker diagnostics subsequently reported a missing Windows helper-service pipe; starting com.docker.service succeeded without changing its startup type. A further normal Desktop restart still timed out. Docker Desktop remained stuck at Starting the Docker Engine, and Auth remained unavailable. No Windows reboot, Docker factory reset, distribution unregister, database reset, reseed, resource recreation or dependency upgrade was attempted. The last owned QA web server was stopped for isolated compilation. This report does not certify the complete AUD-60 acceptance matrix. Physical RFID/Pi, public deployment, real notification delivery, fluent-language review and assistive-technology acceptance remain outside this verification.
+Gallery review also found two default timetable previews showing loading skeletons. They are retained under `loading-states/`; the Parent/Teacher timetable captures were retaken at all eight widths and both localized widths after actual saved-period cards became visible. No mock data or application change was used for those retakes.
 
+## Review archive and Git handoff
 
-## Delivered checkpoint and remaining work
+The requested `Schovera_UI_Professional_Review_2026-11-12.zip` is under `UI_REVIEW_SCREENSHOTS/2026-11-12-professional/`, with a copy in Downloads. The requested filename is retained; the manifest/report explicitly identify captures and resumed verification across 12-13 November. Open `OPEN_GALLERY.html` for the four labelled owner-before/fresh-after comparisons, full-size route screenshots and per-role contact sheets. The archive also includes three interface languages, Korean message speech, actual scroll/zoom states, guarded forms, offline pending/synced states, the dated rehearsal and real AI/workbook captures. No historical image substitutes for a missing final route capture.
 
-The review folder is `UI_REVIEW_SCREENSHOTS/2026-11-12-professional/`; open `OPEN_GALLERY.html`. The requested archive is `Schovera_UI_Professional_Review_2026-11-12.zip` in that folder. **It is explicitly an incomplete review pack.** Its README and coverage metadata identify the missing states; old images are never substituted for missing fresh captures. Historical owner screenshots remain separately labelled.
+Raw logs, environment files, credentials, databases and service-recovery helpers stay out of Git and the review ZIP. Hashes establish file identity, not correctness. Historical owner feedback and derived contact sheets are labelled separately. Captures cannot establish animation smoothness or audible/linguistic quality by themselves; those interactive checks and limits are recorded above.
 
-The interrupted capture measured 179 of 184 English route/width combinations and 88 of 92 Hindi/Marathi route/width combinations: 267 of the planned 276 localized layouts. Additional expanded-disclosure measurements are recorded separately. None of these measured states reported page overflow, target-card clipping or browser runtime errors. These measurements establish only their executed states, not unexecuted combinations. All 23 destinations have at least one fresh route capture. Principal Notices still lacks the fresh 414/768/1024/1440/1920px captures and its Hindi/Marathi samples. The Parent 390px profile capture shows a loading state and needs a fully loaded counterpart.
+The meaningful checkpoint commits `ebdb9c5` and `59a19b9` remain in history. The completed milestone follows the owner's standing main-branch workflow, preserving those commits and publishing the final reviewed source/report without force-push. The final commit URL is reported in the handoff. Unrelated untracked `CLAUDE.md` and `review/` remain untouched.
 
-Fresh real sticky captures cover top/middle/bottom of seven long role/page combinations, 21 positions. Twelve representative real browser-zoom captures are retained. The separate sign-in check passed English/Hindi/Marathi at 320/390/768/1440px: text fits, keyboard focus is visible, targets are at least 44px, entered email survives language changes and preference survives reload. Its first attempt correctly caught a genuine 320px overflow caused by the visible Language caption plus globe/select beside the brand. The mobile caption is now screen-reader-only, and the full native language name remains visible without reducing font size. The corrected check passed.
+Remaining limits: fluent interface/message/voice review, actual presentation speaker output, full assistive-technology/user acceptance, maximum-data/load states, hardware/Pi/site operation and public hosting remain separate. AUD-03's previously documented lint-tool findings are not re-audited by this UI work. The Grade 6 assignment question remains pending exact account/environment evidence. No real-school or production readiness claim follows from these local UI checks.
 
-The additional authenticated interaction probe remains failed at sign-in while Auth was unavailable. Consequently its portal-selector canvas measurements, computed hover/reduced-motion checks and Teacher anchor measurements are **NOT completed evidence**. Source/CSS review and earlier passing keyboard/speech suites do not replace that probe. The Principal Users images also predate the final bounded-emblem CSS correction and need a post-fix reshoot. New offline-operation status screenshots, the guarded account-mode UI refresh and a new live AI/workbook acceptance run were not completed in this phase. Earlier functional checks and existing AUD-58/59 evidence remain historical, not fresh substitutes.
+## Execution ledger
 
-Resume safely after Docker is healthy:
+Times below are UTC; add 05:30 for IST. Commands used QA except the root isolated build. Repeated executions overlap and are not independent feature-test totals. Preparatory recovery commands and interrupted probes are described above. Private logs and original failed attempts remain in `.local/schovera-manual-demo/ui60-20261112/`.
 
-1. Verify Auth health and the retained local database, migration count and protected-school hashes. Do not reset or seed.
-2. Start the guarded QA server on 3104, using the existing approved local environment. Finish the missing route/language captures and loaded Parent profile; run the interaction probe sequentially rather than concurrently with builds or other fixed-account sign-out tests.
-3. Complete targeted offline-status/account-mode and AI/workbook checks as appropriate, retain scoped fixture cleanup, regenerate the pack from one final manifest, then review full-size images and contact sheets.
-4. Repeat the final current-source isolated build only if source changes; review/publish the completed milestone to main through the standing workflow. This checkpoint belongs on a clearly labelled feature branch while acceptance remains incomplete.
+| Date UTC | Command | Start UTC | Exit | Result |
+|---|---|---|---:|---|
+| 2026-11-12 | `npm run typecheck` | 06:44:14.931 | 0 | PASS |
+| 2026-11-12 | `npm run lint` | 06:44:25.749 | 0 | PASS |
+| 2026-11-12 | `node node_modules/vitest/vitest.mjs run --exclude **/*.integration.test.ts --maxWorkers=2 --no-file-parallelism` | 06:44:50.016 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/aud02-implementation-20261109/preserve-school.mjs` | 06:46:15.561 | 0 | PASS |
+| 2026-11-12 | `npm run verify:simple-voice` | 06:46:16.131 | 0 | PASS |
+| 2026-11-12 | `npm run verify:accessibility-i18n` | 06:46:35.995 | 0 | PASS |
+| 2026-11-12 | `npm run verify:staff-localization` | 06:46:43.417 | 0 | PASS |
+| 2026-11-12 | `npm run verify:role-navigation` | 06:47:02.794 | 0 | PASS |
+| 2026-11-12 | `npm run verify:attendance` | 06:47:53.571 | 0 | PASS |
+| 2026-11-12 | `npm run verify:assignments` | 06:47:55.247 | 0 | PASS |
+| 2026-11-12 | `npm run verify:announcements` | 06:47:56.384 | 0 | PASS |
+| 2026-11-12 | `npm run verify:principal-communication` | 06:47:57.448 | 0 | PASS |
+| 2026-11-12 | `npm run verify:final-journeys` | 06:48:43.503 | 0 | PASS |
+| 2026-11-12 | `npm run verify:reconnect` | 06:49:19.297 | 0 | PASS |
+| 2026-11-12 | `npm run test:rfid:integration` | 06:49:53.127 | 0 | PASS |
+| 2026-11-12 | `npm run test:gateway:local-integration` | 06:49:57.440 | 0 | PASS |
+| 2026-11-12 | `npm run verify:communication-local` | 06:50:18.648 | 0 | PASS |
+| 2026-11-12 | `npm run typecheck` | 06:51:00.665 | 0 | PASS |
+| 2026-11-12 | `npm run lint` | 06:51:11.635 | 0 | PASS |
+| 2026-11-12 | `node node_modules/vitest/vitest.mjs run --exclude **/*.integration.test.ts --maxWorkers=2 --no-file-parallelism` | 06:51:33.855 | 0 | PASS |
+| 2026-11-12 | `npm run build:isolated -- --working-tree` | 06:52:15.587 | 1 | FAIL |
+| 2026-11-12 | `npm run build:isolated -- --working-tree` | 06:54:21.012 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/states.mjs` | 06:57:41.188 | 1 | FAIL |
+| 2026-11-12 | `npm run build:isolated -- --working-tree` | 07:05:47.168 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/signin.mjs` | 07:16:26.838 | 1 | FAIL |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/signin.mjs` | 07:17:09.661 | 0 | PASS |
+| 2026-11-12 | `npm run build:isolated -- --working-tree` | 07:19:09.080 | 0 | PASS |
+| 2026-11-12 | `npm run build:isolated -- --working-tree` | 10:40:22.061 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/aud02-implementation-20261109/preserve-school.mjs` | 11:11:42.325 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/states.mjs` | 11:12:04.795 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/capture.mjs --resume` | 11:12:19.597 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/reshoot.mjs` | 11:13:24.577 | 0 | PASS |
+| 2026-11-12 | `npm run verify:ui-refinement` | 11:13:35.627 | 1 | FAIL |
+| 2026-11-12 | `node --env-file=.env.test.local scripts/verify-native-voice.mjs --languages en,hi,mr,ko` | 11:13:50.301 | 0 | PASS |
+| 2026-11-12 | `npm run verify:ui-refinement` | 11:15:11.995 | 0 | PASS |
+| 2026-11-12 | `npm run verify:school-operations` | 11:16:08.798 | 0 | PASS |
+| 2026-11-12 | `npm run verify:ui-refinement` | 11:19:01.681 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/final-capture.mjs` | 11:19:41.038 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/states.mjs` | 11:21:12.434 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/zoom.mjs` | 11:21:21.228 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/rehearsal.mjs` | 11:22:48.498 | 0 | PASS |
+| 2026-11-12 | `npm run verify:school-operations` | 11:23:04.143 | 0 | PASS |
+| 2026-11-12 | `npm run verify:accounts` | 11:24:50.622 | 0 | PASS |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/accounts.mjs` | 11:24:59.514 | 1 | FAIL |
+| 2026-11-12 | `node --env-file=.env.test.local .local/ui60/accounts.mjs` | 11:27:16.434 | 0 | PASS |
+| 2026-11-12 | `node node_modules/vitest/vitest.mjs run --exclude **/*.integration.test.ts --maxWorkers=2 --no-file-parallelism` | 11:28:19.824 | 0 | PASS |
+| 2026-11-12 | `npm run typecheck` | 11:28:55.199 | 0 | PASS |
+| 2026-11-12 | `npm run lint` | 11:29:01.644 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/aud02-implementation-20261109/preserve-school.mjs` | 05:17:09.862 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/ui60/teacher-ai-evidence.mjs` | 05:18:46.112 | 0 | PASS |
+| 2026-11-13 | `npm run verify:communication-local` | 05:21:58.994 | 0 | PASS |
+| 2026-11-13 | `npm run verify:simple-voice` | 05:22:46.121 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local scripts/verify-native-voice.mjs --languages en,hi,mr,ko` | 05:23:04.213 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/ui60/preservation.mjs` | 05:23:57.732 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/aud02-implementation-20261109/preserve-school.mjs` | 05:23:59.109 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/ui60/integrity.mjs` | 05:24:24.767 | 0 | PASS |
+| 2026-11-13 | `npm run build:isolated -- --working-tree` | 05:24:37.998 | 0 | PASS |
+| 2026-11-13 | `npm run verify:ui-refinement` | 05:28:31.629 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/ui60/states.mjs` | 05:29:21.549 | 0 | PASS |
+| 2026-11-13 | `npm run verify:ui-refinement` | 05:30:12.935 | 0 | PASS |
+| 2026-11-13 | `npm run lint` | 05:32:54.791 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/ui60/integrity.mjs` | 05:33:28.740 | 0 | PASS |
+| 2026-11-13 | `npm run build:isolated -- --working-tree` | 05:33:36.804 | 0 | PASS |
+| 2026-11-13 | `npm run verify:ui-refinement` | 05:35:51.759 | 0 | PASS |
+| 2026-11-13 | `npm run lint` | 05:37:01.195 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/ui60/integrity.mjs` | 05:37:25.430 | 0 | PASS |
+| 2026-11-13 | `npm run build:isolated -- --working-tree` | 05:37:32.746 | 0 | PASS |
+| 2026-11-13 | `node --env-file=.env.test.local .local/ui60/timetable-captures.mjs` | 05:40:58.019 | 0 | PASS |
 
-No physical RFID, Raspberry Pi, public hosting, real SMS/call delivery, human pronunciation quality or production release was certified. The restart/WSL recovery guidance was checked against [Docker troubleshooting documentation](https://docs.docker.com/desktop/troubleshoot-and-support/troubleshoot/) and [Docker WSL guidance](https://docs.docker.com/desktop/features/wsl). A Windows restart may be the next environment-recovery step after saving other work; it was not authorized or performed by this task.
-
-## Executed command ledger
-
-Times are UTC on 12 November 2026. Add 05:30 for IST. Commands ran in isolated QA except the root isolated-build wrapper. Preparatory probes and Docker/WSL recovery attempts are described above; interrupted captures are not completed matrix passes.
-
-| Command | Start UTC | Exit | Result |
-|---|---|---:|---|
-| `npm run typecheck` | 06:44:14.931 | 0 | PASS |
-| `npm run lint` | 06:44:25.749 | 0 | PASS |
-| `node node_modules/vitest/vitest.mjs run --exclude **/*.integration.test.ts --maxWorkers=2 --no-file-parallelism` | 06:44:50.016 | 0 | PASS |
-| `node --env-file=.env.test.local .local/aud02-implementation-20261109/preserve-school.mjs` | 06:46:15.561 | 0 | PASS |
-| `npm run verify:simple-voice` | 06:46:16.131 | 0 | PASS |
-| `npm run verify:accessibility-i18n` | 06:46:35.995 | 0 | PASS |
-| `npm run verify:staff-localization` | 06:46:43.417 | 0 | PASS |
-| `npm run verify:role-navigation` | 06:47:02.794 | 0 | PASS |
-| `npm run verify:attendance` | 06:47:53.571 | 0 | PASS |
-| `npm run verify:assignments` | 06:47:55.247 | 0 | PASS |
-| `npm run verify:announcements` | 06:47:56.384 | 0 | PASS |
-| `npm run verify:principal-communication` | 06:47:57.448 | 0 | PASS |
-| `npm run verify:final-journeys` | 06:48:43.503 | 0 | PASS |
-| `npm run verify:reconnect` | 06:49:19.297 | 0 | PASS |
-| `npm run test:rfid:integration` | 06:49:53.127 | 0 | PASS |
-| `npm run test:gateway:local-integration` | 06:49:57.440 | 0 | PASS |
-| `npm run verify:communication-local` | 06:50:18.648 | 0 | PASS |
-| `npm run typecheck` | 06:51:00.665 | 0 | PASS |
-| `npm run lint` | 06:51:11.635 | 0 | PASS |
-| `node node_modules/vitest/vitest.mjs run --exclude **/*.integration.test.ts --maxWorkers=2 --no-file-parallelism` | 06:51:33.855 | 0 | PASS |
-| `npm run build:isolated -- --working-tree` | 06:52:15.587 | 1 | FAIL |
-| `npm run build:isolated -- --working-tree` | 06:54:21.012 | 0 | PASS |
-| `node --env-file=.env.test.local .local/ui60/states.mjs` | 06:57:41.188 | 1 | FAIL |
-| `npm run build:isolated -- --working-tree` | 07:05:47.168 | 0 | PASS |
-| `node --env-file=.env.test.local .local/ui60/signin.mjs` | 07:16:26.838 | 1 | FAIL |
-| `node --env-file=.env.test.local .local/ui60/signin.mjs` | 07:17:09.661 | 0 | PASS |
-| `npm run build:isolated -- --working-tree` | 07:19:09.080 | 0 | PASS |
-| `npm run build:isolated -- --working-tree` | 10:40:22.061 | 0 | PASS |
-
-## Git checkpoint
-
-Base main revision: `67f9153d48f8c0cedc087ceef553c4ab1b611600`. The standing workflow permits unfinished work only as a clearly labelled feature checkpoint. Published branch: `checkpoint/aud60-ui-refinement`; main remains unchanged while the Docker-dependent acceptance gaps are open. Only the six UI/test source files and this report belong in the checkpoint. Screenshots, ZIPs, local logs, environment files, service-recovery helpers and unrelated artifacts remain ignored or unstaged. No force-push or deployment is involved.
-
-Published UI checkpoint: [`ebdb9c5186ab756606fe400b8d81df3e6b12ca2d`](https://github.com/OmiVibes/Schovera/commit/ebdb9c5186ab756606fe400b8d81df3e6b12ca2d). Git push, remote branch SHA and the connected GitHub commit API agreed. Publication is a backup/checkpoint, not a passing full-acceptance release.
+Recorded completed command executions: 68; PASS 63; FAIL 5. The uncompleted interrupted build is separate; it is not a pass. Final required reruns passed.

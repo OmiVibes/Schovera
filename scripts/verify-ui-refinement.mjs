@@ -21,6 +21,27 @@ try{
     await page.setViewportSize({width,height:1000});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
     const geometry=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,active:(()=>{const r=document.querySelector('.app-section-nav a[aria-current=page]')?.getBoundingClientRect();return r?{left:r.left,right:r.right,height:r.height}:null;})()}));
     result.layouts.push({role,section,width,...geometry});
+    const counterColors = await page.evaluate(() => {
+      const failures=[];
+      for(const value of document.querySelectorAll('.attendance-counts b')) {
+        const status=value.parentElement.textContent.replace(value.textContent,'').trim().toLowerCase();
+        if(!['present','absent','late'].includes(status))continue;
+        const expected=document.createElement('span');expected.style.color=`var(--status-${status})`;document.body.append(expected);
+        const color=getComputedStyle(expected).color;expected.remove();
+        if(getComputedStyle(value).color!==color)failures.push({status,actual:getComputedStyle(value).color,expected:color});
+      }
+      return failures;
+    });
+    result.errors.push(...counterColors.map(colors=>({role,section,width,counterColors:colors})));
+    if(section==='notices'&&width===1440){
+      const important=page.locator('.school-notice-card.important-notice').first();
+      if(!await important.count())throw new Error(`${role}: expected the protected school's Important notice for hover verification.`);
+      await page.mouse.move(0,0);
+      const style=el=>({border:getComputedStyle(el).borderLeftColor,transform:getComputedStyle(el).transform});
+      const before=await important.evaluate(style);await important.hover();await page.waitForTimeout(220);
+      const after=await important.evaluate(style);
+      if(before.border!==after.border||before.transform!==after.transform)result.errors.push({role,section,width,priorityHover:{before,after}});
+    }
     if(section==='attendance'&&width===1440){
       if(role==='teacher'){await page.locator('#teacher-attendance-history > summary').click();await page.locator('.attendance-trends[data-loaded=true]').waitFor();}
       const colors=await page.evaluate(()=>['present','absent'].map(status=>{
@@ -34,11 +55,11 @@ try{
     if(width<=820&&(!geometry.active||geometry.active.left<0||geometry.active.right>width+1||geometry.active.height<44))result.errors.push({role,section,width,activeNavigation:geometry.active});
     if(role==='teacher'&&section==='home'&&[1440,390,320].includes(width)){
       const disclosure=page.locator('#teacher-home-notices');
-      await disclosure.locator('summary').click();await disclosure.locator('.school-notice-card').first().waitFor();
+      await disclosure.locator(':scope > summary').click();await disclosure.locator('.school-notice-card').first().waitFor();
       const expanded=await disclosure.evaluate(el=>({width:el.getBoundingClientRect().width,parent:el.closest('.teacher-home-stack').getBoundingClientRect().width,minimumCard:Math.min(...[...el.querySelectorAll('.school-notice-card')].map(card=>card.getBoundingClientRect().width))}));
       result.expanded.push({role,section,width,...expanded});
       if(expanded.width<expanded.parent*.9||expanded.minimumCard<(width>820?280:180))result.errors.push({role,section,width,narrowExpandedNotices:expanded});
-      await disclosure.locator('summary').click();
+      await disclosure.locator(':scope > summary').click();
     }
     if(section==='homework'&&[390,320].includes(width)){
       const titles=await page.locator('.assignment-card header h3').evaluateAll(nodes=>nodes.map(n=>({text:n.textContent,width:n.getBoundingClientRect().width})));

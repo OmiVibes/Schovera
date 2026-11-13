@@ -54,6 +54,7 @@ body { overflow-x: visible; font-size: var(--text-body); }
 .language-selector select, .login-topbar .language-selector select, .role-header .language-selector select { min-height: 46px; padding: 10px 22px 10px 34px; border: 1px solid var(--control-line); border-radius: 10px; background-color: var(--brand-wash); font-size: .9375rem; font-weight: 600; }
 .login-topbar .language-selector { border: 0; padding: 0; border-radius: 10px; }
 .login-topbar .language-selector select { padding-left: 12px; }
+.language-selector select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%237c0e44' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; background-size: 12px; }
 .language-selector select:hover { border-color: var(--brand); background-color: var(--brand-soft); }
 .language-selector select:focus-visible, .login-topbar .language-selector select:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
 .app [id] { scroll-margin-top: calc(var(--portal-shell-height, 240px) + 20px); }
@@ -202,7 +203,6 @@ body { overflow-x: visible; font-size: var(--text-body); }
 .app .principal-notice-workspace .notice-composer label:nth-child(3) { grid-column: 2; align-self: start; }
 .app .principal-notice-workspace .notice-composer button { grid-column: 1 / -1; width: auto; justify-self: start; min-width: 180px; }
 .app .announcement-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
-.app .school-notice-card:hover { transform: none; border-color: var(--line); }
 .app .principal-metrics { gap: 18px; }
 .app .principal-metric-card { padding: 22px; min-height: 165px; background: #fff; border-radius: 14px; box-shadow: none; text-align: left; }
 .app .principal-metric-card small { font-size: var(--text-meta); letter-spacing: 0; }
@@ -237,6 +237,8 @@ body { overflow-x: visible; font-size: var(--text-body); }
 .app .student-profile-identity { padding: 26px; background: var(--brand-wash); border-radius: 16px; }
 .app .student-profile-grid { gap: 20px; align-items: start; }
 .app .student-profile-grid h2 { font-size: 1.25rem; }
+.app .student-profile-grid .attendance-counts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.app .student-profile-grid .attendance-counts span { min-width: 0; overflow-wrap: anywhere; font-size: var(--text-meta); }
 .app .student-profile-summary { gap: 16px; }
 .app .attendance-trends { padding: 26px; margin-block: 24px 0; background: white; border-radius: var(--radius); }
 .app .attendance-trends h2 { font-size: var(--text-section); }
@@ -248,6 +250,7 @@ body { overflow-x: visible; font-size: var(--text-body); }
 .app .trend-filters { gap: 16px; }
 .app .attendance-metric { border-radius: 12px; padding: 18px; }
 .app .attendance-metric strong { font-size: 2rem; }
+.app .attendance-metric.present .attendance-metric-symbol { color: var(--status-present); background: #e7f4ec; }
 .app .attendance-metric > div > span, .app .attendance-panel-heading p, .app .attendance-range p, .app .attendance-point-detail { font-size: var(--text-meta); }
 .app .attendance-latest :is(span,time), .app .principal-communication-card footer time, .app .timetable-day > p { color: var(--ink-soft); }
 .app .attendance-calendar-day { min-height: 44px; font-size: .9375rem; }
