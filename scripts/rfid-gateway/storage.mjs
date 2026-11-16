@@ -1,6 +1,9 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import {randomUUID} from 'node:crypto';
+import {assertGatewayRuntime} from './runtime-guard.mjs';
+assertGatewayRuntime();
+const {DatabaseSync}=await import('node:sqlite');
 
 export const GATEWAY_SCHEMA_VERSION = 2;
 
@@ -153,11 +156,13 @@ export function openGatewayDatabase(filePath, { maxEvents = 10_000 } = {}) {
     }
     // A process killed while a request was in flight has no durable remote receipt.
     // Keep the immutable payload and retry it with the same event ID and a fresh nonce.
-    db.prepare(`UPDATE gateway_events SET queue_state='pending', last_error_class='interrupted_sync_recovered',
-      next_retry_at=NULL, updated_at=? WHERE queue_state='syncing'`).run(new Date().toISOString());
+    db.exec(`CREATE TABLE IF NOT EXISTS gateway_delivery_worker(id INTEGER PRIMARY KEY CHECK(id=1),pid INTEGER NOT NULL CHECK(pid>0),token TEXT NOT NULL,started_at TEXT NOT NULL) STRICT;`);
     db.exec('PRAGMA foreign_keys = ON;');
     const configuredCapacity = Number.isSafeInteger(maxEvents) && maxEvents > 0 ? maxEvents : 10_000;
-    return new GatewayStore(db, resolved, configuredCapacity);
+    const store=new GatewayStore(db, resolved, configuredCapacity);
+    const token=store.acquireWorker();
+    if(token)try{store.recoverInterrupted();}finally{store.releaseWorker(token);}
+    return store;
   } catch (error) {
     try { db?.close(); } catch { /* preserve the original open/validation failure */ }
     throw error;
@@ -174,6 +179,17 @@ export class GatewayStore {
   close() { this.db.close(); }
 
   transaction(work) { return transaction(this.db, work); }
+
+  acquireWorker() {
+    return this.transaction(()=>{
+      const current=this.db.prepare('SELECT * FROM gateway_delivery_worker WHERE id=1').get();
+      if(current){let alive=true;try{process.kill(Number(current.pid),0);}catch(error){alive=error.code!=='ESRCH';}if(alive)return null;}
+      const token=randomUUID();this.db.prepare('INSERT OR REPLACE INTO gateway_delivery_worker VALUES(1,?,?,?)').run(process.pid,token,new Date().toISOString());return token;
+    });
+  }
+  releaseWorker(token){this.db.prepare('DELETE FROM gateway_delivery_worker WHERE id=1 AND token=? AND pid=?').run(token,process.pid);}
+  workerStatus(){const r=this.db.prepare('SELECT pid,started_at FROM gateway_delivery_worker WHERE id=1').get();return r?{state:'worker_registered',pid:Number(r.pid),started_at:r.started_at}:{state:'idle'};}
+  recoverInterrupted(){this.db.prepare("UPDATE gateway_events SET queue_state='pending',last_error_class='interrupted_sync_recovered',next_retry_at=NULL,updated_at=? WHERE queue_state='syncing'").run(new Date().toISOString());}
 
   registerReader({ readerId, deviceId, tokenHash, now }) {
     this.db.prepare(`INSERT INTO gateway_readers(reader_id, device_id, token_sha256, created_at)

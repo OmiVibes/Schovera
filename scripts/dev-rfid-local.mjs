@@ -2,6 +2,8 @@ import { access, readFile, readdir } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+import {assertGatewayRuntime} from './rfid-gateway/runtime-guard.mjs';
+assertGatewayRuntime();
 
 function parseEnv(text) {
   const values = new Map();

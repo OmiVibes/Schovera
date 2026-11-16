@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     // Do not initialize Node SQLite for a disabled/hosted application route.
     const {openOperations,localSigningKey,issueLease,verifyLease,prepareOperation,replayOperations}=await import('../../../../../scripts/school-operations/store.mjs');
     const body=await bodyOf(request);
-    if(!['lease','capture','status','sync'].includes(body.action))throw new Error('invalid_request');
+    if(!['lease','capture','status','sync','review-held','resolve-held'].includes(body.action))throw new Error('invalid_request');
     store=openOperations(path.join(directory(),'gateway.sqlite'));
     const signingKey=localSigningKey(directory());
     if(body.action==='capture') {
@@ -53,22 +53,45 @@ export async function POST(request: Request) {
       if(snapshot.error)return response({error:'Assigned class and valid attendance date required.'},403);
       return response({lease:issueLease(signingKey,snapshot.data),expires_at:Date.now()+30*60_000});
     }
+    if(body.action==='review-held'||body.action==='resolve-held') {
+      const {retainedIntention,sanitizedComparison}=await import('../../../../../scripts/school-operations/held-review.mjs');
+      const row=store.rows(actor,school).find((r:{operation_id:string})=>r.operation_id===body.operation_id);
+      if(!row)return response({error:'Current assignment and session required. Original work is retained.'},403);
+      const original=retainedIntention(row);
+      const baseline=await client!.rpc('school_operation_baseline',{p_class_id:row.class_id,p_attendance_date:row.attendance_date});
+      if(baseline.error)return response({error:'Current assignment and session required. Original work is retained.'},403);
+      if(body.action==='review-held') {
+        const [snapshot,roster,prior]=await Promise.all([
+          client!.rpc('class_attendance_snapshot',{p_class_id:row.class_id,p_attendance_date:row.attendance_date}),
+          client!.from('students').select('id,full_name').eq('class_id',row.class_id).eq('school_id',school).eq('active',true).limit(501),
+          client!.rpc('held_school_operation_resolution',{p_original_id:row.operation_id})]);
+        if(snapshot.error||roster.error||prior.error||!roster.data||roster.data.length>500)return response({error:'Authoritative review unavailable. Original work is retained.'},503);
+        if(prior.data)store.recordDisposition(row.operation_id,prior.data);
+        return response({operation_id:row.operation_id,kind:row.kind,date:row.attendance_date,revision:snapshot.data.revision,state:snapshot.data.state,error:row.error,rows:sanitizedComparison(row,roster.data,snapshot.data),disposition:prior.data});
+      }
+      if(body.disposition==='new_attendance_write'&&original.kind!=='attendance')throw new Error('invalid_resolution');
+      const result=await client!.rpc('resolve_held_school_operation',{p_original_id:row.operation_id,p_original_hash:row.payload_hash,p_class_id:row.class_id,p_attendance_date:row.attendance_date,
+        p_request_id:body.request_id,p_disposition:body.disposition,p_expected_revision:body.expected_revision??null,p_records:body.records??null,p_reason:body.reason});
+      if(result.error){const code=['attendance_conflict','operation_conflict','attendance_reason_required','not_authorized','invalid_resolution','operation_already_synced'].find(c=>result.error.message.includes(c));return response({error:code??'Resolution unavailable. Original work is retained.'},code==='not_authorized'?403:409);}
+      store.recordDisposition(row.operation_id,result.data);return response({resolution:result.data});
+    }
     if(body.action==='sync') {
       await replayOperations(store,actor,school,async (operation: unknown,hash: string)=>{
         const result=await client!.rpc('replay_school_operation',{p_envelope:operation,p_payload_hash:hash});
         if(result.error) {
           const message=result.error.message;
-          const attendanceError=['attendance_conflict','attendance_review_required','attendance_reason_required','attendance_already_finalized','attendance_revision_required'].find(code=>message.includes(code));
+          const attendanceError=['attendance_conflict','attendance_review_required','attendance_reason_required','attendance_already_finalized','attendance_revision_required','operation_resolved'].find(code=>message.includes(code));
           throw new Error(attendanceError??(message.includes('not_authorized')||message.includes('not authorized')?'not_authorized':message.includes('operation_conflict')||message.includes('idempotency conflict')?'operation_conflict':message.includes('invalid')?'invalid_operation':'connection_lost'));
         }
         return result.data;
       },{force:body.retry===true});
     }
-    const rows=store.rows(actor,school).filter((r:{class_id:string;attendance_date:string;kind:string})=>!leaseScope||(r.class_id===leaseScope.class_id&&(r.kind!=='attendance'||r.attendance_date===leaseScope.attendance_date))).map((r:{operation_id:string;kind:string;state:string;class_id:string;attendance_date:string;local_received_at:string;error:string|null;receipt:string|null})=>({operation_id:r.operation_id,kind:r.kind,state:r.state,class_id:r.class_id,attendance_date:r.attendance_date,local_received_at:r.local_received_at,error:r.error,receipt:r.receipt?JSON.parse(r.receipt):null}));
+    const ownStore=store;
+    const rows=store.rows(actor,school).filter((r:{class_id:string;attendance_date:string;kind:string})=>!leaseScope||(r.class_id===leaseScope.class_id&&(r.kind!=='attendance'||r.attendance_date===leaseScope.attendance_date))).map((r:{operation_id:string;kind:string;state:string;class_id:string;attendance_date:string;local_received_at:string;error:string|null;receipt:string|null})=>({operation_id:r.operation_id,kind:r.kind,state:r.state,class_id:r.class_id,attendance_date:r.attendance_date,local_received_at:r.local_received_at,error:r.error,receipt:r.receipt?JSON.parse(r.receipt):null,disposition:ownStore.disposition(r.operation_id)}));
     return response({simulation:true,mode:store.mode(),rows});
   } catch(error) {
     const code=error instanceof Error?error.message:'unavailable';
-    const safe=['invalid_request','request_too_large','invalid_lease','lease_expired','invalid_operation','invalid_attendance','invalid_update','queue_full','operation_conflict','attendance_already_pending'];
+    const safe=['invalid_request','request_too_large','invalid_lease','lease_expired','invalid_operation','invalid_attendance','invalid_update','queue_full','operation_conflict','attendance_already_pending','held_operation_required','stored_payload_corrupt','invalid_resolution'];
     return response({error:safe.includes(code)?code:'School operations unavailable. No local save was confirmed.'},safe.includes(code)?409:503);
   } finally {store?.close();}
 }

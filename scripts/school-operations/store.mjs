@@ -22,6 +22,7 @@ export function openOperations(file, {maxOperations=10000}={}) {
       ) STRICT;
       CREATE TABLE IF NOT EXISTS school_operation_control(id INTEGER PRIMARY KEY CHECK(id=1), mode TEXT NOT NULL);
       INSERT OR IGNORE INTO school_operation_control VALUES(1,'online');`);
+    db.exec(`CREATE TABLE IF NOT EXISTS school_operation_dispositions(operation_id TEXT PRIMARY KEY REFERENCES school_operations(operation_id) ON DELETE CASCADE,result TEXT NOT NULL,recorded_at TEXT NOT NULL) STRICT;`);
   });
   const versions=db.prepare('SELECT version FROM school_operation_schema').all();
   if(versions.length!==1||versions[0].version!==1)throw operationError('unsupported_operation_schema');
@@ -48,11 +49,17 @@ export function openOperations(file, {maxOperations=10000}={}) {
       return db.prepare('SELECT * FROM school_operations WHERE operation_id=?').get(operation.operation_id);
     }),
     rows: (actor, school) => db.prepare('SELECT * FROM school_operations WHERE actor_id=? AND school_id=? ORDER BY local_received_at,operation_id').all(actor,school),
+    disposition: id => {const row=db.prepare('SELECT result FROM school_operation_dispositions WHERE operation_id=?').get(id);return row?JSON.parse(row.result):null;},
+    recordDisposition: (id,result) => gateway.transaction(()=>{
+      const prior=db.prepare('SELECT result FROM school_operation_dispositions WHERE operation_id=?').get(id),text=JSON.stringify(result);
+      if(prior&&prior.result!==text)throw operationError('operation_conflict');
+      db.prepare('INSERT OR IGNORE INTO school_operation_dispositions VALUES(?,?,?)').run(id,text,new Date().toISOString());
+    }),
     receipt: (id, receipt, beforeCommit = () => {}) => gateway.transaction(() => {
       beforeCommit();
       db.prepare("UPDATE school_operations SET state='synced',receipt=?,error=NULL WHERE operation_id=?").run(JSON.stringify(receipt),id);
     }),
-    retryTransient: (actor,school) => db.prepare("UPDATE school_operations SET state='pending',attempts=0,next_retry_at=0 WHERE actor_id=? AND school_id=? AND state='review' AND error='retry_needed'").run(actor,school),
+    retryTransient: (actor,school) => db.prepare("UPDATE school_operations SET state='pending',attempts=0,next_retry_at=0 WHERE actor_id=? AND school_id=? AND state='review' AND error='retry_needed' AND NOT EXISTS(SELECT 1 FROM school_operation_dispositions d WHERE d.operation_id=school_operations.operation_id)").run(actor,school),
     failure: (id, review, error) => {
       const attempts=Number(db.prepare('SELECT attempts FROM school_operations WHERE operation_id=?').get(id)?.attempts||0)+1;
       db.prepare("UPDATE school_operations SET state=?,attempts=?,next_retry_at=?,error=? WHERE operation_id=? AND state<>'synced'")
@@ -123,7 +130,7 @@ export async function replayOperations(store, actor, school, send, options=/** @
       if(store.mode()==='lose-response') {store.setMode('online');throw operationError('connection_lost');}
       store.receipt(row.operation_id,receipt,beforeReceiptCommit);
     } catch(error) {
-      const reason=['attendance_conflict','attendance_review_required','attendance_reason_required','attendance_already_finalized','attendance_revision_required','not_authorized','operation_conflict','invalid_operation'].find(code=>error.message?.includes(code));
+      const reason=['attendance_conflict','attendance_review_required','attendance_reason_required','attendance_already_finalized','attendance_revision_required','not_authorized','operation_conflict','invalid_operation','operation_resolved'].find(code=>error.message?.includes(code));
       store.failure(row.operation_id,Boolean(reason),reason||'retry_needed');
     }
   }

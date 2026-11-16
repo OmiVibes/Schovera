@@ -10,8 +10,9 @@ function run(options: { extra?: Record<string, string>; file?: string; devExtra?
   const root = mkdtempSync(path.join(tmpdir(), 'schovera-rfid-launcher-'));
   try {
     mkdirSync(path.join(root, 'scripts/lib'), { recursive: true });
+    mkdirSync(path.join(root, 'scripts/rfid-gateway'), { recursive: true });
     mkdirSync(path.join(root, 'node_modules/next/dist/bin'), { recursive: true });
-    for (const file of ['scripts/dev-rfid-local.mjs', 'scripts/lib/local-test-env.mjs']) copyFileSync(path.resolve(file), path.join(root, file));
+    for (const file of ['scripts/dev-rfid-local.mjs', 'scripts/lib/local-test-env.mjs', 'scripts/rfid-gateway/runtime-guard.mjs']) copyFileSync(path.resolve(file), path.join(root, file));
     const url = options.url ?? 'http://127.0.0.1:54321';
     const publicEnv = `NEXT_PUBLIC_SUPABASE_URL=${url}\nNEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=synthetic-local-public\n`;
     writeFileSync(path.join(root, '.env.development.local'), publicEnv + (options.devExtra ?? ''));

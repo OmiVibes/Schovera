@@ -79,4 +79,23 @@ A newer register exists. Reload it, compare the retained intention with school s
 This older intention needs a reviewed new correction. Ask school staff to inspect the retained operation; its original envelope must not be edited.|पुराने बदलाव के लिए समीक्षा के बाद नया सुधार आवश्यक है। कर्मचारी से सुरक्षित कार्य जाँचने को कहें; उसका मूल स्वरूप न बदलें।|जुन्या बदलासाठी आढाव्यानंतर नवी दुरुस्ती आवश्यक आहे. कर्मचाऱ्यांना राखलेले कार्य तपासायला सांगा; त्याचे मूळ स्वरूप बदलू नका.
 Current permission was refused. Ask the school administrator to check the assignment or account before creating any new write.|वर्तमान अनुमति नहीं मिली। नया बदलाव करने से पहले प्रशासक से कक्षा आवंटन या खाता जाँचने को कहें।|सध्याची परवानगी नाकारली गेली. नवा बदल करण्यापूर्वी प्रशासकांना वर्ग नेमणूक किंवा खाते तपासायला सांगा.
 Saved work is retained. Ask school staff to inspect this operation before retrying or making a new write. Retry cannot force a conflict.|सहेजा काम सुरक्षित है। फिर भेजने या नया बदलाव करने से पहले कर्मचारी से यह कार्य जँचवाएँ। फिर भेजना टकराव को जबरन लागू नहीं करता।|जतन केलेले काम राखले आहे. पुन्हा पाठवण्यापूर्वी किंवा नवा बदल करण्यापूर्वी कर्मचाऱ्यांकडून हे कार्य तपासून घ्या. पुन्हा पाठवल्याने विसंगत बदल सक्तीने लागू होत नाही.
+Review held operation|रोके गए काम की समीक्षा करें|राखलेल्या कामाचे पुनरावलोकन करा
+Retained intention|सुरक्षित मूल बदलाव|जतन केलेला मूळ बदल
+Choose a reviewed status|समीक्षा के बाद स्थिति चुनें|पुनरावलोकनानंतर स्थिती निवडा
+No saved mark|कोई सहेजी स्थिति नहीं|जतन केलेली नोंद नाही
+Reason for resolution|समाधान का कारण|निराकरणाचे कारण
+Save new reviewed attendance|समीक्षित उपस्थिति नई तरह सहेजें|पुनरावलोकन केलेली नवीन उपस्थिती जतन करा
+Close without applying original|मूल बदलाव लागू किए बिना बंद करें|मूळ बदल लागू न करता बंद करा
+Current revision {0}; compare before making a new write.|वर्तमान संस्करण {0}; नया बदलाव सहेजने से पहले तुलना करें।|सध्याची आवृत्ती {0}; नवीन बदलापूर्वी तुलना करा.
+Only current authorized students are shown. Original notes and message text remain private.|केवल वर्तमान अधिकृत छात्र दिखते हैं। मूल टिप्पणियाँ और संदेश निजी रहते हैं।|फक्त सध्याचे अधिकृत विद्यार्थी दिसतात. मूळ नोंदी आणि संदेश गोपनीय राहतात.
+Create any replacement message in Students with a new identity. This review does not resend its private text.|नया संदेश विद्यार्थी विभाग में बनाएँ। यह समीक्षा निजी संदेश दोबारा नहीं भेजती।|बदली संदेश विद्यार्थी विभागात नवीन ओळखीसह तयार करा. हे पुनरावलोकन गोपनीय संदेश पुन्हा पाठवत नाही.
+Resolution recorded. The original held write was not applied.|समाधान दर्ज हुआ। रोका गया मूल बदलाव लागू नहीं हुआ।|निराकरण नोंदवले. राखलेला मूळ बदल लागू झाला नाही.
+Review unavailable. Sign in and check current class permission; original work is retained.|समीक्षा उपलब्ध नहीं। साइन इन करके कक्षा अनुमति जाँचें; मूल काम सुरक्षित है।|पुनरावलोकन उपलब्ध नाही. साइन इन करून वर्गाची परवानगी तपासा; मूळ काम जतन आहे.
+Resolution not confirmed. Retry the same request or reload current state; original work is retained.|समाधान की पुष्टि नहीं हुई। वही अनुरोध फिर करें या वर्तमान स्थिति लोड करें; मूल काम सुरक्षित है।|निराकरणाची पुष्टी नाही. तीच विनंती पुन्हा करा किंवा सध्याची स्थिती लोड करा; मूळ काम जतन आहे.
+Destination already confirmed the original. Retry sync to recover its receipt.|गंतव्य ने मूल बदलाव की पुष्टि की है। रसीद पाने के लिए सिंक फिर करें।|गंतव्याने मूळ बदलाची पुष्टी केली आहे. पावती मिळवण्यासाठी पुन्हा सिंक करा.
+The register changed. Review current state before making a new correction.|रजिस्टर बदल गया। नया सुधार करने से पहले वर्तमान स्थिति जाँचें।|रजिस्टर बदलले आहे. नवीन दुरुस्तीपूर्वी सध्याच्या स्थितीचे पुनरावलोकन करा.
+Session expired or signed out. Sign in again; saved work is retained.|सत्र समाप्त या साइन आउट हुआ। फिर साइन इन करें; सहेजा काम सुरक्षित है।|सत्र संपले किंवा साइन आउट झाले. पुन्हा साइन इन करा; जतन केलेले काम सुरक्षित आहे.
+Current Teacher permission was refused. Check the account before syncing.|वर्तमान शिक्षक अनुमति अस्वीकृत है। सिंक से पहले खाता जाँचें।|सध्याची शिक्षक परवानगी नाकारली आहे. सिंकपूर्वी खाते तपासा.
+Offline capture permission expired. Connect and prepare this class again. Saved work is retained.|ऑफ़लाइन सहेजने की अनुमति समाप्त हुई। जुड़कर कक्षा फिर तैयार करें। काम सुरक्षित है।|ऑफलाइन जतन करण्याची परवानगी संपली. जोडून हा वर्ग पुन्हा तयार करा. काम सुरक्षित आहे.
+Review complete. Resolved original intentions were not applied.|समीक्षा पूरी हुई। निपटाए गए मूल बदलाव लागू नहीं हुए।|पुनरावलोकन पूर्ण झाले. निराकरण केलेले मूळ बदल लागू झाले नाहीत.
 `;

@@ -1658,6 +1658,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
   const db = useMemo(() => createClient(), []);
   const activeChildIdRef = useRef('');
   const childRequestVersionRef = useRef(0);
+  const updateReadSequence = useRef(0), attendanceReadSequence = useRef(0);
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [childrenError, setChildrenError] = useState(false);
   const [children, setChildren] = useState<any[]>([]),
@@ -1700,6 +1701,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
     requestVersion = childRequestVersionRef.current,
   ) => {
     if (!targetChildId) return;
+    const readSequence = ++updateReadSequence.current;
     const { data, error } = await db
       .from('student_updates')
       .select(
@@ -1709,7 +1711,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
       .order('sent_at', { ascending: false });
     if (
       targetChildId === activeChildIdRef.current &&
-      requestVersion === childRequestVersionRef.current
+      requestVersion === childRequestVersionRef.current && readSequence === updateReadSequence.current
     ) {
       setUpdates(data || []);
       setUpdatesError(error ? t('parent.updatesError') : '');
@@ -1721,6 +1723,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
     requestVersion = childRequestVersionRef.current,
   ) => {
     if (!targetChildId) return;
+    const readSequence = ++attendanceReadSequence.current;
     const { data, error } = await db
       .from('attendance_records')
       .select('id,class_id,student_id,attendance_date,status')
@@ -1729,7 +1732,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
       .limit(10);
     if (
       targetChildId === activeChildIdRef.current &&
-      requestVersion === childRequestVersionRef.current
+      requestVersion === childRequestVersionRef.current && readSequence === attendanceReadSequence.current
     ) {
       setAttendance(data || []);
       setAttendanceError(error ? t('parent.attendanceError') : '');
@@ -1745,7 +1748,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
       loadAttendance(targetChildId, requestVersion),
     ]);
   };
-  const { onChannelStatus: onParentRealtimeStatus, connectionState } = useRealtimeResync(
+  const { onChannelStatus: onParentRealtimeStatus, connectionState, reconcile: reconcileParent } = useRealtimeResync(
     refreshParentContext,
   );
   useEffect(() => {
@@ -1776,7 +1779,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'student_updates' },
-        () => refresh(),
+        reconcileParent,
       )
       .on(
         'postgres_changes',
@@ -1786,14 +1789,14 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
           table: 'acknowledgements',
           filter: `parent_id=eq.${profile.id}`,
         },
-        () => refresh(),
+        reconcileParent,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'attendance_records' },
         (event: any) => {
           if (event.new?.student_id === activeChildIdRef.current || event.old?.student_id === activeChildIdRef.current)
-            refreshParentContext();
+            reconcileParent();
         },
       )
       .subscribe(onParentRealtimeStatus);

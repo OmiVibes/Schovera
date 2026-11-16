@@ -1,0 +1,6 @@
+import {it,expect} from 'vitest';import {createHash} from 'node:crypto';import {retainedIntention,sanitizedComparison} from './held-review.mjs';
+it('projects only current authorized names/statuses, not canonical notes, old students or message text',()=>{
+ const operation={operation_id:'one',actor_id:'actor',school_id:'school',class_id:'class',kind:'attendance',payload:{reason:'Private original staff note',records:[{student_id:'current',status:'late'},{student_id:'transferred',status:'absent'}]}};
+ const canonical=JSON.stringify(operation),row={...operation,canonical,payload_hash:createHash('sha256').update(canonical).digest('hex'),state:'review'};
+ const projected=sanitizedComparison(row,[{id:'current',full_name:'Synthetic Child'}],{records:[{student_id:'current',status:'present'}]});expect(projected).toEqual([{student_id:'current',name:'Synthetic Child',current:'present',intended:'late'}]);expect(JSON.stringify(projected)).not.toContain('Private');expect(JSON.stringify(projected)).not.toContain('transferred');expect(()=>retainedIntention({...row,canonical:canonical+' '})).toThrow('stored_payload_corrupt');expect(()=>retainedIntention({...row,state:'synced'})).toThrow('held_operation_required');
+});

@@ -10,7 +10,7 @@ export function gatewayDiagnostics(store,readerId,{now=Date.now(),adapterState='
   const oldest=times.oldest_pending?Math.max(0,Math.floor((now-Date.parse(times.oldest_pending))/1000)):null;
   const errors=store.db.prepare('SELECT last_error_class AS code,COUNT(*) AS count FROM gateway_events WHERE last_error_class IS NOT NULL GROUP BY last_error_class').all();
   const invalidReceiptOrder=Number(store.db.prepare('SELECT COUNT(*) AS n FROM gateway_events WHERE remote_received_at IS NOT NULL AND julianday(remote_received_at)<julianday(local_received_at)').get().n);
-  return {storage:'SQLite WAL/FULL',reader:!reader?'reader_not_configured':!reader.active?'reader_revoked':adapterState,
+  return {storage:'SQLite WAL/FULL',worker:store.workerStatus(),reader:!reader?'reader_not_configured':!reader.active?'reader_revoked':adapterState,
     physicalConnectionVerified:false,service:serviceAvailable===null?'not_probed':serviceAvailable?'web_reachable':'service_unavailable',
     delivery:counts.attention?'attention_required':counts.syncing?'synchronizing':oldest!==null&&oldest>60?'sync_delayed':counts.pending?'pending':'no_pending_events',
     queue:{pending:counts.pending??0,syncing:counts.syncing??0,delivered:counts.delivered??0,attention:counts.attention??0},

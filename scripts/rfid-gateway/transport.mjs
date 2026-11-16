@@ -94,7 +94,7 @@ export function retryDelayMs(attempt, { retryAfterMs = null, random = Math.rando
   return Math.floor(ceiling * (0.5 + random()));
 }
 
-export function syncPendingEvents(store, transport, privateKey, {
+function syncPendingEventsOwned(store, transport, privateKey, {
   now = Date.now(),
   limit = 100,
   force = false,
@@ -140,4 +140,9 @@ export function syncPendingEvents(store, transport, privateKey, {
     }
   }
   return results;
+}
+
+export function syncPendingEvents(store,transport,privateKey,options={}){
+  const token=store.acquireWorker();if(!token)throw new AttentionTransportError('gateway_worker_busy');
+  try{store.recoverInterrupted();return syncPendingEventsOwned(store,transport,privateKey,options);}finally{store.releaseWorker(token);}
 }

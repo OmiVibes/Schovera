@@ -23,6 +23,7 @@ export function useRealtimeResync(refresh: () => Promise<void> | void) {
   const inFlightRef = useRef(false);
   const repeatRef = useRef(false);
   const timerRef = useRef<number | undefined>(undefined);
+  const reconcileRef = useRef<(() => void) | null>(null);
   const recoveryTimersRef = useRef<number[]>([]);
   const recoveryWindowRef = useRef(false);
   const [connectionState, setConnectionState] = useState<
@@ -48,15 +49,18 @@ export function useRealtimeResync(refresh: () => Promise<void> | void) {
       try {
         await refreshRef.current();
         if (mountedRef.current) setConnectionState('online');
+      } catch {
+        if (mountedRef.current) setConnectionState('reconnecting');
       } finally {
         inFlightRef.current = false;
         if (repeatRef.current) {
           repeatRef.current = false;
-          reconcile();
+          reconcileRef.current?.();
         }
       }
     }, 80);
-  }, [inFlightRef, mountedRef, refreshRef, repeatRef, scheduledRef, timerRef]);
+  }, [inFlightRef, mountedRef, refreshRef, repeatRef, scheduledRef, timerRef, reconcileRef]);
+  useEffect(() => { reconcileRef.current = reconcile; }, [reconcile]);
 
   const scheduleRecovery = useCallback(() => {
     if (!mountedRef.current || recoveryWindowRef.current) return;
@@ -81,11 +85,12 @@ export function useRealtimeResync(refresh: () => Promise<void> | void) {
   const onChannelStatus = useCallback(
     (status: RealtimeStatus) => {
       if (status === 'SUBSCRIBED') {
-        const shouldReconcile = hasSubscribedRef.current || interruptedRef.current;
         hasSubscribedRef.current = true;
         interruptedRef.current = false;
         if (mountedRef.current) setConnectionState('online');
-        if (shouldReconcile) scheduleRecovery();
+        // The first query can finish before this channel joins. Reconcile on
+        // the FIRST subscription too, closing that query-to-subscribe gap.
+        scheduleRecovery();
         return;
       }
       if (
@@ -125,6 +130,10 @@ export function useRealtimeResync(refresh: () => Promise<void> | void) {
       mountedRef.current = false;
       if (timerRef.current !== undefined) window.clearTimeout(timerRef.current);
       recoveryTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      recoveryTimersRef.current = [];
+      recoveryWindowRef.current = false;
+      scheduledRef.current = false;
+      repeatRef.current = false;
       window.removeEventListener('offline', offline);
       window.removeEventListener('online', online);
       window.removeEventListener('focus', focused);

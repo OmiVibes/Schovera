@@ -5,6 +5,7 @@ import {useI18n} from './i18n-provider';
 import {schoolOperationText} from './school-operation-copy';
 import {heldOperationAdvice,type SchoolOperationRow} from './attendance-review';
 import {useUiText} from '@/components/ui-text';
+import {HeldOperationReview} from '@/components/held-operation-review';
 
 type Row=SchoolOperationRow;
 export function useSchoolOperations(db:SupabaseClient,actor:string,classId:string,date:string) {
@@ -40,15 +41,18 @@ export function useSchoolOperations(db:SupabaseClient,actor:string,classId:strin
       const result=await call({action:'sync',retry});
       if(current.current!==context||requestVersion!==version.current)return;
       setRows(result.rows);
-      const pending=result.rows.some((r:Row)=>r.state==='pending'),review=result.rows.some((r:Row)=>r.state==='review');
+      const pending=result.rows.some((r:Row)=>r.state==='pending'),review=result.rows.some((r:Row)=>r.state==='review'&&!r.disposition);
       const retryNeeded=result.rows.some((r:Row)=>r.error==='retry_needed');
-      setMessage(review?'Some saved work needs review. Newer attendance was not replaced.':retryNeeded?'Sync failed — retry needed. Saved work is retained.':pending?'Saved locally — waiting to sync.':'All changes synced.');
+      setMessage(review?'Some saved work needs review. Newer attendance was not replaced.':retryNeeded?'Sync failed — retry needed. Saved work is retained.':pending?'Saved locally — waiting to sync.':result.rows.some((r:Row)=>r.disposition)?'Review complete. Resolved original intentions were not applied.':'All changes synced.');
       const fresh=result.rows.filter((r:Row)=>r.state==='synced'&&!seenReceipts.current.has(r.operation_id));
       for(const row of fresh)seenReceipts.current.add(row.operation_id);
       if(fresh.some((row:Row)=>row.kind==='attendance'))window.dispatchEvent(new Event('schovera:attendance-synced'));
       if(fresh.length)void prepare(true);
       return result;
-    } catch {
+    } catch(error) {
+      const failure=error instanceof Error?error.message:'';
+      if(current.current===context&&failure.includes('sign in')){setMessage('Session expired or signed out. Sign in again; saved work is retained.');return;}
+      if(current.current===context&&failure.includes('active Teacher')){setMessage('Current Teacher permission was refused. Check the account before syncing.');return;}
       if(lease.current?.context===context&&lease.current.expires>Date.now())try{
         const result=await call({action:'status',lease:lease.current.token});
         if(current.current===context){setRows(result.rows);setMessage(result.rows.some((r:Row)=>r.state==='pending')?'Saved locally — waiting to sync.':'Offline — school server available.');}
@@ -70,7 +74,7 @@ export function useSchoolOperations(db:SupabaseClient,actor:string,classId:strin
   const attendance=useRef<{identity:string;operation:Record<string,unknown>}|null>(null);
   const save=async(kind:'attendance'|'update',payload:unknown,id?:string,authoredAt?:string)=>{
     const proof=lease.current;
-    if(!proof||proof.context!==context||proof.expires<=Date.now()){setAvailable(false);setMessage('Connect and prepare offline saving again. No save was confirmed.');throw new Error('lease_expired');}
+    if(!proof||proof.context!==context||proof.expires<=Date.now()){setAvailable(false);setMessage('Offline capture permission expired. Connect and prepare this class again. Saved work is retained.');throw new Error('lease_expired');}
     const identity=JSON.stringify({context,kind,payload});
     let operation:Record<string,unknown>;
     if(kind==='attendance'&&attendance.current?.identity===identity)operation=attendance.current.operation;
@@ -86,13 +90,14 @@ export function useSchoolOperations(db:SupabaseClient,actor:string,classId:strin
     return accepted;
   };
   return {supported,enabled:enabled&&supported,available,message,rows,enable,retry:async()=>{await prepare(true);await refresh(true);},save,
+    reviewHeld:(operation_id:string)=>call({action:'review-held',operation_id}),
+    resolveHeld:async(body:Record<string,unknown>)=>{const result=await call({...body,action:'resolve-held'});await refresh();window.dispatchEvent(new Event('schovera:attendance-synced'));return result;},
     acceptedNote:schoolOperationText(language,'Saved on the school server. See School saving for sync status.'),
     failureNote:schoolOperationText(language,'No new local save was confirmed. Check School saving and retry.')};
 }
 
 export function SchoolOperationStatus({operations,classLabels={}}:{operations:ReturnType<typeof useSchoolOperations>;classLabels?:Record<string,string>}) {
-  const {language}=useI18n();const text=(value:string)=>schoolOperationText(language,value);
-  const ui=useUiText();
+  const {language}=useI18n();const ui=useUiText();const text=(value:string)=>ui(schoolOperationText(language,value));
   if(!operations.supported)return null;
   return <section className="card school-saving-panel" aria-label={text('Offline school saving')}>
     <strong>{text('School saving')}</strong> <small>{text('Local sync simulation')}</small>
@@ -100,9 +105,9 @@ export function SchoolOperationStatus({operations,classLabels={}}:{operations:Re
       <p role="status" aria-live="polite">{text(operations.message||'Preparing offline saving…')}</p>
       {operations.available&&<p>{text('Offline saving ready (30-minute permission).')}</p>}
       {operations.rows.some(r=>r.state==='pending')&&operations.message!=='Saved locally — waiting to sync.'&&<p>{text('Saved locally — waiting to sync.')}</p>}
-      <p>{operations.rows.filter(r=>r.state==='pending').length} {text('waiting')} · {operations.rows.filter(r=>r.state==='review').length} {text('need review')}</p>
+      <p>{operations.rows.filter(r=>r.state==='pending').length} {text('waiting')} · {operations.rows.filter(r=>r.state==='review'&&!r.disposition).length} {text('need review')}</p>
       <button type="button" onClick={()=>void operations.retry()}>{text('Retry sync')}</button>
-      {operations.rows.some(r=>r.state==='review')&&<section aria-label={ui('Held offline work')}><h3>{ui('Held offline work')}</h3><p>{ui('Original intentions are retained. Nothing here forces a stale save or changes its original envelope.')}</p>{operations.rows.filter(r=>r.state==='review').map(row=><article className="m2-held-operation" key={row.operation_id}><strong>{ui(row.kind==='attendance'?'Classroom register':'Important student update')}</strong>{row.class_id&&<p>{classLabels[row.class_id]??ui('Class reference {0}',[row.class_id])}</p>}<p>{ui('Operation {0}',[row.operation_id])}{row.kind==='attendance'&&row.attendance_date?` · ${row.attendance_date}`:''}</p><p>{ui(heldOperationAdvice(row.error))}</p></article>)}</section>}
+      {operations.rows.some(r=>r.state==='review')&&<section aria-label={ui('Held offline work')}><h3>{ui('Held offline work')}</h3><p>{ui('Original intentions are retained. Nothing here forces a stale save or changes its original envelope.')}</p>{operations.rows.filter(r=>r.state==='review').map(row=><article className="m2-held-operation" key={row.operation_id}><strong>{ui(row.kind==='attendance'?'Classroom register':'Important student update')}</strong>{row.class_id&&<p>{classLabels[row.class_id]??ui('Class reference {0}',[row.class_id])}</p>}<p>{ui('Operation {0}',[row.operation_id])}{row.kind==='attendance'&&row.attendance_date?` · ${row.attendance_date}`:''}</p><p>{ui(heldOperationAdvice(row.error))}</p><HeldOperationReview operation={row} review={operations.reviewHeld} resolve={operations.resolveHeld} /></article>)}</section>}
       {!operations.available&&<p>{text('New offline saves require a prepared class. Existing saved work is retained.')}</p>}
     </>}
   </section>;

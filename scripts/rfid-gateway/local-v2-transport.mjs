@@ -126,7 +126,7 @@ export class LocalSupabaseV2Transport {
   }
 }
 
-export async function syncPendingV2Events(store, transport, {
+async function syncPendingV2EventsOwned(store, transport, {
   now = Date.now(), limit = 10, force = false, maxAttempts = 8, random = Math.random, beforeReceiptCommit,
 } = {}) {
   const rows = store.duePending(new Date(now).toISOString(), Math.min(10, Math.max(1, limit)), force);
@@ -175,4 +175,9 @@ export async function syncPendingV2Events(store, transport, {
     }
   }
   return results;
+}
+
+export async function syncPendingV2Events(store,transport,options={}){
+  const token=store.acquireWorker();if(!token)throw new AttentionTransportError('gateway_worker_busy');
+  try{store.recoverInterrupted();return await syncPendingV2EventsOwned(store,transport,options);}finally{store.releaseWorker(token);}
 }

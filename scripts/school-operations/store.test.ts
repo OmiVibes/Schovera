@@ -80,3 +80,9 @@ it('caps automatic failures without deleting work; explicit retry can resume tra
     expect(s.rows(snapshot.actor_id,snapshot.school_id)[0].state).toBe('synced');
   }finally{s.close();}
 });
+it('retains durable closure separately and never retries its original transient intention',async()=>{
+ const p=file(),o=operation('update');let s=openOperations(p);
+ try{s.insert(o);s.failure(o.operation_id,true,'retry_needed');const canonical=s.rows(snapshot.actor_id,snapshot.school_id)[0].canonical;s.recordDisposition(o.operation_id,{disposition:'closed_without_applying',original_applied:false});s.close();s=openOperations(p);
+  await replayOperations(s,snapshot.actor_id,snapshot.school_id,async()=>{throw Error('closed original must not be resent');},{force:true});const r=s.rows(snapshot.actor_id,snapshot.school_id)[0];expect(r.state).toBe('review');expect(r.canonical).toBe(canonical);expect(r.receipt).toBe(null);expect(s.disposition(o.operation_id).original_applied).toBe(false);expect(()=>s.recordDisposition(o.operation_id,{disposition:'changed'})).toThrow('operation_conflict');
+ }finally{s.close();}
+});

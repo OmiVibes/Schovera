@@ -46,9 +46,9 @@ export function heldOperationAdvice(error:string|null) {
   if(error==='not_authorized')return 'Current permission was refused. Ask the school administrator to check the assignment or account before creating any new write.';
   return 'Saved work is retained. Ask school staff to inspect this operation before retrying or making a new write. Retry cannot force a conflict.';
 }
-export type SchoolOperationRow={operation_id:string;kind:string;state:string;error:string|null;class_id?:string;attendance_date?:string;local_received_at?:string};
+export type SchoolOperationRow={operation_id:string;kind:string;state:string;error:string|null;class_id?:string;attendance_date?:string;local_received_at?:string;disposition?:{disposition:string;resolution_id:string}|null};
 export function attendanceOperationState(rows:SchoolOperationRow[],classId:string,date:string) {
-  const own=rows.filter(r=>r.kind==='attendance'&&r.class_id===classId&&r.attendance_date===date);
+  const own=rows.filter(r=>r.kind==='attendance'&&r.class_id===classId&&r.attendance_date===date&&!r.disposition);
   return own.some(r=>r.state==='review')?'review':own.some(r=>r.state==='pending')?'pending':'none';
 }
 export function attendanceRegisterLabel(state:'draft'|'finalized'|null,dirty:boolean,operation:'none'|'pending'|'review',loading:boolean) {
