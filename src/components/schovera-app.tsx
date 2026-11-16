@@ -25,6 +25,7 @@ import { detectNoticeLanguage, type ParentSpeechController } from '@/lib/parent-
 import { usePrincipalCommunication } from '@/lib/use-principal-communication';
 import { PRINCIPAL_PAGE_SIZE } from '@/lib/principal-communication';
 import { useSchoolOperations, SchoolOperationStatus } from '@/lib/use-school-operations';
+import { attendanceSnapshotSchema, attendanceWriteError, type AttendanceSnapshot } from '@/lib/attendance-register';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
 // Principals never need to download the Teacher-only workspace.
@@ -581,6 +582,11 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
   const pendingSendStorageKey = `schovera:pending-teacher-update:${profile.id}`;
   const schoolOperations = useSchoolOperations(db, profile.id, classId, date);
   const attendanceDirtyRef = useRef(false);
+  const [attendanceDirty, setAttendanceDirty] = useState(false);
+  const [attendanceSnapshot, setAttendanceSnapshot] = useState<AttendanceSnapshot | null>(null);
+  const [attendanceReason, setAttendanceReason] = useState('');
+  const loadedAttendanceContext = useRef('');
+  const attendanceRequest = useRef<{ identity: string; id: string } | null>(null);
   const clearPendingSend = () => {
     sessionStorage.removeItem(pendingSendStorageKey);
     setPendingSend(null);
@@ -722,25 +728,26 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     requestVersion: number,
   ) => {
     if (!targetClassId || !roster.length || attendanceDirtyRef.current) return;
-    const { data, error } = await db
-      .from('attendance_records')
-      .select('student_id,status')
-      .eq('class_id', targetClassId)
-      .eq('attendance_date', targetDate);
+    const { data, error } = await db.rpc('class_attendance_snapshot', {
+      p_class_id: targetClassId, p_attendance_date: targetDate,
+    });
     const context = `${targetClassId}:${targetDate}`;
     if (
       context !== activeAttendanceContextRef.current ||
       requestVersion !== attendanceRequestVersionRef.current || attendanceDirtyRef.current
     )
       return;
-    if (error) {
+    const parsed = attendanceSnapshotSchema.safeParse(data);
+    if (error || !parsed.success) {
+      loadedAttendanceContext.current = '';
+      setAttendanceSnapshot(null);
       setAttendanceNote('Could not load attendance. Try again.');
       setAttendanceLoading(false);
       return;
     }
-    const existing = Object.fromEntries(
-      (data || []).map((row: any) => [row.student_id, row.status as Status]),
-    );
+    setAttendanceSnapshot(parsed.data);
+    loadedAttendanceContext.current = context;
+    const existing = Object.fromEntries(parsed.data.records.map(row => [row.student_id, row.status]));
     setRecords(
       Object.fromEntries(
         roster.map((row) => [row.id, existing[row.id] || 'present']),
@@ -767,14 +774,22 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     refreshTeacherContext,
   );
   useEffect(() => {
+    const synced = () => { void refreshTeacherContext(); };
+    window.addEventListener('schovera:attendance-synced', synced);
+    return () => window.removeEventListener('schovera:attendance-synced', synced);
+  }, [classId, date, students]);
+  useEffect(() => {
     if (mode !== 'attendance') return;
-    attendanceDirtyRef.current = false;
+    attendanceDirtyRef.current = false; setAttendanceDirty(false);
     const context = `${classId}:${date}`;
     activeAttendanceContextRef.current = context;
     const requestVersion = attendanceRequestVersionRef.current + 1;
     attendanceRequestVersionRef.current = requestVersion;
     setRecords({});
     setAttendanceNote('');
+    setAttendanceSnapshot(null);
+    setAttendanceReason('');
+    loadedAttendanceContext.current = '';
     if (
       !classId ||
       classLoading ||
@@ -924,8 +939,8 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
     setNote('Correction sent and saved. The original remains in the history.');
     refreshUpdates(student?.id, studentRequestVersionRef.current);
   };
-  const saveAttendance = async () => {
-    if (!classId || !students.length) return;
+  const saveAttendance = async (action: 'draft' | 'finalize' = 'finalize') => {
+    if (!classId || !students.length || !attendanceSnapshot || loadedAttendanceContext.current !== `${classId}:${date}`) return;
     const targetContext = `${classId}:${date}`;
     setAttendanceSaving(true);
     setAttendanceNote('');
@@ -933,32 +948,43 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
       student_id: row.id,
       status: records[row.id] || 'present',
     }));
+    const payload = { records: p_records, attendance_version: 2, action, expected_revision: attendanceSnapshot.revision, reason: attendanceReason.trim() || null };
+    const identity = JSON.stringify({ classId, date, payload });
+    if (attendanceRequest.current?.identity !== identity) attendanceRequest.current = { identity, id: crypto.randomUUID() };
     if (schoolOperations.enabled) {
       try {
-        await schoolOperations.save('attendance', { records: p_records });
+        await schoolOperations.save('attendance', payload, attendanceRequest.current.id);
         if (targetContext === activeAttendanceContextRef.current) {
-          attendanceDirtyRef.current = false;
+          attendanceDirtyRef.current = false; setAttendanceDirty(false);
           setAttendanceNote(schoolOperations.acceptedNote);
+          void refreshTeacherContext();
         }
       } catch { setAttendanceNote(schoolOperations.failureNote); }
       finally { setAttendanceSaving(false); }
       return;
     }
-    const { error } = await db.rpc('save_class_attendance', {
+    const { data, error } = await db.rpc('write_class_attendance', {
       p_class_id: classId,
       p_attendance_date: date,
       p_records,
+      p_expected_revision: attendanceSnapshot.revision, p_action: action,
+      p_reason: payload.reason, p_request_id: attendanceRequest.current.id,
     });
     setAttendanceSaving(false);
     if (!error && targetContext === activeAttendanceContextRef.current) {
-      attendanceDirtyRef.current = false;
+      const parsed = attendanceSnapshotSchema.safeParse(data);
+      if (!parsed.success) { setAttendanceNote(attendanceWriteError('invalid_response')); return; }
+      setAttendanceSnapshot(parsed.data);
+      setAttendanceReason('');
+      attendanceRequest.current = null;
+      attendanceDirtyRef.current = false; setAttendanceDirty(false);
       void refreshTeacherContext();
     }
     if (targetContext === activeAttendanceContextRef.current)
       setAttendanceNote(
         error
-          ? 'Could not save attendance. Check the roster and try again.'
-          : `Attendance saved for ${displaySchoolDate(date)}.`,
+          ? attendanceWriteError(error.message)
+          : action === 'draft' ? 'Draft saved. Parents cannot see draft attendance.' : `Attendance saved for ${displaySchoolDate(date)}.`,
       );
   };
   const attendanceBusy = attendanceLoading || attendanceSaving;
@@ -1270,6 +1296,18 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
           counts={counts}
           busy={attendanceBusy}
           note={attendanceNote}
+          localAccepted={attendanceNote === schoolOperations.acceptedNote}
+          snapshot={attendanceSnapshot}
+          dirty={attendanceDirty}
+          reason={attendanceReason}
+          onReason={(value: string) => { attendanceDirtyRef.current = true; setAttendanceDirty(true); setAttendanceReason(value); }}
+          onDraft={() => void saveAttendance('draft')}
+          onReload={() => {
+            attendanceDirtyRef.current = false; setAttendanceDirty(false);
+            setAttendanceReason('');
+            setAttendanceLoading(true);
+            void loadAttendance(classId, date, students, attendanceRequestVersionRef.current);
+          }}
           onDate={(nextDate: string) => {
             activeAttendanceContextRef.current = '';
             attendanceRequestVersionRef.current += 1;
@@ -1278,11 +1316,11 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
             setAttendanceNote('');
           }}
           onStatus={(studentId: string, status: Status) => {
-            attendanceDirtyRef.current = true;
+            attendanceDirtyRef.current = true; setAttendanceDirty(true);
             attendanceRequestVersionRef.current += 1;
             setRecords((current) => ({ ...current, [studentId]: status }));
           }}
-          onSave={saveAttendance}
+          onSave={() => void saveAttendance('finalize')}
         />{classId && <div className="teacher-attendance-secondary"><OptionalSection id="teacher-attendance-history" title={ui('Attendance history & trends')} description={ui('Explore earlier registers and attendance patterns.')}><AttendanceTrends key={`${classId}:${attendanceNote}`} schoolId={profile.school_id} classId={classId} /></OptionalSection><OptionalSection id="teacher-attendance-insights" title={ui('Classroom attendance insights')} description={ui('Review explainable signals and their limitations.')}><AttendanceInsights role="teacher" profileId={profile.id} schoolId={profile.school_id} classId={classId} revision={attendanceNote} /></OptionalSection></div>}</div>
       ) : mode === 'homework' ? (
         <div id="teacher-homework"><TeacherAssignments key={classId} teacherId={profile.id} classId={classId} classLabel={classes.find((row) => row.id === classId)} studentsCount={students.length} /></div>
@@ -1330,12 +1368,19 @@ function AttendanceMarker({
   counts,
   busy,
   note,
+  localAccepted,
   onDate,
   onStatus,
   onSave,
+  snapshot,
+  dirty,
+  reason,
+  onReason,
+  onDraft,
+  onReload,
 }: any) {
   const ui = useUiText();
-  const saved = note.startsWith('Attendance saved');
+  const saved = snapshot?.state === 'finalized';
   const [rosterSearch, setRosterSearch] = useState('');
   const rosterQuery = rosterSearch.trim().toLocaleLowerCase();
   const shownStudents = students.filter((row: any) => !rosterQuery || `${row.full_name} ${row.roll_number || ''}`.toLocaleLowerCase().includes(rosterQuery));
@@ -1368,8 +1413,12 @@ function AttendanceMarker({
           <div className="attendance-register-guidance">
             <span className="section-icon"><Icon name="check" /></span>
             <p><UiText source={"Everyone starts as Present. Change only Absent or Late students."} /></p>
-            <span className={saved ? 'attendance-state saved' : 'attendance-state pending'}>{saved ? <><Icon name="check" /> <UiText source={"Saved"} /></> : <><UiText source={"Ready to mark"} /></>}</span>
+            <span className={saved && !dirty ? 'attendance-state saved' : 'attendance-state pending'}>{saved && !dirty ? <><Icon name="check" /> <UiText source={"Saved"} /></> : <><UiText source={"Ready to mark"} /></>}</span>
           </div>
+          <p role="status">{dirty ? ui('Unsaved changes — Parent records are unchanged') : saved ? ui('Teacher-confirmed attendance') : ui('Draft — not confirmed for Parents')} · {ui('Revision {0}', [String(snapshot?.revision ?? 0)])}
+            {saved && snapshot.confirmed_at && <> · {new Date(snapshot.confirmed_at).toLocaleString()}</>}
+          </p>
+          {saved && <label>{ui('Reason for correction (required when statuses change)')}<textarea maxLength={500} value={reason} onChange={event => onReason(event.target.value)} /></label>}
           <div className="attendance-counts attendance-live-summary" aria-label={ui("Live attendance summary")} aria-live="polite">
             <span className="attendance-total"><b>{students.length}</b><UiText source={"Total"} /></span>
             <span className="attendance-present"><b>{counts.present}</b><UiText source={"Present"} /></span>
@@ -1400,13 +1449,15 @@ function AttendanceMarker({
             </>
           )}
           <div className="attendance-save-area">
-            <div><b>{counts.present} <UiText source={"Present · "} />{counts.absent} <UiText source={"Absent · "} />{counts.late} <UiText source={"Late"} /></b><span>{saved ? ui("Attendance is saved for this date.") : ui("Review exceptions, then save the register.")}</span></div>
-            <button disabled={busy || !students.length} onClick={onSave}>
-              {busy ? ui("Saving attendance…") : saved ? ui("Save changes") : ui("Save attendance")}
+            <div><b>{counts.present} <UiText source={"Present · "} />{counts.absent} <UiText source={"Absent · "} />{counts.late} <UiText source={"Late"} /></b><span>{saved && !dirty ? ui("Attendance is saved for this date.") : ui("Review exceptions, then save the register.")}</span></div>
+            {!saved && <button className="secondary" disabled={busy || !students.length || !snapshot} onClick={onDraft}>{ui('Save draft')}</button>}
+            <button disabled={busy || !students.length || !snapshot} onClick={onSave}>
+              {busy ? ui("Saving attendance…") : saved ? ui("Save correction") : ui("Finalize attendance")}
             </button>
           </div>
+          <button type="button" className="secondary" disabled={busy} onClick={onReload}>{ui('Reload saved register (discard unsaved edits)')}</button>
           {note && (
-            <p className={note.startsWith('Could') ? 'error' : 'success'}>
+            <p role="status" className={localAccepted || note.startsWith('Attendance saved') || note.startsWith('Draft saved') ? 'success' : 'error'}>
               {ui(note)}
             </p>
           )}
@@ -1932,6 +1983,7 @@ function AttendanceSummary({
   return (
     <div className="card attendance-card">
       <h2>{t('parent.latestAttendance')}</h2>
+      <p>{ui('Teacher-saved classroom records. Draft registers are not shown.')}</p>
       <div className={`attendance-latest ${attendance[0].status}`}>
         <span className="attendance-latest-icon" aria-hidden="true"><Icon name={attendance[0].status === 'present' ? 'check' : attendance[0].status === 'absent' ? 'important' : 'attendance'} /></span>
         <div><b>{localizedStatus(attendance[0].status, t)}</b><time dateTime={attendance[0].attendance_date}>{displaySchoolDate(attendance[0].attendance_date, { month: 'short', day: 'numeric', year: 'numeric' }, language)}</time></div>

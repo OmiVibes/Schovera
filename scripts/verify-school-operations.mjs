@@ -65,13 +65,19 @@ try {
   await api(teacher,{action:'capture',lease:`broken.${lease.split('.')[1]}`,operation:invalid},409);
   const key=localSigningKey(path.dirname(database)),claims=verifyLease(key,lease);
   const expired=issueLease(key,claims,Date.now()-LEASE_MS-1000);await api(teacher,{action:'capture',lease:expired,operation:invalid},409);
-  const online=op('attendance',{records:[{student_id:student,status:'present'}]});await capture(teacher,lease,online);await api(teacher,{action:'sync',retry:true});
+  const online=op('attendance',{records:[{student_id:student,status:'present'}],attendance_version:2,expected_revision:claims.register_revision,action:'finalize',reason:'Synthetic online classroom correction'});await capture(teacher,lease,online);const initialSync=await api(teacher,{action:'sync',retry:true});
+  const initialRow=initialSync.rows.find(r=>r.operation_id===online.operation_id);
+  if(initialRow.state!=='synced') {
+    const queued=openOperations(database);let envelope,hash;try{const row=queued.rows(teacher.id,fixture.schoolId).find(r=>r.operation_id===online.operation_id);envelope=JSON.parse(row.canonical);hash=row.payload_hash;}finally{queued.close();}
+    const diagnostic=await teacher.client.rpc('replay_school_operation',{p_envelope:envelope,p_payload_hash:hash});
+    assert.equal(initialRow.state,'synced',`Initial sync ${initialRow.error}: ${diagnostic.error?.message||'direct retry succeeded'}`);
+  }
   const saved=await attendanceRows(student,day);assert.equal(saved.length,1);assert.equal(saved[0].status,'present');
   await api(teacher,{action:'sync',retry:true});assert.deepEqual(await attendanceRows(student,day),saved);
   console.log('Online capture, atomic receipt, same-operation retry, invalid/forged/expired proof, role/school/Origin denial passed.');
 
   const queuedDay=fixture.dates.at(-2),offlineLease=await leaseFor(queuedDay);
-  const offline=op('attendance',{records:[{student_id:student,status:'late'}]});
+  const offline=op('attendance',{records:[{student_id:student,status:'late'}],attendance_version:2,expected_revision:verifyLease(key,offlineLease).register_revision,action:'finalize',reason:'Synthetic offline register correction'});
   const notice=op('update',{student_id:student,category:'general',title:`Synthetic pending ${randomUUID()}`,message:'Original synthetic notice at 09:00. No automatic approval.'});
   const secondNotice=op('update',{...notice.payload,title:`Synthetic second ${randomUUID()}`});
   control('authority-offline');
@@ -91,7 +97,8 @@ try {
 
   const conflictDay=fixture.dates.at(-3),conflictLease=await leaseFor(conflictDay),conflict=op('attendance',{records:[{student_id:student,status:'absent'}]});
   control('offline');await capture(teacher,conflictLease,conflict);
-  await must(teacher.client.rpc('save_class_attendance',{p_class_id:klass,p_attendance_date:conflictDay,p_records:[{student_id:student,status:'present'}]}));
+  const conflictSnapshot=await must(teacher.client.rpc('class_attendance_snapshot',{p_class_id:klass,p_attendance_date:conflictDay}));
+  await must(teacher.client.rpc('write_class_attendance',{p_class_id:klass,p_attendance_date:conflictDay,p_records:[{student_id:student,status:'present'}],p_expected_revision:conflictSnapshot.revision,p_action:'finalize',p_reason:'Newer synthetic Teacher correction',p_request_id:randomUUID()}));
   const corrected=await attendanceRows(student,conflictDay);control('online');
   assert.equal((await api(teacher,{action:'sync',retry:true})).rows.find(r=>r.operation_id===conflict.operation_id).state,'review');
   assert.deepEqual(await attendanceRows(student,conflictDay),corrected);
@@ -115,7 +122,7 @@ try {
   await page.goto(base);await page.getByLabel('Email',{exact:true}).fill(fixture.accounts.teacher.email);await page.getByLabel('Password',{exact:true}).fill(fixture.accounts.teacher.password);await page.getByRole('button',{name:'Sign in securely',exact:true}).click();await page.locator('.role-teacher').waitFor();
   await page.goto(`${base}/teacher/attendance`);await page.getByRole('button',{name:'Grade 8-A',exact:true}).click();const uiDay=fixture.dates[1];await page.getByLabel('Date',{exact:true}).fill(uiDay);
   await page.getByRole('button',{name:'Enable offline saving',exact:true}).click();await page.getByText('Offline saving ready (30-minute permission).',{exact:true}).waitFor();
-  control('authority-offline');const register=page.locator('.teacher-attendance-register');await register.locator('.roster-row').getByRole('button',{name:'Late',exact:true}).click();await register.getByRole('button',{name:/Save attendance|Save changes/}).click();
+  control('authority-offline');const register=page.locator('.teacher-attendance-register');await register.locator('.roster-row').getByRole('button',{name:'Late',exact:true}).click();await register.getByLabel('Reason for correction (required when statuses change)',{exact:true}).fill('Synthetic offline classroom review');await register.getByRole('button',{name:'Save correction',exact:true}).click();
   await page.getByText('Saved locally — waiting to sync.',{exact:true}).waitFor();assert.equal((await attendanceRows(student,uiDay))[0].status,'absent');
   stop();await start();await until(async()=>{const s=openOperations(database);try{return s.rows(teacher.id,fixture.schoolId).some(r=>JSON.parse(r.canonical).attendance_date===uiDay&&r.state==='pending');}finally{s.close();}},'pending UI record after server restart');
   control('online');await until(async()=>(await attendanceRows(student,uiDay))[0].status==='late','automatic browser attendance replay');

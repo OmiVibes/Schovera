@@ -91,6 +91,14 @@ export function prepareOperation(claims, input) {
     const rows=input.payload?.records;
     if(!Array.isArray(rows)||rows.length!==claims.roster.length||!rows.length||rows.some(r=>!claims.roster.includes(r.student_id)||!['present','absent','late'].includes(r.status))||new Set(rows.map(r=>r.student_id)).size!==rows.length) throw operationError('invalid_attendance');
     payload={records:rows.map(r=>({student_id:r.student_id,status:r.status})).sort((a,b)=>a.student_id.localeCompare(b.student_id))};
+    if (input.payload.attendance_version !== undefined) {
+      const p=input.payload;
+      if(!Number.isInteger(claims.register_revision)||claims.register_revision<0
+        ||p.attendance_version!==2||!['draft','finalize'].includes(p.action)||!Number.isSafeInteger(p.expected_revision)||p.expected_revision<0
+        ||Object.keys(p).some(k=>!['records','attendance_version','action','expected_revision','reason'].includes(k))
+        ||(p.reason!==undefined&&p.reason!==null&&(typeof p.reason!=='string'||p.reason.trim().length>500))) throw operationError('invalid_attendance');
+      payload={...payload,attendance_version:2,action:p.action,expected_revision:p.expected_revision,reason:typeof p.reason==='string'?p.reason.trim():null};
+    } else if(Object.keys(input.payload).some(k=>k!=='records')) throw operationError('invalid_attendance');
   } else {
     const p=input.payload;
     if(!p||!claims.roster.includes(p.student_id)||!['general','academic','attendance','achievement','behaviour','homework_task'].includes(p.category)||typeof p.title!=='string'||typeof p.message!=='string') throw operationError('invalid_update');
@@ -115,7 +123,7 @@ export async function replayOperations(store, actor, school, send, options=/** @
       if(store.mode()==='lose-response') {store.setMode('online');throw operationError('connection_lost');}
       store.receipt(row.operation_id,receipt,beforeReceiptCommit);
     } catch(error) {
-      const reason=['attendance_conflict','not_authorized','operation_conflict','invalid_operation'].find(code=>error.message?.includes(code));
+      const reason=['attendance_conflict','attendance_review_required','attendance_reason_required','attendance_already_finalized','attendance_revision_required','not_authorized','operation_conflict','invalid_operation'].find(code=>error.message?.includes(code));
       store.failure(row.operation_id,Boolean(reason),reason||'retry_needed');
     }
   }

@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { assertLocalTestEnvironment } from './lib/local-test-env.mjs';
+import { prepareManualFixture, cleanManualFixture, readManualFixture } from './manual-demo.mjs';
 import { schoolToday, shiftSchoolDate } from '../src/lib/school-date.mjs';
 
 assertLocalTestEnvironment();
@@ -9,7 +10,6 @@ assertLocalTestEnvironment();
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-const password = process.env.SCHOVERA_DEMO_PASSWORD || 'SchoveraDemo2026!';
 if (!url || !serviceKey || !publishableKey)
   throw new Error('Required Supabase environment configuration is missing.');
 const admin = createClient(url, serviceKey, {
@@ -23,6 +23,7 @@ const temporary = {
   schoolIds: [],
   authUserIds: [],
 };
+let fixture;
 const suffix = randomUUID().slice(0, 8);
 const dateDaysAgo = (days) => {
   return shiftSchoolDate(schoolToday(), -days);
@@ -41,7 +42,9 @@ async function signIn(email) {
   const client = createClient(url, publishableKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { error } = await client.auth.signInWithPassword({ email, password });
+  const ownedAccount = Object.values(fixture.accounts).find(account => account.email === email);
+  if (!ownedAccount) throw new Error('Owned synthetic account required.');
+  const { error } = await client.auth.signInWithPassword(ownedAccount);
   if (error) throw error;
   return client;
 }
@@ -80,30 +83,14 @@ async function cleanup() {
 }
 
 try {
-  const school = await must(
-    admin.from('schools').select('id').eq('code', 'SCHOVERA-DEMO').single(),
-  );
-  const profiles = await must(
-    admin
-      .from('profiles')
-      .select('id,role,email,school_id')
-      .in('email', [
-        'teacher@schovera.demo',
-        'parent@schovera.demo',
-        'principal@schovera.demo',
-      ]),
-  );
-  const byEmail = (email) =>
-    profiles.find((profile) => profile.email === email);
-  const teacherProfile = byEmail('teacher@schovera.demo');
-  const parentProfile = byEmail('parent@schovera.demo');
-  const principalProfile = byEmail('principal@schovera.demo');
-  expect(
-    teacherProfile && parentProfile && principalProfile,
-    'Seed roles are missing. Run npm run seed:demo first.',
-  );
-  const aaravRecord = await must(admin.from('students').select('id,class_id').eq('school_id', parentProfile.school_id).eq('full_name', 'Aarav Patil').maybeSingle());
-  expect(aaravRecord, 'Aarav Patil is missing.');
+  fixture = await prepareManualFixture({ onCreated: value => { fixture = value; } });
+  const school = { id: fixture.schoolId };
+  const profiles = await must(admin.from('profiles').select('id,role,email,school_id').eq('school_id',school.id));
+  const byEmail = email => profiles.find(profile => profile.email === email);
+  const teacherProfile=byEmail(fixture.accounts.teacher.email),parentProfile=byEmail(fixture.accounts.parent.email),principalProfile=byEmail(fixture.accounts.principal.email);
+  const aaravRecord=fixture.students[0];
+  // A second owned classmate preserves complete-roster and mixed-status checks.
+  await must(admin.from('students').insert({school_id:school.id,class_id:aaravRecord.class_id,roll_number:'02',full_name:'Synthetic Attendance Classmate',active:true}));
   const assignment = await must(
     admin
       .from('teacher_class_assignments')
@@ -113,7 +100,7 @@ try {
       .is('ended_at', null)
       .maybeSingle(),
   );
-  expect(assignment, 'Demo Teacher is not assigned to Aarav Patil\'s class.');
+  expect(assignment, 'Synthetic Teacher is not assigned to the test class.');
   const roster = await must(
     admin
       .from('students')
@@ -124,10 +111,10 @@ try {
   );
   expect(
     roster.length >= 2,
-    'Attendance verifier requires the seeded Grade 7A roster.',
+    'Attendance verifier requires two owned synthetic classmates.',
   );
-  const aarav = roster.find((student) => student.full_name === 'Aarav Patil');
-  expect(aarav, 'Aarav Patil is missing.');
+  const aarav = roster.find((student) => student.id === aaravRecord.id);
+  expect(aarav, 'Owned synthetic child is missing.');
   const teacher = await signIn(teacherProfile.email);
   const parent = await signIn(parentProfile.email);
   const principal = await signIn(principalProfile.email);
@@ -319,10 +306,12 @@ try {
     student_id: student.id,
     status: index === 0 ? 'late' : 'present',
   }));
-  const { error: updateError } = await teacher.rpc('save_class_attendance', {
+  const current = await must(teacher.rpc('class_attendance_snapshot',{p_class_id:assignment.class_id,p_attendance_date:testDate}));
+  const { error: updateError } = await teacher.rpc('write_class_attendance', {
     p_class_id: assignment.class_id,
     p_attendance_date: testDate,
     p_records: changedRecords,
+    p_expected_revision:current.revision,p_action:'finalize',p_reason:'Synthetic Teacher register correction',p_request_id:randomUUID(),
   });
   if (updateError) throw updateError;
   const updated = await must(
@@ -364,5 +353,5 @@ try {
     'Attendance verification passed: roster save/update, parent history, principal overview, and authorization isolation.',
   );
 } finally {
-  await cleanup();
+  try { await cleanup(); } finally { if(fixture && readManualFixture().runId===fixture.runId)await cleanManualFixture(); }
 }

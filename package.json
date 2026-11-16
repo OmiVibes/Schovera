@@ -102,7 +102,8 @@
     "test:rfid": "vitest run scripts/rfid-simulator/core.test.ts scripts/rfid-simulator/event-v2.test.ts scripts/lib/local-test-env.test.ts src/lib/rfid/server.test.ts",
     "rfid:capability-key:init": "node scripts/init-rfid-capability-key.mjs",
     "test:credential-attribution": "vitest run scripts/rfid-attribution/attribution.test.mjs",
-    "verify:local-i18n-reconnect": "node --env-file=.env.test.local scripts/verify-production-i18n.mjs"
+    "verify:local-i18n-reconnect": "node --env-file=.env.test.local scripts/verify-production-i18n.mjs",
+    "verify:attendance-integrity": "node --env-file=.env.test.local scripts/verify-attendance-integrity.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

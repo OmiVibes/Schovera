@@ -421,4 +421,19 @@ you@school.org|you@school.org|you@school.org
 More pages|और पृष्ठ|आणखी पाने
 All portal pages|पोर्टल के सभी पृष्ठ|पोर्टलची सर्व पाने
 Live drafting is unavailable on this server. Use the school's configured local model. Spreadsheet editing below still works locally in your browser.|इस सर्वर पर AI प्रारूप उपलब्ध नहीं है। स्कूल का निर्धारित स्थानीय मॉडल इस्तेमाल करें। नीचे फ़ाइल का संपादन इसी ब्राउज़र में उपलब्ध है।|या सर्व्हरवर AI मसुदा उपलब्ध नाही. शाळेचे निश्चित स्थानिक मॉडेल वापरा. खाली फाइलचे संपादन याच ब्राउझरमध्ये उपलब्ध आहे.
+Teacher-confirmed attendance|शिक्षक द्वारा पुष्टि की गई उपस्थिति|शिक्षकांनी पुष्टी केलेली उपस्थिती
+Unsaved changes — Parent records are unchanged|बिना सहेजे बदलाव — अभिभावकों के रिकॉर्ड नहीं बदले हैं|न जतन केलेले बदल — पालकांच्या नोंदी बदललेल्या नाहीत
+Draft — not confirmed for Parents|प्रारूप — अभिभावकों के लिए पुष्टि नहीं हुई|मसुदा — पालकांसाठी पुष्टी झालेली नाही
+Revision {0}|संस्करण {0}|आवृत्ती {0}
+Reason for correction (required when statuses change)|सुधार का कारण (स्थिति बदलने पर आवश्यक)|दुरुस्तीचे कारण (स्थिती बदलल्यास आवश्यक)
+Save draft|प्रारूप सहेजें|मसुदा जतन करा
+Save correction|सुधार सहेजें|दुरुस्ती जतन करा
+Finalize attendance|उपस्थिति की पुष्टि करें|उपस्थितीची पुष्टी करा
+Reload saved register (discard unsaved edits)|सहेजा रजिस्टर फिर खोलें (बिना सहेजे बदलाव हटेंगे)|जतन केलेले रजिस्टर पुन्हा उघडा (न जतन केलेले बदल रद्द होतील)
+Draft saved. Parents cannot see draft attendance.|प्रारूप सहेजा गया। अभिभावक प्रारूप उपस्थिति नहीं देख सकते।|मसुदा जतन झाला. पालक मसुद्यातील उपस्थिती पाहू शकत नाहीत.
+Attendance changed elsewhere. Your edits were not saved. Reload the register before trying again.|उपस्थिति कहीं और बदली है। आपके बदलाव नहीं सहेजे गए। फिर कोशिश करने से पहले रजिस्टर फिर खोलें।|उपस्थिती इतरत्र बदलली आहे. तुमचे बदल जतन झाले नाहीत. पुन्हा प्रयत्न करण्यापूर्वी रजिस्टर पुन्हा उघडा.
+Enter a reason for changing finalized attendance.|पुष्टि की गई उपस्थिति बदलने का कारण लिखें।|पुष्टी केलेली उपस्थिती बदलण्याचे कारण लिहा.
+This register is already finalized. Reload before making a correction.|इस रजिस्टर की पुष्टि हो चुकी है। सुधार करने से पहले फिर खोलें।|या रजिस्टरची पुष्टी झाली आहे. दुरुस्ती करण्यापूर्वी पुन्हा उघडा.
+Could not save attendance. No confirmation was received. Retry the same save or reload the register.|उपस्थिति नहीं सहेजी जा सकी। पुष्टि नहीं मिली। वही बदलाव फिर सहेजें या रजिस्टर फिर खोलें।|उपस्थिती जतन झाली नाही. पुष्टी मिळाली नाही. तेच बदल पुन्हा जतन करा किंवा रजिस्टर पुन्हा उघडा.
+Teacher-saved classroom records. Draft registers are not shown.|शिक्षक द्वारा सहेजी गई कक्षा उपस्थिति। प्रारूप रजिस्टर नहीं दिखाए जाते।|शिक्षकांनी जतन केलेली वर्ग उपस्थिती. मसुदा रजिस्टर दाखवले जात नाहीत.
 `;

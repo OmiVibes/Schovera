@@ -58,7 +58,8 @@ try {
   const register = teacher.page.locator('.teacher-attendance-register');
   await register.locator('.roster-row button[aria-pressed=true]').filter({ hasText: 'Absent' }).waitFor();
   await register.locator('.roster-row').getByRole('button', { name: 'Present', exact: true }).click();
-  await register.getByRole('button', { name: /Save attendance|Save changes/ }).click();
+  await register.getByLabel('Reason for correction (required when statuses change)', {exact:true}).fill('Synthetic Teacher reviewed classroom attendance');
+  await register.getByRole('button', { name: 'Save correction', exact:true }).click();
   await teacher.page.getByText('Attendance saved', { exact: false }).waitFor();
   await insights.getByText('No follow-up pattern under these rules.', { exact: false }).waitFor();
   await go(teacher.page, 'teacher', 'students'); await teacher.page.getByRole('button', { name: /Synthetic Child A/ }).first().click();

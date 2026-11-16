@@ -27,6 +27,24 @@ it('binds capture to the signed actor/school and preserves update identity acros
   const a=prepareOperation(snapshot,input),b=prepareOperation({...snapshot,baseline:'1'.repeat(32),attendance_date:'2026-11-08'},input);
   expect(a.actor_id).toBe(snapshot.actor_id);expect(a.school_id).toBe(snapshot.school_id);expect(b).toEqual(a);
 });
+it('preserves version-2 attendance revision, action and correction reason without changing legacy envelopes',()=>{
+  const input={operation_id:randomUUID(),kind:'attendance',authored_at:'2026-11-09T08:00:00Z',payload:{records:[{student_id:snapshot.roster[0],status:'late'}],attendance_version:2,expected_revision:3,action:'finalize',reason:' Teacher checked the register '}};
+  expect(prepareOperation({...snapshot,register_revision:3},input).payload).toMatchObject({attendance_version:2,expected_revision:3,action:'finalize',reason:'Teacher checked the register'});
+  expect(()=>prepareOperation(snapshot,input)).toThrow('invalid_attendance'); // Old authority cannot receive a draft as a legacy final save.
+  expect(operation().payload).not.toHaveProperty('attendance_version');
+  for(const patch of [{attendance_version:3},{expected_revision:-1},{action:'reopen'},{reason:{text:'invalid'}}])
+    expect(()=>prepareOperation({...snapshot,register_revision:3},{...input,payload:{...input.payload,...patch}})).toThrow('invalid_attendance');
+  expect(()=>prepareOperation(snapshot,{...input,payload:{records:input.payload.records,action:'draft'}})).toThrow('invalid_attendance');
+});
+it('holds legacy corrections needing review without altering or deleting the captured intention',async()=>{
+  const s=openOperations(file());try{
+    const o=operation();s.insert(o);const before=s.rows(snapshot.actor_id,snapshot.school_id)[0].canonical;
+    await replayOperations(s,snapshot.actor_id,snapshot.school_id,async()=>{throw Error('attendance_reason_required');});
+    const held=s.rows(snapshot.actor_id,snapshot.school_id)[0];expect(held.state).toBe('review');expect(held.canonical).toBe(before);
+    await replayOperations(s,snapshot.actor_id,snapshot.school_id,async()=>{throw Error('must not replay');},{force:true});
+    expect(s.rows(snapshot.actor_id,snapshot.school_id)[0].attempts).toBe(1);
+  }finally{s.close();}
+});
 it('commits before acknowledgement, deduplicates exactly and rejects changed replay',()=>{
   const s=openOperations(file());try{const o=operation();expect(()=>s.insert(o,()=>{throw Error('fault');})).toThrow();expect(s.rows(snapshot.actor_id,snapshot.school_id)).toHaveLength(0);
     s.insert(o);s.insert(o);expect(s.rows(snapshot.actor_id,snapshot.school_id)).toHaveLength(1);expect(()=>s.insert({...o,authored_at:'2026-11-08T08:00:00Z'})).toThrow('operation_conflict');

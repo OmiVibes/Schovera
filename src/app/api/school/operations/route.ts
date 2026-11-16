@@ -57,7 +57,8 @@ export async function POST(request: Request) {
         const result=await client!.rpc('replay_school_operation',{p_envelope:operation,p_payload_hash:hash});
         if(result.error) {
           const message=result.error.message;
-          throw new Error(message.includes('attendance_conflict')?'attendance_conflict':message.includes('not_authorized')||message.includes('not authorized')?'not_authorized':message.includes('operation_conflict')||message.includes('idempotency conflict')?'operation_conflict':message.includes('invalid')?'invalid_operation':'connection_lost');
+          const attendanceError=['attendance_conflict','attendance_review_required','attendance_reason_required','attendance_already_finalized','attendance_revision_required'].find(code=>message.includes(code));
+          throw new Error(attendanceError??(message.includes('not_authorized')||message.includes('not authorized')?'not_authorized':message.includes('operation_conflict')||message.includes('idempotency conflict')?'operation_conflict':message.includes('invalid')?'invalid_operation':'connection_lost'));
         }
         return result.data;
       },{force:body.retry===true});

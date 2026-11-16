@@ -43,6 +43,7 @@ export function useSchoolOperations(db:SupabaseClient,actor:string,classId:strin
       setMessage(review?'Some saved work needs review. Newer attendance was not replaced.':retryNeeded?'Sync failed — retry needed. Saved work is retained.':pending?'Saved locally — waiting to sync.':'All changes synced.');
       const fresh=result.rows.filter((r:Row)=>r.state==='synced'&&!seenReceipts.current.has(r.operation_id));
       for(const row of fresh)seenReceipts.current.add(row.operation_id);
+      if(fresh.some((row:Row)=>row.kind==='attendance'))window.dispatchEvent(new Event('schovera:attendance-synced'));
       if(fresh.length)void prepare(true);
       return result;
     } catch {
