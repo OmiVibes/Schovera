@@ -684,7 +684,13 @@ try {
   // for the current weekday, so intentionally wait on the first visible match.
   await teacherPage.locator('#teacher-timetable').getByText(timetableSubject, { exact: true }).first().waitFor({ state: 'visible', timeout: 20000 });
   await teacherPage.locator('#teacher-timetable .timetable-week').getByRole('heading', { name: 'All school days' }).waitFor({ state: 'visible', timeout: 15000 });
-  const teacherTimetableBefore = await teacherPage.locator('#teacher-timetable').innerText();
+  // Read readiness and its snapshot in one browser task. A background refresh
+  // can otherwise replace the grid after waitFor() but before innerText().
+  const timetableSnapshot = await teacherPage.waitForFunction(() => {
+    const text = document.querySelector('#teacher-timetable')?.innerText;
+    return text?.includes('All school days') && text.includes('Today') ? text : false;
+  }, undefined, { timeout: 15000 });
+  const teacherTimetableBefore = await timetableSnapshot.jsonValue();
   expect(teacherTimetableBefore.includes('All school days') && teacherTimetableBefore.includes('Today'), `Teacher today/weekly timetable did not load. Rendered profile: ${teacherTimetableBefore}`);
   const teacherTimetableSubject = `Reconnect teacher timetable ${suffix}`;
   await teacherContext.setOffline(true);

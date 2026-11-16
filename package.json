@@ -104,6 +104,7 @@
     "test:credential-attribution": "vitest run scripts/rfid-attribution/attribution.test.mjs",
     "verify:local-i18n-reconnect": "node --env-file=.env.test.local scripts/verify-production-i18n.mjs",
     "verify:attendance-integrity": "node --env-file=.env.test.local scripts/verify-attendance-integrity.mjs",
+    "verify:reader-readiness": "node --env-file=.env.test.local scripts/verify-reader-readiness.mjs",
     "verify:attendance-review": "node --env-file=.env.test.local scripts/verify-attendance-review.mjs",
     "attendance:demo": "node --env-file=.env.test.local scripts/attendance-demo/cli.mjs"
   },

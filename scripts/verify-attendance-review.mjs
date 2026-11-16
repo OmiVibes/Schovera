@@ -100,7 +100,7 @@ try {
   await deny(teacher.rpc('review_attendance_exception',{...intent,p_reason:'Changed review explanation'}),'operation_conflict');
   await deny(parent.rpc('review_attendance_exception',intent),'not_authorized');
   await capture(teacherPage,'teacher-manual-fallback-reviewed.png');
-  const parentPage=await login('parent','attendance');await parentPage.getByText(`Current class: Teacher-saved attendance is available for ${day}.`,{exact:true}).waitFor();
+  const parentPage=await login('parent','attendance');await parentPage.locator('.child-switcher select').selectOption(student);await parentPage.getByText(`Current class: Teacher-saved attendance is available for ${day}.`,{exact:true}).waitFor();
   await parentPage.context().route('**/rest/v1/rpc/parent_classroom_confirmation',r=>r.fulfill({status:503,contentType:'application/json',body:'{"message":"synthetic unavailable"}'}));
   await parentPage.reload();await parentPage.getByText('Today’s classroom confirmation is unavailable. Earlier saved history is shown separately.',{exact:true}).waitFor();assert.deepEqual(await published(),before);
   await capture(parentPage,'parent-confirmation-unavailable.png');await parentPage.context().unroute('**/rest/v1/rpc/parent_classroom_confirmation');await parentPage.reload();await parentPage.getByText(`Current class: Teacher-saved attendance is available for ${day}.`,{exact:true}).waitFor();
