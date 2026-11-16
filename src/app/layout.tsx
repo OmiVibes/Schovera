@@ -5,6 +5,7 @@ import { AppEntry } from "@/components/schovera-app";
 import "./globals.css";
 import "./theme.css";
 import "./refinement.css";
+import "./attendance-review.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

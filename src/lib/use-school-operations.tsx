@@ -3,8 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {useI18n} from './i18n-provider';
 import {schoolOperationText} from './school-operation-copy';
+import {heldOperationAdvice,type SchoolOperationRow} from './attendance-review';
+import {useUiText} from '@/components/ui-text';
 
-type Row={operation_id:string;kind:string;state:string;error:string|null};
+type Row=SchoolOperationRow;
 export function useSchoolOperations(db:SupabaseClient,actor:string,classId:string,date:string) {
   const {language}=useI18n();
   const supported=process.env.NEXT_PUBLIC_SCHOVERA_SCHOOL_OPERATIONS==='local';
@@ -77,7 +79,7 @@ export function useSchoolOperations(db:SupabaseClient,actor:string,classId:strin
     try{accepted=await call({action:'capture',lease:proof.token,operation});}
     catch{setMessage('No new local save was confirmed. Retry the same work or reconnect.');throw new Error('capture_not_confirmed');}
     version.current++;
-    setRows(previous=>previous.some(r=>r.operation_id===accepted.operation_id)?previous:[...previous,{operation_id:accepted.operation_id,kind,state:accepted.state,error:null}]);
+    setRows(previous=>previous.some(r=>r.operation_id===accepted.operation_id)?previous:[...previous,{operation_id:accepted.operation_id,kind,state:accepted.state,error:null,class_id:classId,attendance_date:date,local_received_at:accepted.local_received_at}]);
     setMessage(accepted.state==='synced'?'All changes synced.':'Saved locally — waiting to sync.');
     const refreshed=await refresh();
     if(kind==='attendance'&&refreshed?.rows.some((r:Row)=>r.operation_id===operation.operation_id&&r.state==='synced'))attendance.current=null;
@@ -88,8 +90,9 @@ export function useSchoolOperations(db:SupabaseClient,actor:string,classId:strin
     failureNote:schoolOperationText(language,'No new local save was confirmed. Check School saving and retry.')};
 }
 
-export function SchoolOperationStatus({operations}:{operations:ReturnType<typeof useSchoolOperations>}) {
+export function SchoolOperationStatus({operations,classLabels={}}:{operations:ReturnType<typeof useSchoolOperations>;classLabels?:Record<string,string>}) {
   const {language}=useI18n();const text=(value:string)=>schoolOperationText(language,value);
+  const ui=useUiText();
   if(!operations.supported)return null;
   return <section className="card school-saving-panel" aria-label={text('Offline school saving')}>
     <strong>{text('School saving')}</strong> <small>{text('Local sync simulation')}</small>
@@ -99,6 +102,7 @@ export function SchoolOperationStatus({operations}:{operations:ReturnType<typeof
       {operations.rows.some(r=>r.state==='pending')&&operations.message!=='Saved locally — waiting to sync.'&&<p>{text('Saved locally — waiting to sync.')}</p>}
       <p>{operations.rows.filter(r=>r.state==='pending').length} {text('waiting')} · {operations.rows.filter(r=>r.state==='review').length} {text('need review')}</p>
       <button type="button" onClick={()=>void operations.retry()}>{text('Retry sync')}</button>
+      {operations.rows.some(r=>r.state==='review')&&<section aria-label={ui('Held offline work')}><h3>{ui('Held offline work')}</h3><p>{ui('Original intentions are retained. Nothing here forces a stale save or changes its original envelope.')}</p>{operations.rows.filter(r=>r.state==='review').map(row=><article className="m2-held-operation" key={row.operation_id}><strong>{ui(row.kind==='attendance'?'Classroom register':'Important student update')}</strong>{row.class_id&&<p>{classLabels[row.class_id]??ui('Class reference {0}',[row.class_id])}</p>}<p>{ui('Operation {0}',[row.operation_id])}{row.kind==='attendance'&&row.attendance_date?` · ${row.attendance_date}`:''}</p><p>{ui(heldOperationAdvice(row.error))}</p></article>)}</section>}
       {!operations.available&&<p>{text('New offline saves require a prepared class. Existing saved work is retained.')}</p>}
     </>}
   </section>;

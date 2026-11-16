@@ -1,0 +1,13 @@
+.m2-attendance-review { margin-block:1rem; padding:1rem; border:1px solid var(--line); border-radius:14px; background:var(--surface); min-width:0; }
+.m2-attendance-review header,.m2-exception>div:first-child { display:flex; gap:.75rem; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+.m2-attendance-review h3 { margin:0 0 .5rem; font-size:1.15rem; }
+.m2-exception,.m2-held-operation { padding:1rem; margin-block:.75rem; border:1px solid var(--line); border-inline-start:4px solid var(--brand); border-radius:10px; overflow-wrap:anywhere; }
+.m2-exception ul { padding-inline-start:1.25rem; margin-block:.5rem; }
+.m2-review-form { display:grid; gap:.6rem; margin-top:1rem; }
+.m2-class-picker { display:grid; gap:.4rem; margin-block:.75rem; }
+.m2-review-form label,.m2-principal-attendance>label { display:grid; gap:.4rem; margin-block:.75rem; }
+.m2-attendance-review textarea,.m2-principal-attendance select,.m2-principal-attendance input { width:100%; min-width:0; max-width:100%; }
+.m2-attendance-review button,.m2-principal-attendance button { min-height:44px; margin:.25rem; white-space:normal; }
+.m2-parent-confirmation { padding:1rem; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+.m2-principal-attendance .history-list>p { display:flex; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+@media(max-width:480px) { .m2-attendance-review { padding:.8rem; } .m2-exception { padding:.75rem; } .m2-exception button { width:100%; margin-inline:0; } }

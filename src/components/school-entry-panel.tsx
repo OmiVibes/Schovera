@@ -297,6 +297,7 @@ export function SchoolEntryPanel({
       </header>
       {lastUpdated && <p className="school-entry-last-updated" role="status" aria-live="polite">{t('entry.lastUpdated', { time: lastUpdated })}</p>}
       <p className="school-entry-note">{t('entry.disclaimer')}</p>
+      <p className="hint">{ui('Historical reference-only events may appear here. Classroom review uses assignment-bound v2 evidence only. Names and classes are stored bindings, not verified identity at scan time.')}</p>
       {connectionState !== 'online' && <p className="school-entry-connection" role="status">{t('entry.offline')}</p>}
       {role === 'teacher' && <label className="school-entry-control">{t('entry.class')}
         <select value={classId} onChange={(event) => onClassChange?.(event.target.value)} disabled={!classes.length}>
@@ -323,7 +324,7 @@ export function SchoolEntryPanel({
             {visibleEvents.map((item) => {
               const received = new Date(item.received_at).getTime();
               const observed = new Date(item.observed_at).getTime();
-              const delayed = item.timestamp_quality === 'clock_uncertain' || Math.abs(received - observed) > 5 * 60 * 1000;
+              const delayed = item.timestamp_quality === 'clock_uncertain' || Math.abs(received - observed) > 10 * 60 * 1000;
               const student = item.students;
               const grade = student?.classes?.grade && student.classes.division ? classDisplay(student.classes, ui) : '';
               const checkpoint = t('entry.checkpoint');

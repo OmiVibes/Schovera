@@ -25,6 +25,9 @@ import { detectNoticeLanguage, type ParentSpeechController } from '@/lib/parent-
 import { usePrincipalCommunication } from '@/lib/use-principal-communication';
 import { PRINCIPAL_PAGE_SIZE } from '@/lib/principal-communication';
 import { useSchoolOperations, SchoolOperationStatus } from '@/lib/use-school-operations';
+import { StaffAttendanceReview, ParentClassroomConfirmation, PrincipalAttendanceReview } from '@/components/attendance-review';
+import { attendanceOperationState, attendanceRegisterLabel } from '@/lib/attendance-review';
+import { useUnsavedAttendance } from '@/lib/use-unsaved-attendance';
 import { attendanceSnapshotSchema, attendanceWriteError, type AttendanceSnapshot } from '@/lib/attendance-register';
 
 // Keep the spreadsheet tooling out of the shared role bundle. Parents and
@@ -440,7 +443,7 @@ export function SchoveraApp() {
       </main>
     );
   if (routeRole && routeRole !== profile.role) {
-    return <main className="center"><section className="card role-mismatch-card"><span className="role-mismatch-icon" aria-hidden="true"><Icon name="school" /></span><p className="eyebrow"><UiText source={"ACCOUNT WORKSPACE"} /></p><h1><UiText source={"That workspace is not available to this account."} /></h1><p><UiText source={"You are signed in as a "} />{profile.role}<UiText source={". Return to your workspace or switch to the account for this role."} /></p><div><Link className="primary" href="/"><UiText source={"Return to your workspace"} /></Link><button className="secondary" type="button" onClick={async () => { profileRef.current = null; setProfile(null); setBusy(true); await db.auth.signOut(); router.replace('/'); }}><UiText source={"Sign out and switch account"} /></button></div></section></main>;
+    return <main className="center"><section className="card role-mismatch-card"><span className="role-mismatch-icon" aria-hidden="true"><Icon name="school" /></span><p className="eyebrow"><UiText source={"ACCOUNT WORKSPACE"} /></p><h1><UiText source={"That workspace is not available to this account."} /></h1><p><UiText source={"You are signed in as a "} />{profile.role}<UiText source={". Return to your workspace or switch to the account for this role."} /></p><div><Link className="primary" href="/"><UiText source={"Return to your workspace"} /></Link><button className="secondary" type="button" onClick={async () => { if(!window.dispatchEvent(new Event('schovera:before-workspace-leave',{cancelable:true})))return; profileRef.current = null; setProfile(null); setBusy(true); await db.auth.signOut(); router.replace('/'); }}><UiText source={"Sign out and switch account"} /></button></div></section></main>;
   }
   const currentPage = roleNavigation[profile.role].find((item) => item.slug === routeSlug) || roleNavigation[profile.role][0];
   return (
@@ -467,7 +470,7 @@ export function SchoveraApp() {
             <button
               className="link"
               type="button"
-              onClick={async () => { profileRef.current = null; setProfile(null); setBusy(true); await db.auth.signOut(); router.replace('/'); }}
+              onClick={async () => { if(!window.dispatchEvent(new Event('schovera:before-workspace-leave',{cancelable:true})))return; profileRef.current = null; setProfile(null); setBusy(true); await db.auth.signOut(); router.replace('/'); }}
             >
               {t('common.signOut')}
             </button>
@@ -587,6 +590,14 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
   const [attendanceReason, setAttendanceReason] = useState('');
   const loadedAttendanceContext = useRef('');
   const attendanceRequest = useRef<{ identity: string; id: string } | null>(null);
+  const discardAttendanceEdits = () => {
+    attendanceDirtyRef.current=false;setAttendanceDirty(false);setAttendanceReason('');
+    const saved=Object.fromEntries((attendanceSnapshot?.records??[]).map(row=>[row.student_id,row.status]));
+    setRecords(Object.fromEntries(students.map(row=>[row.id,saved[row.id]??'present'])));
+  };
+  const confirmAttendanceLeave=useUnsavedAttendance(attendanceDirty,ui('Discard unsaved attendance changes?'),discardAttendanceEdits);
+  const operationState=attendanceOperationState(schoolOperations.rows,classId,date);
+
   const clearPendingSend = () => {
     sessionStorage.removeItem(pendingSendStorageKey);
     setPendingSend(null);
@@ -1029,7 +1040,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
   };
   return (
     <section className="teacher-workspace" id="teacher-home">
-    {(mode === 'attendance' || mode === 'updates') && <SchoolOperationStatus operations={schoolOperations} />}
+    {(mode === 'attendance' || mode === 'updates') && <SchoolOperationStatus operations={schoolOperations} classLabels={Object.fromEntries(classes.map(row=>[row.id,classDisplay(row,ui)]))} />}
     <section className={`two teacher-mode-${mode}`}>
       <aside className="card teacher-sidebar teacher-class-panel">
         <p className="eyebrow"><UiText source={"YOUR CLASSROOM"} /></p>
@@ -1049,6 +1060,7 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
                 // Re-selecting the current class must preserve its loaded roster
                 // and unsaved register; the classId effect would not run again.
                 if (row.id === classId) return;
+                if (!confirmAttendanceLeave()) return;
                 activeClassIdRef.current = row.id;
                 classRequestVersionRef.current += 1;
                 activeStudentIdRef.current = '';
@@ -1298,17 +1310,22 @@ function Teacher({ profile, page }: { profile: Profile; page: string }) {
           note={attendanceNote}
           localAccepted={attendanceNote === schoolOperations.acceptedNote}
           snapshot={attendanceSnapshot}
+          teacherName={profile.full_name}
+          operationState={operationState}
+          onBulkPresent={() => { attendanceDirtyRef.current=true;setAttendanceDirty(true);setRecords(Object.fromEntries(students.map(row=>[row.id,'present']))); }}
           dirty={attendanceDirty}
           reason={attendanceReason}
           onReason={(value: string) => { attendanceDirtyRef.current = true; setAttendanceDirty(true); setAttendanceReason(value); }}
           onDraft={() => void saveAttendance('draft')}
           onReload={() => {
+            if (!confirmAttendanceLeave()) return;
             attendanceDirtyRef.current = false; setAttendanceDirty(false);
             setAttendanceReason('');
             setAttendanceLoading(true);
             void loadAttendance(classId, date, students, attendanceRequestVersionRef.current);
           }}
           onDate={(nextDate: string) => {
+            if (!confirmAttendanceLeave()) return;
             activeAttendanceContextRef.current = '';
             attendanceRequestVersionRef.current += 1;
             setDate(nextDate);
@@ -1373,6 +1390,9 @@ function AttendanceMarker({
   onStatus,
   onSave,
   snapshot,
+  teacherName,
+  operationState,
+  onBulkPresent,
   dirty,
   reason,
   onReason,
@@ -1413,12 +1433,18 @@ function AttendanceMarker({
           <div className="attendance-register-guidance">
             <span className="section-icon"><Icon name="check" /></span>
             <p><UiText source={"Everyone starts as Present. Change only Absent or Late students."} /></p>
-            <span className={saved && !dirty ? 'attendance-state saved' : 'attendance-state pending'}>{saved && !dirty ? <><Icon name="check" /> <UiText source={"Saved"} /></> : <><UiText source={"Ready to mark"} /></>}</span>
+            <span className={saved && !dirty ? 'attendance-state saved' : 'attendance-state pending'}>{!snapshot?ui(busy?'Loading register state…':'Register state unavailable — refresh before saving'):saved && !dirty ? <><Icon name="check" /> <UiText source={"Saved"} /></> : <><UiText source={"Ready to mark"} /></>}</span>
           </div>
-          <p role="status">{dirty ? ui('Unsaved changes — Parent records are unchanged') : saved ? ui('Teacher-confirmed attendance') : ui('Draft — not confirmed for Parents')} · {ui('Revision {0}', [String(snapshot?.revision ?? 0)])}
+          <p role="status">{ui(attendanceRegisterLabel(snapshot?.state??null,dirty,operationState,busy))} · {snapshot?ui('Revision {0}',[String(snapshot.revision)]):ui('Revision unavailable')}
             {saved && snapshot.confirmed_at && <> · {new Date(snapshot.confirmed_at).toLocaleString()}</>}
           </p>
+          <p>{ui('Teacher: {0}',[teacherName])}</p>
+          {snapshot?.legacy&&<p>{ui('Historical Teacher-saved record; it predates explicit register finalization.')}</p>}
           {saved && <label>{ui('Reason for correction (required when statuses change)')}<textarea maxLength={500} value={reason} onChange={event => onReason(event.target.value)} /></label>}
+          <p className="hint">{ui('Use at least 8 characters and two words. Say what you checked or why the mark changed.')}</p>
+          <StaffAttendanceReview key={`${classId}:${date}`} classId={classId} date={date} revision={snapshot?.revision??0} onFind={(name)=>{setRosterSearch(name);requestAnimationFrame(()=>{const search=document.getElementById('attendance-roster-search');search?.scrollIntoView({block:'center'});search?.focus({preventScroll:true});});}} />
+          <button type="button" className="secondary" disabled={busy||!snapshot||operationState==='pending'} onClick={onBulkPresent}>{ui('Mark all Present (unsaved)')}</button>
+          <p className="hint">{ui('Bulk edits remain unsaved until you explicitly save or finalize.')}</p>
           <div className="attendance-counts attendance-live-summary" aria-label={ui("Live attendance summary")} aria-live="polite">
             <span className="attendance-total"><b>{students.length}</b><UiText source={"Total"} /></span>
             <span className="attendance-present"><b>{counts.present}</b><UiText source={"Present"} /></span>
@@ -1429,7 +1455,7 @@ function AttendanceMarker({
             <Skeleton label={ui("Loading attendance")} rows={4} />
           ) : (
             <>
-            {students.length > 10 && <label className="attendance-roster-search">{ui('Find a student in this register')}<input type="search" value={rosterSearch} onChange={(event) => setRosterSearch(event.target.value)} placeholder={ui('Search by name or roll number')} /></label>}
+            {!!students.length && <label className="attendance-roster-search">{ui('Find a student in this register')}<input id="attendance-roster-search" type="search" value={rosterSearch} onChange={(event) => setRosterSearch(event.target.value)} placeholder={ui('Search by name or roll number')} /></label>}
             <p className="attendance-scroll-help" id="attendance-scroll-help">{ui('Scroll within the register to review every student. Counts and Save cover the whole class.')}</p>
             <div className="roster" role="region" tabIndex={0} aria-label={ui('Attendance register students')} aria-describedby="attendance-scroll-help">
               <div className="attendance-roster-heading" aria-hidden="true"><span><UiText source={"Student"} /></span><span><UiText source={"Status"} /></span></div>
@@ -1450,8 +1476,8 @@ function AttendanceMarker({
           )}
           <div className="attendance-save-area">
             <div><b>{counts.present} <UiText source={"Present · "} />{counts.absent} <UiText source={"Absent · "} />{counts.late} <UiText source={"Late"} /></b><span>{saved && !dirty ? ui("Attendance is saved for this date.") : ui("Review exceptions, then save the register.")}</span></div>
-            {!saved && <button className="secondary" disabled={busy || !students.length || !snapshot} onClick={onDraft}>{ui('Save draft')}</button>}
-            <button disabled={busy || !students.length || !snapshot} onClick={onSave}>
+            {!saved && <button className="secondary" disabled={busy || !students.length || !snapshot || operationState==='pending'} onClick={onDraft}>{ui('Save draft')}</button>}
+            <button disabled={busy || !students.length || !snapshot || operationState==='pending'} onClick={onSave}>
               {busy ? ui("Saving attendance…") : saved ? ui("Save correction") : ui("Finalize attendance")}
             </button>
           </div>
@@ -1888,7 +1914,7 @@ function Parent({ profile, page }: { profile: Profile; page: string }) {
       </section>}
       {page === 'homework' && <ParentHomework child={child} className={className} />}
       {page === 'timetable' && <TimetableView classId={child?.class_id} className={className} profile={profile} />}
-      {page === 'attendance' && <div id="parent-attendance"><AttendanceSummary
+      {page === 'attendance' && <div id="parent-attendance">{childId&&<ParentClassroomConfirmation studentId={childId} revision={attendance.map(row=>`${row.id}:${row.status}`).join(',')} />}<AttendanceSummary
         attendance={attendance}
         counts={counts}
         error={attendanceError}
@@ -2102,10 +2128,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
   const { t } = useI18n();
   const router = useRouter();
   const db = useMemo(() => createClient(), []);
-  const [classes, setClasses] = useState<any[]>([]),
-    [todayAttendance, setTodayAttendance] = useState<Attendance[]>([]),
-    [communicationFilter, setCommunicationFilter] = useState<'all' | 'awaiting'>('all'),
-    [attendanceError, setAttendanceError] = useState('');
+  const [communicationFilter, setCommunicationFilter] = useState<'all' | 'awaiting'>('all');
   const { data: communication, error: communicationError, loading: communicationLoading,
     loadingMore, refresh, loadMore } = usePrincipalCommunication(db, profile.school_id, communicationFilter,
       page === 'home' ? 6 : PRINCIPAL_PAGE_SIZE);
@@ -2115,38 +2138,11 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
     const requestedFilter = new URLSearchParams(window.location.search).get('filter');
     setCommunicationFilter(page === 'communication' && requestedFilter === 'awaiting' ? 'awaiting' : 'all');
   }, [page]);
-  const loadAttendance = async () => {
-    const [classResult, attendanceResult] = await Promise.all([
-      db
-        .from('classes')
-        .select('id,grade,division')
-        .eq('school_id', profile.school_id)
-        .eq('active', true),
-      db
-        .from('attendance_records')
-        .select(
-          'id,class_id,student_id,attendance_date,status,students(full_name)',
-        )
-        .eq('school_id', profile.school_id)
-        .eq('attendance_date', today())
-        .order('updated_at', { ascending: false }),
-    ]);
-    setClasses(classResult.data || []);
-    setTodayAttendance(attendanceResult.data || []);
-    setAttendanceError(
-      classResult.error || attendanceResult.error
-        ? 'Attendance overview could not be loaded.'
-      : '',
-    );
-  };
-  const refreshPrincipalContext = async () => {
-    await Promise.all([refresh(), loadAttendance()]);
-  };
+  const refreshPrincipalContext = async () => { await refresh(); window.dispatchEvent(new Event('schovera:attendance-review-changed')); };
   const { onChannelStatus: onPrincipalRealtimeStatus, reconcile: reconcilePrincipal } = useRealtimeResync(
     refreshPrincipalContext,
   );
   useEffect(() => {
-    void loadAttendance();
     const channel = db
       .channel('principal-coverage')
       .on(
@@ -2162,7 +2158,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'attendance_records' },
-        loadAttendance,
+        () => window.dispatchEvent(new Event('schovera:attendance-review-changed')),
       )
       .subscribe(onPrincipalRealtimeStatus);
     return () => {
@@ -2171,11 +2167,6 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
   }, [db, profile, onPrincipalRealtimeStatus, reconcilePrincipal]);
   const awaiting = summary?.awaiting_count,
     communicationCoverage = summary?.coverage ?? null,
-    attendanceCounts = todayAttendance.reduce(
-      (total, row) => ({ ...total, [row.status]: total[row.status] + 1 }),
-      { present: 0, absent: 0, late: 0 } as Record<Status, number>,
-    ),
-    markedClassIds = new Set(todayAttendance.map((row) => row.class_id)),
     visibleCommunication = all;
   const showAwaitingCommunication = () => {
     setCommunicationFilter('awaiting');
@@ -2251,54 +2242,7 @@ function Principal({ profile, page }: { profile: Profile; page: string }) {
       {page === 'students' && <PrincipalStudentOverview profile={profile} />}
       {page === 'homework' && <PrincipalHomework profile={profile} />}
       {page === 'timetable' && <PrincipalTimetable profile={profile} />}
-      {page === 'attendance' && <div className="card attendance-overview" id="principal-attendance">
-        <p className="eyebrow"><UiText source={"TODAY’S ATTENDANCE"} /></p>
-        <h2><UiText source={"Today's attendance"} /></h2>
-        {attendanceError ? (
-          <p className="error">{ui(attendanceError)}</p>
-        ) : (
-          <>
-            <div className="attendance-counts">
-              <span>
-                <b>{markedClassIds.size}</b><UiText source={"Marked classes"} /></span>
-              <span>
-                <b>{Math.max(0, classes.length - markedClassIds.size)}</b>
-                <UiText source={"Pending classes"} /></span>
-              <span className="present">
-                <b>{attendanceCounts.present}</b><UiText source={"Present"} /></span>
-              <span className="absent">
-                <b>{attendanceCounts.absent}</b><UiText source={"Absent"} /></span>
-              <span className="late">
-                <b>{attendanceCounts.late}</b><UiText source={"Late"} /></span>
-            </div>
-            <div className="history-list">
-              {classes.map((row) => (
-                <p key={row.id}>
-                  <span>{classDisplay({ grade: row.grade, division: row.division }, ui)}</span>
-                  <b
-                    className={
-                      markedClassIds.has(row.id)
-                        ? 'status present'
-                        : 'status pending'
-                    }
-                  >
-                    {markedClassIds.has(row.id) ? ui("Marked") : ui("Pending")}
-                  </b>
-                </p>
-              ))}
-            </div>
-            {!classes.length && (
-              <p className="empty compact-empty">
-                <UiText source={"No active classes are available for today's attendance view."} /></p>
-            )}
-            {todayAttendance.length > 0 && (
-              <p className="hint">
-                <UiText source={"Latest activity:"} />{' '}
-                {todayAttendance[0].students?.full_name || ui("Student")} <UiText source={"attendance recorded today."} /></p>
-            )}
-          </>
-        )}
-      </div>}
+      {page === 'attendance' && <PrincipalAttendanceReview />}
       {page === 'attendance' && <><AttendanceTrends schoolId={profile.school_id} /><AttendanceInsights role="principal" profileId={profile.id} schoolId={profile.school_id} /></>}
       {(page === 'home' || page === 'communication') && <div className="card principal-recent-communication" id="principal-recent-communication">
         <div className="principal-communication-heading">

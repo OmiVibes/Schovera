@@ -33,9 +33,10 @@ export async function POST(request: Request) {
     // A still-valid capture lease can read only its owner's minimized local status
     // when the authority is unavailable. It never authorizes remote mutation.
     let actor: string,school: string;
+    let leaseScope: {class_id:string;attendance_date:string}|undefined;
     let client: SupabaseClient|undefined;
     if(body.action==='status'&&body.lease) {
-      const claims=verifyLease(signingKey,body.lease);actor=claims.actor_id;school=claims.school_id;
+      const claims=verifyLease(signingKey,body.lease);actor=claims.actor_id;school=claims.school_id;leaseScope=claims;
     } else {
       if(store.mode()==='authority-offline')return response({error:'Authority unavailable. Saved work is retained.'},503);
       const token=request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1];
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
         return result.data;
       },{force:body.retry===true});
     }
-    const rows=store.rows(actor,school).map((r:{operation_id:string;kind:string;state:string;local_received_at:string;error:string|null;receipt:string|null})=>({operation_id:r.operation_id,kind:r.kind,state:r.state,local_received_at:r.local_received_at,error:r.error,receipt:r.receipt?JSON.parse(r.receipt):null}));
+    const rows=store.rows(actor,school).filter((r:{class_id:string;attendance_date:string;kind:string})=>!leaseScope||(r.class_id===leaseScope.class_id&&(r.kind!=='attendance'||r.attendance_date===leaseScope.attendance_date))).map((r:{operation_id:string;kind:string;state:string;class_id:string;attendance_date:string;local_received_at:string;error:string|null;receipt:string|null})=>({operation_id:r.operation_id,kind:r.kind,state:r.state,class_id:r.class_id,attendance_date:r.attendance_date,local_received_at:r.local_received_at,error:r.error,receipt:r.receipt?JSON.parse(r.receipt):null}));
     return response({simulation:true,mode:store.mode(),rows});
   } catch(error) {
     const code=error instanceof Error?error.message:'unavailable';

@@ -124,6 +124,7 @@ try {
   await page.getByRole('button',{name:'Enable offline saving',exact:true}).click();await page.getByText('Offline saving ready (30-minute permission).',{exact:true}).waitFor();
   control('authority-offline');const register=page.locator('.teacher-attendance-register');await register.locator('.roster-row').getByRole('button',{name:'Late',exact:true}).click();await register.getByLabel('Reason for correction (required when statuses change)',{exact:true}).fill('Synthetic offline classroom review');await register.getByRole('button',{name:'Save correction',exact:true}).click();
   await page.getByText('Saved locally — waiting to sync.',{exact:true}).waitFor();assert.equal((await attendanceRows(student,uiDay))[0].status,'absent');
+  await register.getByText('Pending offline sync — Parent records are unchanged',{exact:false}).waitFor();
   stop();await start();await until(async()=>{const s=openOperations(database);try{return s.rows(teacher.id,fixture.schoolId).some(r=>JSON.parse(r.canonical).attendance_date===uiDay&&r.state==='pending');}finally{s.close();}},'pending UI record after server restart');
   control('online');await until(async()=>(await attendanceRows(student,uiDay))[0].status==='late','automatic browser attendance replay');
   await page.goto(`${base}/teacher/students`);await selectTeacherStudent(page,'Synthetic Child A');
