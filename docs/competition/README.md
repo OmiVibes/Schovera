@@ -9,7 +9,9 @@ Prepared 17 November 2026 for Arohi's Robotex International 2026 presentation in
 - [Judge Q&A — short, factual answers](JUDGE_QA.md)
 - [Feature evidence/status matrix](FEATURE_STATUS.md)
 - [Presentation, backup and failure checklist](PRESENTATION_CHECKLIST.md)
+- [Short adult-operated rehearsal cue sheet](ADULT_REHEARSAL_CHECKLIST.md)
 - [M5 release evidence and exact commands](../65_M5_ROBOTEX_COMPETITION_RELEASE.md)
+- [M6 security and release freeze](../66_M6_SECURITY_STABILIZATION_AND_RELEASE_FREEZE.md)
 
 The presenter should say **“simulated reader”**, **“Teacher-confirmed classroom attendance”** and **“proposed price”**. A scan never proves safety or classroom presence. Recorded screenshots must be introduced as recorded evidence. Teachers send original notices directly; Principal review is an optional translation workflow, not mandatory pre-approval for all communication.
 

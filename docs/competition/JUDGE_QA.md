@@ -42,5 +42,5 @@ Preparation sheet, 17 November 2026. These are proposed answers, not claims of c
 38. **Can it support every school size today?** We have tested specific synthetic boundaries, including counts above 1,000. That is not proof of unlimited scale or hosted load capacity.
 39. **Can it send SMS or phone calls?** Real SMS and calls are not implemented or enabled. Simulated receipts are not actual delivery.
 40. **What is next?** Rehearse, review language and audio, test compatible hardware safely, then design a supervised pilot with consent, privacy, backups and operating procedures. Public hosting is a separate acceptance task.
-41. **What remains unfinished in software?** Excused attendance policy is deferred, the historical lint-tool advisory remains open and a fresh audit also flags Next.js, and public hosting and operational controls need separate review. See the status sheet.
+41. **What remains unfinished in software?** Excused attendance policy is deferred. Public hosting and operating procedures need separate review. Dependency findings change over time; use the M6 report's dated audit results rather than repeating the historical M5 findings as current.
 42. **What if the live demonstration fails?** I will explain the failure honestly and show the dated fictional screenshots as recorded evidence, not pretend they are live.

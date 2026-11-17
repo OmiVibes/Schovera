@@ -1,13 +1,13 @@
 # Software feature evidence sheet
 
-17 November 2026. Categories describe scope, not production certification. The [M5 report](../65_M5_ROBOTEX_COMPETITION_RELEASE.md) records current executions; [M1](../61_M1_ATTENDANCE_INTEGRITY.md), M2–M4 reports in `docs/` retain prior evidence. A recorded test is not human or hardware acceptance.
+17 November 2026. Categories describe scope, not production certification. The [M6 release freeze](../66_M6_SECURITY_STABILIZATION_AND_RELEASE_FREEZE.md) records the latest security/stability executions; the [M5 report](../65_M5_ROBOTEX_COMPETITION_RELEASE.md) and [M1](../61_M1_ATTENDANCE_INTEGRITY.md)–M4 reports retain their historical evidence. A recorded test is not human or hardware acceptance.
 
 | Feature | Category | Defensible statement / evidence |
 |---|---|---|
 | Role-scoped original updates and parent acknowledgement | WORKING AND TESTED | Connected journey and competition rehearsal verify actual persisted original/acknowledgement; no Principal pre-approval of every original |
 | Parent profile, homework and timetable views | WORKING AND TESTED | Current connected journey checks authorized persisted views; data completeness and every date/filter state are outside that check |
 | Teacher homework editing, Principal notices/timetable authoring | WORKING WITH LIMITATIONS | Existing dedicated acceptance and prior reports; M5 does not repeat every authoring form or add publishing permissions |
-| Principal local account administration | WORKING WITH LIMITATIONS | Existing separate guarded account-server mode; competition RFID mode does not enable this privileged API; account lifecycle suite not freshly rerun in M5 |
+| Principal local account administration | WORKING WITH LIMITATIONS | Existing separate guarded account-server mode; competition RFID mode does not enable this privileged API; account lifecycle suite not freshly rerun in M5/M6 |
 | Draft/final attendance, revisions and correction reasons | WORKING AND TESTED | M1 acceptance; manual teacher confirmation is separate from gate evidence; stale writes rejected |
 | Exact Principal totals and exception review | WORKING AND TESTED | Boundary regression, M2 review and current-role evidence; not a claim of unlimited load |
 | Parent published attendance | WORKING AND TESTED | Draft/default values do not become confirmed parent records |

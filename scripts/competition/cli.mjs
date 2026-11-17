@@ -1,6 +1,6 @@
 // No dotenv loading here: the normal developer checkout may contain private data.
-import {spawn,execFileSync} from 'node:child_process';import {fileURLToPath} from 'node:url';import {existsSync,mkdirSync,writeFileSync,openSync,closeSync,unlinkSync} from 'node:fs';import path from 'node:path';import {randomUUID} from 'node:crypto';import {setTimeout as delay} from 'node:timers/promises';
-import {qaDirectory,origin,stateFile,safeQa,readState,assertOwner,minimalEnvironment,sourceFingerprint} from './guard.mjs';import {assertGatewayRuntime} from '../rfid-gateway/runtime-guard.mjs';
+import {spawn,execFileSync} from 'node:child_process';import {fileURLToPath} from 'node:url';import {existsSync,mkdirSync,writeFileSync,readFileSync,openSync,closeSync,unlinkSync} from 'node:fs';import path from 'node:path';import {randomUUID} from 'node:crypto';import {setTimeout as delay} from 'node:timers/promises';
+import {qaDirectory,origin,stateFile,safeQa,readState,assertOwner,minimalEnvironment,sourceFingerprint,reviewedDependencyVersions} from './guard.mjs';import {assertGatewayRuntime} from '../rfid-gateway/runtime-guard.mjs';
 assertGatewayRuntime();const command=process.argv[2],discard=process.argv[3]==='--discard-pending';
 if(!['start','status','rehearse','credentials','stop','clean'].includes(command)||process.argv.slice(3).some(a=>a!=='--discard-pending')||(discard&&command!=='clean'))throw Error('Use competition -- start|status|rehearse|credentials|stop|clean [--discard-pending for clean only]');
 const source=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..'),env=minimalEnvironment();safeQa();
@@ -14,7 +14,7 @@ function prerequisites(){
  let database;try{database=JSON.parse(execFileSync('docker',['inspect','supabase_db_Schovera','--format','{{json .}}'],{env,encoding:'utf8',windowsHide:true,timeout:10000}));}catch{throw Error('Start Docker Desktop and the existing local Supabase stack first. No reset or migration was attempted.');}
  if(!database.State.Running||!database.NetworkSettings.Ports['5432/tcp']?.every(p=>p.HostIp==='127.0.0.1'&&p.HostPort==='54322'))throw Error('Approved loopback database is not ready');
  const count=Number(execFileSync('docker',['exec','supabase_db_Schovera','psql','-U','postgres','-d','postgres','-Atc','SELECT count(*) FROM supabase_migrations.schema_migrations'],{env,encoding:'utf8',windowsHide:true,timeout:10000}).trim());if(count!==48)throw Error('Expected reviewed 48-migration QA schema; no migration was applied automatically.');
- for(const [name,version]of Object.entries({next:'16.4.1',zod:'4.6.6'})){const actual=JSON.parse(execFileSync(process.execPath,['-e',`console.log(JSON.stringify(require(${JSON.stringify(path.join(qaDirectory,'node_modules',name,'package.json'))}).version))`],{env,encoding:'utf8',windowsHide:true}));if(actual!==version)throw Error('QA dependency installation differs from the reviewed lockfile');}
+ for(const [name,version]of Object.entries(reviewedDependencyVersions(JSON.parse(readFileSync(path.join(source,'package.json'),'utf8'))))){const actual=JSON.parse(execFileSync(process.execPath,['-e',`console.log(JSON.stringify(require(${JSON.stringify(path.join(qaDirectory,'node_modules',name,'package.json'))}).version))`],{env,encoding:'utf8',windowsHide:true}));if(actual!==version)throw Error('QA dependency installation differs from the reviewed lockfile');}
 }
 let s=readState(),started=false;
 try{

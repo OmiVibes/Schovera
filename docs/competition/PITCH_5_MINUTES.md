@@ -1,67 +1,63 @@
-# Five-minute extended demonstration
+# Five-minute extended pitch — adult-operated cues
 
-Target five minutes with short actions. Practice with an adult operator; do not read every technical detail. If the three-minute flow is already complete, treat steps 1–3 as a recap rather than sending a duplicate notice or overwriting a finalized register. Start a fresh owned rehearsal for a fully fresh timed run.
+Revised for M6, 17 November 2026. Target five minutes including actions, not a certified speaking duration. Read the quoted words; the adult handles role windows and commands. Use a fresh owned fictional fixture for a new full run. If the short version has already run, recap its completed actions rather than sending duplicates or re-finalizing.
 
-## 0:00–0:40 — the problem and proposal
+## 0:00–0:30 — problem and buyer
 
-“Hello. I am Arohi. Schovera connects school communication with clear classroom attendance.
+“Hello. I am Arohi. Schovera brings school messages and clear classroom attendance together.
 
-Our problem hypothesis is simple. Notices can be missed, languages can differ, and a card event can be mistaken for classroom attendance. We have not yet proved demand through a real-school pilot.
+Notices can be missed. Families may use different languages. A card event can also be confused with being in class. We want to help schools handle these differences clearly. We have not yet proved demand through a real-school pilot.”
 
-Our buyer would be a school. Our users would be teachers, parents and the Principal. I will show fictional records on this laptop.”
+## 0:30–1:30 — message, response and language
 
-## 0:40–1:25 — Teacher and Parent
+“Here is a fictional school. The teacher writes one Important reminder. The parent reads it and acknowledges it. That is a recorded response, not proof that every word was understood.
 
-“The teacher writes one original Important update. The parent can read it and acknowledge it. We preserve the original text.
+The original can arrive directly. The Principal can review an optional translation separately. This example has a reviewed Marathi version. Listen, Pause, Resume and Stop control playback.
 
-The Principal can review an optional translated version. That is separate from sending the teacher's original message. This example has a reviewed Marathi translation. I can select it and use Listen, Pause, Resume and Stop.
+Software playback tests do not prove good pronunciation. A fluent person and the actual speakers still need checking.”
 
-Audio playback has software tests. A fluent person still needs to check pronunciation and meaning, and we must check the actual speakers.”
+**Adult action:** Send/acknowledge the original first. In Principal → Communication, save/submit/check/approve the prepared fictional Marathi version. In Parent → Updates, select it, play a few seconds, Pause/Resume/Stop. If slow or silent, read the original aloud and continue; label any backup capture as recorded.
 
-**Action:** Send the notebook reminder; show Parent acknowledgement first. Then show the optional Principal translation review and Parent approved version. Play only a few seconds and stop. If audio fails, read the visible text and state the limitation; do not pretend the audience heard it.
+## 1:30–2:25 — simulated reader and teacher decision
 
-## 1:25–2:15 — simulated reader and deliberate confirmation
+“This reader is simulated. The gateway saves an event on disk before confirming local capture. The software checks its signature and assignment evidence. Retrying the same event is not a new scan.
 
-“This reader is simulated. A scan has a fixed event identity, a sequence and its original time. The gateway saves the event on disk before it confirms local capture. Signatures and assignment evidence are checked before named gate evidence is accepted.
+A gate event never proves classroom presence or safety. The teacher checks the register and explicitly confirms it. Only then does the parent see the saved classroom mark.
 
-The teacher sees an evidence flag. A gate event never automatically marks classroom attendance. After checking the class, the teacher explicitly finalizes the register. The parent then sees the saved classroom status.”
+This second fictional child has no scan. Manual attendance still works.”
 
-**Action:** Run `scan`, show the Teacher unconfirmed flag, finalize, show Parent attendance. Point to the confirming revision/time. Use a prepared fresh fixture, not a historical school's register.
+**Adult action:** Run `scan`. Show the unconfirmed Teacher flag, finalize, show Parent attendance, then point to Synthetic Manual Fallback. The pending physical driver is not used.
 
-## 2:15–3:05 — interruption and manual fallback
+## 2:25–3:20 — interruption and honest recovery
 
-“Now we simulate a destination connection failure. The new event really stays in SQLite. We restart the command and restore delivery. It sends the same saved event and waits for a receipt, so a retry is not another scan.
+“Now we simulate a connection failure. A separate event waits in SQLite on disk. Another command opens the queue again and sends the saved event when delivery returns. It waits for a database receipt. The classroom marks do not change.
 
-This is a local-service test, not proof of cloud delivery or a fully offline browser. A school service must be reachable to save new work.
+This tests a local service. It is not a Wi-Fi cut, public cloud delivery or a promise that a disconnected browser can save without reaching the school service.”
 
-The second child has no card scan. The teacher can still mark them manually. A missing card or reader must not force an absence.”
+**Adult action:** `offline` → `inspect` → `sync` → `inspect`, using the commands in the technical checklist. Show pending one, then delivered two. These short commands are separate processes, proving reopen/replay without manually restarting Docker.
 
-**Action:** `offline` → `inspect` → `sync` → `inspect`. Show pending then confirmed local delivery, not a Wi-Fi disconnection. Classroom statuses must remain unchanged by these extra events. Show Synthetic Manual Fallback.
+## 3:20–4:00 — Principal and careful corrections
 
-## 3:05–3:45 — Principal and safe corrections
+“The Principal sees school-level totals. We tested counts above one thousand records.
 
-“The Principal sees school-level attendance and communication reporting. We tested totals above a thousand records, rather than counting only the first page.
+If old offline work conflicts with a newer register, it is held. The original authorized teacher can review it, make a new correction with a reason, or close it without applying it. The old evidence stays retained. Private reasons are not shown to parents.”
 
-If an older offline correction conflicts with newer attendance, it is held. Authorized staff compare the current register with the retained intention. They can make a new reviewed correction or close the old intention without applying it. The original evidence is retained.
+**Adult action:** Show Principal Communication and Attendance. Explain held work; do not manufacture a live conflict to fill the screen. A backup held-work image must be introduced as recorded synthetic evidence.
 
-Parents do not receive private staff reasons.”
+## 4:00–4:40 — business example
 
-**Action:** Show Principal Attendance and Communication. Explain a retained held-work capture if no live hold exists; do not create a false incident merely to fill the screen. Label the capture as recorded synthetic evidence.
+“We propose a yearly school subscription, with optional training and future hardware support.
 
-## 3:45–4:30 — how the business might work
+At three dollars per student, two hundred students means six hundred dollars of revenue. Our assumed yearly operating cost is five hundred and thirty-seven dollars. That leaves sixty-three dollars before other costs and tax. These are planning assumptions, not proven profit.
 
-“We propose a school-paid annual subscription, with optional training and future hardware support.
+We use eighty-five rupees per dollar just for illustration, not as a live exchange rate.”
 
-For illustration, three dollars per student per year means six hundred dollars for two hundred students. We assumed five hundred and thirty-seven dollars of annual operating costs. That leaves sixty-three dollars of contribution before tax, sales costs and founder pay. These are assumptions, not actual sales or guaranteed profit.
+## 4:40–5:00 — competition and next step
 
-We chose eighty-five rupees per dollar only for easy comparison. It is not a live exchange rate. Schools would need to test whether the product and price are useful.”
+“Other products, including ClassDojo, ParentSquare and MyClassboard, already connect schools and families. Multilingual messaging is not our invention.
 
-## 4:30–5:00 — competition and next step
+Our focus is this clear workflow. Hardware, public hosting and real SMS still need separate work. Next comes careful rehearsal and a supervised pilot after acceptance.
 
-“ClassDojo, ParentSquare and MyClassboard already provide school communication features. Multilingual messaging is not our invention.
+Thank you.”
 
-Our proposal focuses on this school workflow: original messages, optional reviewed translations, explicit Teacher confirmation and retained offline evidence.
-
-Before a real pilot, we need privacy and operational acceptance. Hardware, public hosting and real SMS are future work. Today's evidence is a tested local software demonstration.
-
-Thank you. I am happy to explain the parts we have tested and the parts still planned.”
+If actions run long, explain one completed screen and use the recorded backup rather than rushing or claiming an unperformed step. The adult must time a real student rehearsal; automated test duration is not presentation timing.

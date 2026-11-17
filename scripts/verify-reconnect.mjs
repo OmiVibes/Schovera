@@ -1,6 +1,9 @@
 /* Browser-level missed-event acceptance test. Persisted rows are created through
  * authenticated RPCs while an already-open role session is genuinely offline. */
 import { randomUUID } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 import {prepareManualFixture, cleanManualFixture, readManualFixture} from './manual-demo.mjs';
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
@@ -261,10 +264,31 @@ try {
   browser = await chromium.launch({ headless: true });
   const teacherContext = await browser.newContext();
   const parentContext = await browser.newContext();
+  // Observe recovery signals without dispatching synthetic signals, delaying
+  // requests or changing the product's recovery behavior.
+  await parentContext.addInitScript(() => {
+    const signals = [];
+    window.__reconnectSignals = signals;
+    const record = (type) => {
+      signals.push({ type, at: Date.now(), online: navigator.onLine, visibility: document.visibilityState, focused: document.hasFocus() });
+      if (signals.length > 60) signals.shift();
+    };
+    record('initial');
+    for (const type of ['online', 'offline', 'focus', 'blur']) window.addEventListener(type, () => record(type));
+    document.addEventListener('visibilitychange', () => record('visibilitychange'));
+  });
   const parentSecondContext = await browser.newContext();
   const principalContext = await browser.newContext();
   const teacherPage = await teacherContext.newPage();
   const parentPage = await parentContext.newPage();
+  const parentReadResults = [];
+  parentPage.on('response', (response) => {
+    const location = new URL(response.url());
+    if (location.pathname === '/rest/v1/student_updates') {
+      parentReadResults.push({ at: Date.now(), status: response.status() });
+      if (parentReadResults.length > 60) parentReadResults.shift();
+    }
+  });
   const parentSecondPage = await parentSecondContext.newPage();
   const principalPage = await principalContext.newPage();
   for (const [label, page] of [['teacher', teacherPage], ['parent', parentPage], ['principal', principalPage]]) {
@@ -489,7 +513,29 @@ try {
   await sendUpdate(teacherClient, assignment.class_id, student.id, normalTitle, 'normal');
   await restoreConnectivity(parentContext, parentPage);
   await openSection(parentPage, 'parent', 'updates');
-  await parentPage.getByText(normalTitle).first().waitFor({ state: 'visible', timeout: 20000 });
+  try {
+    await parentPage.getByText(normalTitle).first().waitFor({ state: 'visible', timeout: 20000 });
+  } catch (error) {
+    const diagnosticDirectory = path.join(os.tmpdir(), 'schovera-reconnect-diagnostics', suffix);
+    mkdirSync(diagnosticDirectory, { recursive: true });
+    const inspectRows = async (client) => {
+      const result = await client.from('student_updates').select('id').eq('student_id', student.id).eq('title', normalTitle);
+      return { count: result.data?.length ?? null, errorCode: result.error?.code ?? null };
+    };
+    const diagnostic = {
+      stage: 'later-normal-update',
+      page: new URL(parentPage.url()).pathname,
+      selectedChildMatches: await parentPage.locator('.child-switcher select').inputValue().then(id => id === student.id).catch(() => false),
+      browser: await parentPage.evaluate(() => ({ online: navigator.onLine, visibility: document.visibilityState, focused: document.hasFocus(), signals: window.__reconnectSignals })),
+      reads: parentReadResults,
+      destination: await inspectRows(admin),
+      parentAuthorized: await inspectRows(parentClient),
+    };
+    // No headers, URLs with tokens, auth state, authored text or credentials.
+    writeFileSync(path.join(diagnosticDirectory, 'failure.json'), JSON.stringify(diagnostic, null, 2));
+    console.error('Sanitized reconnect failure evidence: ' + diagnosticDirectory);
+    throw error;
+  }
   expect(await parentPage.getByText(normalTitle, { exact: false }).count() < 3, 'Reconnect duplicated the parent update UI.');
   console.log('Parent duplicate-refresh protection passed.');
   const dueDate = shiftSchoolDate(schoolToday(), 1);

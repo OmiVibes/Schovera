@@ -85,6 +85,6 @@ npm run competition -- clean --discard-pending
 - Storage power-loss/disk-full testing, school LAN/Wi-Fi and real outage/site acceptance.
 - Consent, retention/encryption/backup/restore, incident handling and supervised school pilot.
 - Hosted architecture/secrets/limits/monitoring and real SMS/provider acceptance, if later authorized.
-- Excused policy/versioned rollout and compatible remediation of the lint-tool finding and the newly reported Next.js advisory.
+- Excused policy/versioned rollout, ongoing dependency audits and separate hosted-security acceptance. See the M6 report for current security patch results; M5's findings are historical.
 
 None of these are certified by a successful local compilation or fictional rehearsal.

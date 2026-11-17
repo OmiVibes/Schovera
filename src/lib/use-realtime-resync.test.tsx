@@ -16,3 +16,19 @@ it('does not leave recovery frozen after Strict Mode setup/cleanup replay',async
  function Probe(){const {onChannelStatus}=useRealtimeResync(refresh);useEffect(()=>{onChannelStatus('SUBSCRIBED');},[onChannelStatus]);return null;}
  try{await act(async()=>root.render(<React.StrictMode><Probe/></React.StrictMode>));await act(async()=>{await vi.advanceTimersByTimeAsync(5100);});expect(refresh).toHaveBeenCalledTimes(4);await act(async()=>root.unmount());}finally{vi.useRealTimers();}
 });
+it('reconciles a visible online return, coalesces focus and removes visibility listeners on unmount',async()=>{
+ (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?:boolean}).IS_REACT_ACT_ENVIRONMENT=true;
+ vi.useFakeTimers();const visibility=vi.spyOn(document,'visibilityState','get').mockReturnValue('hidden'),online=vi.spyOn(navigator,'onLine','get').mockReturnValue(true);
+ const host=document.createElement('div'),root=createRoot(host),refresh=vi.fn(async()=>{});let stopped=false;
+ function Probe(){useRealtimeResync(refresh);return null;}
+ try{
+  await act(async()=>root.render(<Probe/>));
+  await act(async()=>{document.dispatchEvent(new Event('visibilitychange'));await vi.advanceTimersByTimeAsync(100);});expect(refresh).not.toHaveBeenCalled();
+  visibility.mockReturnValue('visible');online.mockReturnValue(false);
+  await act(async()=>{document.dispatchEvent(new Event('visibilitychange'));await vi.advanceTimersByTimeAsync(100);});expect(refresh).not.toHaveBeenCalled();
+  online.mockReturnValue(true);
+  await act(async()=>{document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new Event('focus'));await vi.advanceTimersByTimeAsync(100);});expect(refresh).toHaveBeenCalledTimes(1);
+  await act(async()=>root.unmount());stopped=true;
+  await act(async()=>{document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new Event('focus'));await vi.advanceTimersByTimeAsync(10000);});expect(refresh).toHaveBeenCalledTimes(1);
+ }finally{if(!stopped)await act(async()=>root.unmount());visibility.mockRestore();online.mockRestore();vi.useRealTimers();host.remove();}
+});

@@ -1,47 +1,43 @@
-# Three-minute pitch — practice script
+# Three-minute pitch — short practice script
 
-Target three minutes including the actions below. Timing is a rehearsal target, not a certified speaking duration. Speak slowly; an adult operates the prepared role windows/terminal. Use one fresh, owned fictional rehearsal and pre-position the windows. Do not show the credential terminal.
+Revised for M6, 17 November 2026. Target three minutes **including clicks**, with an adult operating prepared windows. Read only the quoted words. Stage all three role sessions in advance; keep the credential terminal off screen. The shorter script leaves room for actions, but only an actual timed rehearsal can confirm the duration. Use the [adult cue sheet](ADULT_REHEARSAL_CHECKLIST.md).
 
-## 0:00–0:25 — problem and customer
+## 0:00–0:20 — problem and customer
 
-“Hello. I am Arohi, and this is Schovera.
+“Hello. I am Arohi. This is Schovera.
 
-A school notice can get lost between a classroom, a phone and a busy parent. Language can make understanding harder. Our idea is to give schools one clear place for important updates and classroom attendance.
+School notices can be missed. Languages can make them harder to understand. Our idea gives teachers and parents one clear place for important messages and classroom attendance. Our proposed customer is the school.”
 
-Our proposed customers are schools. Teachers and families would use the product.”
+## 0:20–1:00 — original message and acknowledgement
 
-## 0:25–1:05 — communicate, then acknowledge
+“This school and its students are fictional. The teacher sends one reminder. The parent reads it and presses Acknowledge.
 
-“Here is a fictional school. The teacher sends one Important reminder. The parent sees the original message and acknowledges it. That means the parent pressed Acknowledge. It does not prove that they understood every word.
+That records a response, not proof of understanding. The teacher's original does not need the Principal's approval. A reviewed translation is a separate option.”
 
-Teachers do not wait for the Principal to approve every original notice.”
+**Adult action:** Teacher → Students → Grade 8-A → Synthetic Child A. Send the prepared notebook reminder once as Important. Parent → Updates → Child A → Acknowledge. Keep the original selected; save translation/audio for the extended version.
 
-**Action:** Teacher → Students → Grade 8A → Synthetic Child A. Send the agreed notebook reminder, marked Important. Parent → Updates → select Child A → read it → Acknowledge. Use the prepared scenario wording in the checklist. Keep a recorded capture ready if window switching is slow.
+## 1:00–1:50 — gate evidence and classroom confirmation
 
-## 1:05–1:50 — evidence and attendance
+“Now we use a simulated reader. The software saves its event on disk and sends it to the local database. Retrying that event does not create another scan.
 
-“Now I will use a simulated card reader. The event is saved in a local SQLite gateway and sent to the local school database. Replaying the same event does not add another scan.
+A scan does not prove classroom presence or safety. The teacher checks the class and explicitly confirms attendance. The parent then sees that saved classroom mark.”
 
-A scan is only evidence. It does not prove that a child is safe or in class. The teacher checks the register and explicitly confirms classroom attendance. Only the saved classroom record appears for the parent.”
+**Adult action:** Run the prepared `scan` command in QA. Teacher → Attendance → Grade 8-A → show unconfirmed gate evidence → Finalize attendance. Parent → Attendance → show today's saved mark. Never run the automated rehearsal first on this same fresh fixture.
 
-**Action:** `npm run attendance:demo -- scan` in QA, then Teacher → Attendance → Grade 8A → show the unconfirmed gate flag → Finalize attendance. Parent → Attendance → show the current-class saved mark. Commands act only on the competition-owned fictional fixture.
+## 1:50–2:15 — manual fallback
 
-## 1:50–2:20 — manual fallback and privacy
+“This other fictional child has no scan. The teacher can still mark attendance manually. Missing a scan never forces absence.
 
-“This second child forgot their card. The teacher can still mark attendance manually. Missing a scan never forces an absence.
+Parents see linked children. Private staff review notes stay private. Physical reader and Raspberry Pi tests are still pending.”
 
-Parents see their linked children's records. Staff review notes stay private. Physical RFID and Raspberry Pi testing are still pending.”
+**Adult action:** Point to Synthetic Manual Fallback and its saved Present mark, separate from the missing-scan review flag.
 
-**Action:** Point to Synthetic Manual Fallback, its saved Present status and the separate missing-scan review flag. Do not call the flag a confirmed safety incident.
+## 2:15–3:00 — proposed business and next step
 
-## 2:20–3:00 — business and next step
+“We propose a yearly subscription paid by the school. At three dollars per student, two hundred students means six hundred dollars of revenue. Costs still come out of that. This is a price idea, not actual sales or guaranteed profit.
 
-“We propose an annual subscription paid by the school. One example is three US dollars per student per year. A two-hundred-student school would pay six hundred dollars. That is revenue, not profit. Hosting, support and maintenance still cost money.
-
-This price is an assumption, not a validated offer. Hardware and training would be optional extra services.
-
-Other school apps already exist. Our focus is this clear school workflow, reviewed language support and honest handling of offline evidence. Our next step is a supervised pilot after privacy and hardware checks.
+Other school apps exist. We want to test whether schools value this clear workflow. Our next step is a supervised pilot after privacy and hardware checks.
 
 Thank you.”
 
-If interrupted, finish with: **“The software demonstration works locally. The business price is proposed, and the hardware still needs testing.”** See the fact sheet for the INR example and full cost breakdown; do not improvise profit figures.
+If the live flow fails, say: **“I will show recorded fictional evidence and explain what still needs checking.”** The financial sheet contains the illustrative INR conversion and costs. Do not improvise sales or profit claims.
