@@ -1,0 +1,17 @@
+// Root-safe orchestration only. All configuration/data actions stay in QA.
+import assert from 'node:assert/strict';import {execFileSync,execFile} from 'node:child_process';import {promisify} from 'node:util';import {existsSync} from 'node:fs';import {fileURLToPath} from 'node:url';import path from 'node:path';import http from 'node:http';import {readState,minimalEnvironment,qaDirectory} from './competition/guard.mjs';
+assert.equal(readState(),null,'Preserve an existing competition rehearsal; clean only a known owned fixture first');assert.ok(!existsSync(path.join(qaDirectory,'.local/schovera-manual-demo/current.json')),'Preserve an existing manual fixture');
+const entry=fileURLToPath(new URL('./competition/cli.mjs',import.meta.url)),env=minimalEnvironment();let owner,zip;
+const call=(...args)=>JSON.parse(execFileSync(process.execPath,[entry,...args],{env,encoding:'utf8',windowsHide:true,timeout:240000}).trim());
+const run=(...args)=>execFileSync(process.execPath,[entry,...args],{env,encoding:'utf8',windowsHide:true,timeout:240000});
+try{
+ // An unrelated listener is never stopped, reused or claimed as our app.
+ const listener=http.createServer((_q,r)=>r.end('unowned synthetic listener'));await new Promise((resolve,reject)=>listener.once('error',reject).listen(3104,'127.0.0.1',resolve));try{let refused;try{await promisify(execFile)(process.execPath,[entry,'start'],{env,encoding:'utf8',windowsHide:true,timeout:30000});}catch(error){refused=error;}assert.ok(refused);assert.ok(refused.stderr.includes('unowned server'));assert.ok(listener.listening);}finally{await new Promise(resolve=>listener.close(resolve));}
+ try{const started=call('start');assert.equal(started.ready,true);assert.equal(started.url,'http://127.0.0.1:3104');assert.deepEqual(started.roleLoginsVerified,{teacher:true,parent:true,principal:true});}finally{owner=readState()?.owner;}
+ const first=readState();const again=call('start');assert.equal(again.ready,true);assert.equal(readState().fixtureRun,first.fixtureRun);const status=call('status');assert.equal(status.fixture.students,3);assert.equal(status.ownedServer,true);
+ const rehearsal=call('rehearse');assert.equal(rehearsal.corePassed,true);assert.equal(rehearsal.audioPlayback,'media-clock-and-controls-passed');assert.equal(rehearsal.physicalHardware,false);assert.equal(rehearsal.screenshots.length,13);zip=rehearsal.backupZip;assert.ok(existsSync(zip));
+ const repeat=call('rehearse');assert.equal(repeat.repeatedReadOnlyVerification,true);assert.equal(repeat.backupDirectory,rehearsal.backupDirectory);assert.equal(call('status').fixture.students,3);
+ run('stop');assert.equal(call('status').ownedServer,false);assert.equal(call('start').ready,true);assert.equal(readState().fixtureRun,first.fixtureRun);
+ console.log('PASS: unowned-port refusal, owned start/login/readiness, repeated preparation, full communication/approved audio/attendance/durable mock outage replay, 13 synthetic desktop/mobile captures, ZIP, read-only repeat, stop/restart and fixture identity.');
+ console.log('Private synthetic backup ZIP: '+zip);
+}finally{const current=readState();if(owner&&current?.owner===owner)run('clean','--discard-pending');else if(current&&!owner&&!current.fixtureRun)run('clean');assert.equal(readState(),null);assert.ok(!existsSync(path.join(qaDirectory,'.local/schovera-manual-demo/current.json')));if(zip)assert.ok(existsSync(zip),'Backups must survive scoped cleanup');console.log('Owned competition fixture/process cleanup verified; unrelated data and backups preserved.');}
