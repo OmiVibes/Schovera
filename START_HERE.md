@@ -2,6 +2,10 @@
 
 **School. Home. Together.** Schovera connects Teachers, linked Parents and school Principals. The current international demonstration uses fictional records only.
 
+## Current M6 entry point
+
+Use the [M6 release report](docs/66_M6_SECURITY_STABILIZATION_AND_RELEASE_FREEZE.md) and [competition checklist](docs/competition/PRESENTATION_CHECKLIST.md) for the verified local workflow on port **3104**. For a different computer, use [another-laptop setup and sign-ins](docs/competition/SECOND_LAPTOP_SETUP.md): accounts/configuration/databases are local and do not arrive with `git pull`; no login email is sent. The sections below retain earlier Task 32R/3100 and configured-school/3103 guidance. They are not evidence of a shared website or a fresh-laptop M6 installer.
+
 ## Choose your guide
 
 - **Current palette and typography:** [plum-and-rose visual identity](docs/52_PLUM_ROSE_VISUAL_IDENTITY.md).

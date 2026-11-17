@@ -2,6 +2,8 @@
 
 Schovera connects teachers, parents, and school leaders around student communication, attendance, homework, schedules, and official notices.
 
+**Current M6 local competition release:** [release freeze](docs/66_M6_SECURITY_STABILIZATION_AND_RELEASE_FREEZE.md) and [competition checklist](docs/competition/PRESENTATION_CHECKLIST.md). **Using another laptop?** Read [local setup and account handoff](docs/competition/SECOND_LAPTOP_SETUP.md) first. Git transfers code, not local accounts; credentials from one laptop do not automatically work on another, and fictional `.test` logins do not receive email.
+
 ## Project folders
 
 | Folder | What belongs here |
@@ -24,6 +26,10 @@ Latest: [plum-and-rose design, typography and responsive checks](docs/52_PLUM_RO
 For the latest usability changes, local QA evidence and a short manual check, read the [website testing guide](docs/48_WEBSITE_QA_AND_SIMPLICITY.md). School account creation is documented in [Manage users](docs/47_MANAGE_SCHOOL_USERS.md). Existing fixed sign-ins remain unchanged; passwords are not published in this repository.
 
 ## Run locally
+
+For the existing approved M6 QA setup, use `npm run competition -- start`, check `npm run competition -- status`, then privately read `npm run competition -- credentials`. Its URL is **http://127.0.0.1:3104** on that same laptop. These commands require its configured local stack; pulling the repository alone does not install or provision it. New-machine preparation and three-role verification are described in the handoff linked above.
+
+The following 3103 workspace and Task 32R instructions describe earlier, separately configured setups, not a fresh-clone default or shared online service.
 
 For the already configured school workspace, open **http://127.0.0.1:3103** while the local services are running. Sign in with the existing fixed Parent, Teacher or Principal account. Restart from the same isolated application directory with `npm run dev:accounts-local -- --port 3103`; this starts the website without regenerating users or passwords. The directory must contain the approved local-only environment files and must not contain production `.env.local`. Do not run seed, prepare, rotation or cleanup commands on your school workspace just to start it.
 

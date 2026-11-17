@@ -10,6 +10,7 @@ Prepared 17 November 2026 for Arohi's Robotex International 2026 presentation in
 - [Feature evidence/status matrix](FEATURE_STATUS.md)
 - [Presentation, backup and failure checklist](PRESENTATION_CHECKLIST.md)
 - [Short adult-operated rehearsal cue sheet](ADULT_REHEARSAL_CHECKLIST.md)
+- [Another laptop: setup, private sign-ins and why email is not sent](SECOND_LAPTOP_SETUP.md)
 - [M5 release evidence and exact commands](../65_M5_ROBOTEX_COMPETITION_RELEASE.md)
 - [M6 security and release freeze](../66_M6_SECURITY_STABILIZATION_AND_RELEASE_FREEZE.md)
 
