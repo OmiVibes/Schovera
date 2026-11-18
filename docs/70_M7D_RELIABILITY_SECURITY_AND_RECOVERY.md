@@ -157,7 +157,7 @@ M7D changes exactly three files:
 
 ## Git scope
 
-Only the three M7D files listed above belong to this checkpoint. The pre-existing doc 45 edit, `CLAUDE.md` and `review/` remain outside it. Private environment files, account/enrollment material, firmware/issuer keys, SQLite databases, raw serial captures, test logs and screenshots are excluded. The staged source receives a diff/credential/artifact review before normal commit/push to `origin/main`; no force-push, reset, stash, broad staging or branch-protection bypass is authorized. Publication evidence follows after remote verification.
+Only the three M7D files listed above belong to this checkpoint. The pre-existing doc 45 edit, `CLAUDE.md` and `review/` remain outside it. Private environment files, account/enrollment material, firmware/issuer keys, SQLite databases, raw serial captures, test logs and screenshots are excluded. The staged source passed diff/targeted credential/artifact review before normal commit/push to `origin/main`; no force-push, reset, stash, broad staging or branch-protection bypass was used. Publication evidence is recorded below.
 
 
 ## Full execution ledger
@@ -212,3 +212,17 @@ Only the three M7D files listed above belong to this checkpoint. The pre-existin
 | 44 | `node --env-file=.env.test.local .local/m7d/preserve.mjs` | 10:55:09.157 | 0 | PASS | `44-m7d-preserve-1794999309590.log` |
 
 Additional read-only checks: Git status/fetch/remote SHA; native Windows descriptor inventory; `docker exec supabase_db_Schovera psql -U postgres -d postgres -At -c "SELECT count(*) FROM supabase_migrations.schema_migrations"` returned 48; official registry metadata/latest and `npm ls picomatch --all`; `node .local/schovera-manual-demo/m7d-20261118/integrity.mjs` exited 0 (298 QA matches); restored HTTP readiness returned 200; scoped process identity/stop/start, source diff and credential/artifact review. No compilation/upload or controlled physical unplug test was executed.
+
+## Verified publication and final handoff
+
+Implementation and executed report were published to `origin/main` as **[`9ed2abd721461211938b6c591f4b3c876c5bbb11`](https://github.com/OmiVibes/Schovera/commit/9ed2abd721461211938b6c591f4b3c876c5bbb11)**. Normal `git push origin main` succeeded; `git ls-remote origin refs/heads/main` matched, and the GitHub connector independently returned the exact SHA and canonical commit URL. No executable code changed after the frozen-source checks. This publication-receipt update is documentation only; its final handoff SHA is supplied in the owner response after its own push verification.
+
+After the implementation commit, remaining working-tree entries were exactly the pre-existing unrelated work:
+
+```text
+ M docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md
+?? CLAUDE.md
+?? review/
+```
+
+The post-commit integrity check again found 298 QA matches and preserved baseline values outside the two approved hook files. The restored QA server still returned HTTP 200. This checkpoint publishes the narrow verified correction and honest recovery evidence; it does not close the 18-entry full audit, explain the historical second-tab timeout or fix the observed pagination timing failure. Stop after M7D.
