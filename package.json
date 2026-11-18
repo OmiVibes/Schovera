@@ -6,6 +6,9 @@
     "node": ">=20.9 <23"
   },
   "scripts": {
+    "arduino:dry-run": "node --env-file=.env.test.local scripts/arduino-local/dry-run.mjs",
+    "test:arduino": "vitest run scripts/arduino-local/protocol.test.mjs",
+    "verify:arduino-protocol": "node scripts/verify-arduino-protocol.mjs",
     "verify:ui-polish": "node --env-file=.env.test.local scripts/verify-ui-polish.mjs",
     "ui:rehearsal": "node --env-file=.env.test.local scripts/ui-rehearsal.mjs",
     "verify:ui-refinement": "node --env-file=.env.test.local scripts/verify-ui-refinement.mjs",

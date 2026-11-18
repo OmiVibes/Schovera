@@ -1,0 +1,6 @@
+**/local_config.h
+build/
+*.bin
+*.elf
+*.hex
+*.map
