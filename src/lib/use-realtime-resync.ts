@@ -63,12 +63,15 @@ export function useRealtimeResync(refresh: () => Promise<void> | void) {
   useEffect(() => { reconcileRef.current = reconcile; }, [reconcile]);
 
   const scheduleRecovery = useCallback(() => {
-    if (!mountedRef.current || recoveryWindowRef.current) return;
+    if (!mountedRef.current) return;
+    // A later successful join can follow the last retry in an active window.
+    // Always reconcile that signal; only the finite retry timers are shared.
+    reconcile();
+    if (recoveryWindowRef.current) return;
     recoveryWindowRef.current = true;
     // The browser's online event can precede a usable authenticated socket.
     // These bounded, coalesced retries cover connection establishment only;
     // each cycle still reads the current authorized persisted state.
-    reconcile();
     for (const delay of [650, 1800, 4500]) {
       recoveryTimersRef.current.push(
         window.setTimeout(() => reconcile(), delay),
