@@ -304,4 +304,14 @@ Additional inspection/preservation commands: `node .local/schovera-manual-demo/m
 
 ### Git publication
 
-Only the verified M7C code/tests/documentation belong to this checkpoint. Pre-existing doc 45, CLAUDE.md and review/ are preserved and excluded. The verified remote publication receipt follows below.
+Verified M7C implementation and executed report published to `origin/main`: **[`c938821fd21d1f9fdd5f5c55248348560f3ef109`](https://github.com/OmiVibes/Schovera/commit/c938821fd21d1f9fdd5f5c55248348560f3ef109)**. `git push origin main` succeeded; remote `refs/heads/main` matched the local SHA. The GitHub connector independently returned that exact SHA and canonical commit URL. This publication-evidence update is a documentation-only checkpoint; its final SHA is supplied in the handoff. No executable code changed after the frozen-source checks.
+
+Staged review admitted exactly the 11 M7C files described above, with credential/artifact pattern scan and manual scope review. Remaining working-tree entries are exactly the pre-existing unrelated work:
+
+```text
+ M docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md
+?? CLAUDE.md
+?? review/
+```
+
+These files, private QA configuration/enrollment/keys, databases, raw evidence and screenshots remain outside the commits. No force-push, reset, stash, branch-protection bypass, artificial/empty commit or deployment was used. Publication is a tested fictional local integration checkpoint, not a security certificate, hardware/Card acceptance or production release. M7C stops here; no next milestone or physical RFID work has begun.
