@@ -216,4 +216,14 @@ Additional direct physical command, run twice before the final success: `node --
 
 ### Git publication
 
-Only the reviewed M7B files belong to this publication. Pre-existing doc 45, CLAUDE.md and review/ remain preserved and excluded. Verified commit and remote publication receipt follow below.
+Implementation and executed verification report published to `origin/main`: **[`1d5bebec83782df934892d94dad04d826fd219d8`](https://github.com/OmiVibes/Schovera/commit/1d5bebec83782df934892d94dad04d826fd219d8)**. `git push origin main` succeeded; `git ls-remote origin refs/heads/main` matched the local commit. The GitHub connector independently returned that exact SHA and canonical commit URL. This subsequent publication receipt is a documentation-only checkpoint, whose final SHA is supplied in the handoff. No executable code changed after the final physical/unit/build checks.
+
+The staged review admitted exactly the 12 M7B files described above and passed credential/artifact pattern checks plus manual scope review. Pre-existing working-tree entries remain exactly:
+
+```text
+ M docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md
+?? CLAUDE.md
+?? review/
+```
+
+These unrelated files and all ignored credentials/databases/evidence remain outside the commits. No force-push, reset, stash, branch-protection bypass, empty/artificial commit or deployment was used. M7B is ready for software/USB review within the explicit synthetic-validation scope; the security finding and physical/durable limits above remain open. M7C has not begun.
