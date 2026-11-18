@@ -190,4 +190,14 @@ Private integrity command: `node .local/schovera-manual-demo/m7a-20261118/integr
 
 ### Git checkpoint
 
-The implementation and this report are the only M7A publication candidates. Pre-existing `docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md`, `CLAUDE.md` and `review/` remain outside the commits. Remote publication is verified separately below; local build evidence does not imply deployment or production security acceptance.
+Implementation and executed verification report published to `origin/main`: **[`4e2e6240f05a0bf6a083ae30a343ad94511346f0`](https://github.com/OmiVibes/Schovera/commit/4e2e6240f05a0bf6a083ae30a343ad94511346f0)**. `git push origin main` succeeded; `git ls-remote origin refs/heads/main` matched the local SHA, and the GitHub connector independently returned that exact commit and canonical URL. This publication-evidence addition is a separate documentation checkpoint; its final SHA is provided in the handoff. No force-push, merge bypass, deployment, empty commit or artificial activity was used.
+
+After the implementation push, remaining working-tree entries were exactly the pre-existing unrelated work below. They are preserved and excluded from both M7A commits. The only subsequent change is this documentation evidence, with no executable changes after testing.
+
+```text
+ M docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md
+?? CLAUDE.md
+?? review/
+```
+
+Local compilation and publication do not imply production security acceptance. The development-tool audit finding, actual device checks and secure physical ingestion remain pending as described above. Stop at M7A; do not wire, upload or begin M7B from these software results.
