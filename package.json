@@ -8,6 +8,9 @@
   "scripts": {
     "arduino:dry-run": "node --env-file=.env.test.local scripts/arduino-local/dry-run.mjs",
     "arduino:serial": "node --env-file=.env.test.local scripts/arduino-local/serial-cli.mjs",
+    "arduino:gateway": "node --env-file=.env.test.local scripts/arduino-gateway/cli.mjs",
+    "test:arduino-gateway": "vitest run scripts/arduino-gateway/capture.test.mjs scripts/arduino-gateway/bridge.test.mjs",
+    "verify:arduino-gateway": "node --env-file=.env.test.local scripts/verify-arduino-gateway.mjs",
     "test:arduino-serial": "vitest run scripts/arduino-local/serial.test.mjs",
     "test:arduino": "vitest run scripts/arduino-local/protocol.test.mjs",
     "verify:arduino-protocol": "node scripts/verify-arduino-protocol.mjs",

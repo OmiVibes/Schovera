@@ -4,6 +4,8 @@ Use [the M7A report](../../docs/67_M7A_ARDUINO_FIRMWARE_AND_LOCAL_INTEGRATION.md
 
 For the operator-controlled Windows USB bridge, use [M7B setup and observed results](../../docs/68_M7B_USB_SERIAL_BRIDGE.md). It validates synthetic Serial observations only; durable gateway ingestion and physical RFID remain separate work.
 
+[M7C's explicitly fictional host integration](../../docs/69_M7C_DURABLE_USB_GATEWAY_INTEGRATION.md) reuses the existing durable gateway with reviewed test enrollment and real receipts. It does not add RFID reading or source power-loss durability to this firmware.
+
 Open `diagnostics/diagnostics.ino` in Arduino IDE, install/select **Arduino UNO R4 Boards → Arduino UNO R4 WiFi**, and use **Verify**. Its FQBN is `arduino:renesas_uno:unor4wifi`. Compile does not require a connected board. Upload and physical checks remain separate and unverified; leave the HW-126/RC522 completely disconnected for M7A. Do not flash the ESP32-S3 separately or select a Nano/AVR target for this sketch.
 
 Serial Monitor: **115200 baud**, newline ending. Commands:
