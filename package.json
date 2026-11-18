@@ -7,6 +7,8 @@
   },
   "scripts": {
     "arduino:dry-run": "node --env-file=.env.test.local scripts/arduino-local/dry-run.mjs",
+    "arduino:serial": "node --env-file=.env.test.local scripts/arduino-local/serial-cli.mjs",
+    "test:arduino-serial": "vitest run scripts/arduino-local/serial.test.mjs",
     "test:arduino": "vitest run scripts/arduino-local/protocol.test.mjs",
     "verify:arduino-protocol": "node scripts/verify-arduino-protocol.mjs",
     "verify:ui-polish": "node --env-file=.env.test.local scripts/verify-ui-polish.mjs",
