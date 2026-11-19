@@ -434,6 +434,43 @@ you@school.org|you@school.org|you@school.org
 More pages|और पृष्ठ|आणखी पाने
 All portal pages|पोर्टल के सभी पृष्ठ|पोर्टलची सर्व पाने
 Live drafting is unavailable on this server. Use the school's configured local model. Spreadsheet editing below still works locally in your browser.|इस सर्वर पर AI प्रारूप उपलब्ध नहीं है। स्कूल का निर्धारित स्थानीय मॉडल इस्तेमाल करें। नीचे फ़ाइल का संपादन इसी ब्राउज़र में उपलब्ध है।|या सर्व्हरवर AI मसुदा उपलब्ध नाही. शाळेचे निश्चित स्थानिक मॉडेल वापरा. खाली फाइलचे संपादन याच ब्राउझरमध्ये उपलब्ध आहे.
+Timetable proposals|समय-सारणी प्रस्ताव|वेळापत्रक प्रस्ताव
+Your proposal history includes earlier classes. New proposals use the selected assigned class.|आपके प्रस्ताव इतिहास में पहले की कक्षाएँ भी शामिल हैं। नए प्रस्ताव चुनी हुई नियुक्त कक्षा के लिए हैं।|तुमच्या प्रस्तावांच्या इतिहासात आधीचे वर्गही समाविष्ट आहेत. नवीन प्रस्ताव निवडलेल्या नेमणूक असलेल्या वर्गासाठी आहेत.
+Propose your own periods for this class. Only Principal approval publishes a change.|इस कक्षा के अपने पीरियड के लिए प्रस्ताव दें। प्रधानाचार्य की स्वीकृति के बाद ही बदलाव प्रकाशित होगा।|या वर्गातील स्वतःच्या तासांसाठी प्रस्ताव द्या. मुख्याध्यापकांच्या मंजुरीनंतरच बदल प्रकाशित होईल.
+Review Teacher proposals against the current schedule. Direct administration is also available on this page.|वर्तमान समय-सारणी से शिक्षक के प्रस्तावों की जाँच करें। इस पृष्ठ पर सीधे प्रबंधन की सुविधा भी है।|सध्याच्या वेळापत्रकाशी शिक्षकांचे प्रस्ताव तपासा. या पानावर थेट व्यवस्थापनाची सुविधाही आहे.
+Propose a timetable change|समय-सारणी में बदलाव का प्रस्ताव|वेळापत्रक बदलाचा प्रस्ताव
+Published period|प्रकाशित पीरियड|प्रकाशित तास
+Propose a new period|नए पीरियड का प्रस्ताव|नवीन तासाचा प्रस्ताव
+Room (optional)|कक्ष (वैकल्पिक)|खोली (ऐच्छिक)
+Reason for proposal|प्रस्ताव का कारण|प्रस्तावाचे कारण
+Online submission only. Current assignments and conflicts are checked again before approval.|प्रस्ताव केवल ऑनलाइन भेजें। स्वीकृति से पहले वर्तमान नियुक्तियों और टकराव की फिर जाँच होगी।|प्रस्ताव फक्त ऑनलाइन पाठवा. मंजुरीपूर्वी सध्याच्या नेमणुका आणि वेळेतील संघर्ष पुन्हा तपासले जातील.
+Submit proposal|प्रस्ताव भेजें|प्रस्ताव पाठवा
+Proposal status|प्रस्ताव की स्थिति|प्रस्तावाची स्थिती
+All proposal history|सभी प्रस्तावों का इतिहास|सर्व प्रस्तावांचा इतिहास
+Pending|लंबित|प्रलंबित
+Approved|स्वीकृत|मंजूर
+Rejected|अस्वीकृत|नामंजूर
+Withdrawn|वापस लिया गया|मागे घेतलेला
+Refresh proposals|प्रस्ताव फिर लोड करें|प्रस्ताव पुन्हा लोड करा
+Loading proposals…|प्रस्ताव लोड हो रहे हैं…|प्रस्ताव लोड होत आहेत…
+No proposals in this view.|इस दृश्य में कोई प्रस्ताव नहीं है।|या दृश्यात प्रस्ताव नाहीत.
+Change to a published period|प्रकाशित पीरियड में बदलाव|प्रकाशित तासातील बदल
+Proposed new period|प्रस्तावित नया पीरियड|प्रस्तावित नवीन तास
+Withdraw proposal|प्रस्ताव वापस लें|प्रस्ताव मागे घ्या
+Decision reason (optional)|निर्णय का कारण (वैकल्पिक)|निर्णयाचे कारण (ऐच्छिक)
+Approve and publish|स्वीकृत कर प्रकाशित करें|मंजूर करून प्रकाशित करा
+Reject proposal|प्रस्ताव अस्वीकार करें|प्रस्ताव नामंजूर करा
+Load older proposals|पुराने प्रस्ताव लोड करें|जुने प्रस्ताव लोड करा
+Proposals could not be loaded. Refresh when connected.|प्रस्ताव लोड नहीं हुए। कनेक्शन मिलने पर फिर लोड करें।|प्रस्ताव लोड झाले नाहीत. जोडणी झाल्यावर पुन्हा लोड करा.
+Enter a short reason and an end time after the start.|संक्षिप्त कारण लिखें और समाप्ति समय आरंभ के बाद रखें।|थोडक्यात कारण लिहा आणि समाप्तीची वेळ सुरुवातीनंतरची निवडा.
+Proposal submitted. The published schedule is unchanged.|प्रस्ताव भेजा गया। प्रकाशित समय-सारणी नहीं बदली है।|प्रस्ताव पाठवला. प्रकाशित वेळापत्रक बदललेले नाही.
+Proposal withdrawn. Nothing was published.|प्रस्ताव वापस लिया गया। कोई बदलाव प्रकाशित नहीं हुआ।|प्रस्ताव मागे घेतला. कोणताही बदल प्रकाशित झाला नाही.
+Proposal approved and timetable published.|प्रस्ताव स्वीकृत हुआ और समय-सारणी प्रकाशित हुई।|प्रस्ताव मंजूर झाला आणि वेळापत्रक प्रकाशित झाले.
+Proposal rejected. Nothing was published.|प्रस्ताव अस्वीकृत हुआ। कोई बदलाव प्रकाशित नहीं हुआ।|प्रस्ताव नामंजूर झाला. कोणताही बदल प्रकाशित झाला नाही.
+This published period changed. Withdraw this proposal and submit a new version.|प्रकाशित पीरियड बदल चुका है। यह प्रस्ताव वापस लेकर नया संस्करण भेजें।|प्रकाशित तास बदलला आहे. हा प्रस्ताव मागे घेऊन नवीन आवृत्ती पाठवा.
+The proposal conflicts with the current timetable. Nothing was published.|प्रस्ताव वर्तमान समय-सारणी से टकराता है। कोई बदलाव प्रकाशित नहीं हुआ।|प्रस्तावाचा सध्याच्या वेळापत्रकाशी संघर्ष आहे. कोणताही बदल प्रकाशित झाला नाही.
+This proposal was already decided. Refresh its status.|इस प्रस्ताव पर निर्णय हो चुका है। स्थिति फिर लोड करें।|या प्रस्तावावर निर्णय झाला आहे. स्थिती पुन्हा लोड करा.
+No confirmation was received. Refresh the status or retry the same action.|पुष्टि नहीं मिली। स्थिति फिर लोड करें या वही कार्रवाई दोबारा करें।|पुष्टी मिळाली नाही. स्थिती पुन्हा लोड करा किंवा तीच कृती पुन्हा करा.
 Teacher-confirmed attendance|शिक्षक द्वारा पुष्टि की गई उपस्थिति|शिक्षकांनी पुष्टी केलेली उपस्थिती
 Unsaved changes — Parent records are unchanged|बिना सहेजे बदलाव — अभिभावकों के रिकॉर्ड नहीं बदले हैं|न जतन केलेले बदल — पालकांच्या नोंदी बदललेल्या नाहीत
 Draft — not confirmed for Parents|प्रारूप — अभिभावकों के लिए पुष्टि नहीं हुई|मसुदा — पालकांसाठी पुष्टी झालेली नाही

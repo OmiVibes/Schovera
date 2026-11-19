@@ -70,11 +70,11 @@ try{
     await page.getByRole('link',{name:'View school notices',exact:false}).click();await page.locator('#notice-publish-heading').waitFor();await page.goBack();
     await page.goto(baseUrl+'/principal/timetable');await page.getByText('You are acting as timetable administrator. Saved changes are published immediately.',{exact:true}).waitFor();
    }else if(role==='teacher'){
-    await page.goto(baseUrl+'/teacher/timetable');for(const language of ['en','hi','mr']){await page.locator('.language-selector select').selectOption(language);await page.getByText(uiText('Published class schedule. Contact the school timetable administrator to request a change.',language),{exact:true}).waitFor();}await page.getByText('Synthetic room check',{exact:true}).first().waitFor();assert.equal(await page.getByRole('button',{name:'Add period',exact:true}).count(),0);
+    await page.goto(baseUrl+'/teacher/timetable');for(const language of ['en','hi','mr']){await page.locator('.language-selector select').selectOption(language);await page.getByText(uiText('Propose your own periods for this class. Only Principal approval publishes a change.',language),{exact:true}).waitFor();}await page.getByText('Synthetic room check',{exact:true}).first().waitFor();assert.equal(await page.getByRole('button',{name:'Add period',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:uiText('Submit proposal','mr'),exact:true}).count(),1);
    }else{await page.goto(baseUrl+'/parent/timetable');await page.locator('#parent-timetable').waitFor();await page.getByText('Synthetic room check',{exact:true}).first().waitFor();assert.equal(await page.getByRole('button',{name:'Add period',exact:true}).count(),0);}
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:path.join(out,role+'.png'),fullPage:true});
   }
-  check('Three mobile portals: exact Principal head counts/current attendance, unavailable-count recovery, notice preview without composer, truthful timetable ownership and read-only Parent/Teacher');
+  check('Three mobile portals: exact Principal head counts/current attendance, unavailable-count recovery, notice preview without composer, truthful timetable ownership, Teacher proposal controls and published-only Parent view');
  }
  record.passed=true;
 }finally{
