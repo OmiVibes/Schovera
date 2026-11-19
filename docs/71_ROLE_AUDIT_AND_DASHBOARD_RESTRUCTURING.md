@@ -217,3 +217,17 @@ Completed P0/low-risk P1 work is ready for code/local review within the tested f
 | 58 | `node --env-file=.env.test.local .local/role-audit/preserve.mjs` | 06:11:34.642 | 0 | PASS | `58-role-preserve-1795068695194.log` |
 
 Additional read-only evidence: Git fetch/status/scope checks; Docker effective loopback bindings and Auth HTTP 200; migration count 50; private trigger function EXECUTE denied to anon/authenticated/service_role; source integrity (301 contents matched, 87 CRLF-only differences); final role/overflow screenshots and staged diff/secret review. No firmware build/upload, COM port access, RC522 scan, Pi, public hosting or production SQL was executed.
+
+## Verified GitHub publication
+
+Implementation, tests, two additive migrations and this executed report were committed on the isolated branch as **[`be2bdf5fa864e8c020657ab18ef7740e4213e02c`](https://github.com/OmiVibes/Schovera/commit/be2bdf5fa864e8c020657ab18ef7740e4213e02c)**. The original main checkout integrated it with `git merge --ff-only feat/role-dashboard-audit-20261119`, preserving the existing history and unrelated changes. Normal `git push origin main` succeeded; remote main matched the SHA, and the GitHub connector independently returned the exact SHA and canonical URL.
+
+The staged review admitted exactly the nine scoped files and checked added content for credential patterns/known approved QA values. No private environment/configuration, database, generated fixture credential, log, screenshot or firmware artifact was staged. No force-push, reset, stash, broad cleanup, branch-protection bypass or deployment occurred. After integration, remaining main-checkout work was exactly:
+
+```text
+ M docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md
+?? CLAUDE.md
+?? review/
+```
+
+The post-publication integrity check again passed with 301 matching executable/config contents after CRLF-only normalization, 50 migrations and no retained owned manual fixture. The QA website still returned HTTP 200 at `http://127.0.0.1:3106`. No executable code changed after the final build. This publication receipt is documentation only; its own handoff SHA is supplied in the owner response after push verification. The isolated development worktree is retained for review.
