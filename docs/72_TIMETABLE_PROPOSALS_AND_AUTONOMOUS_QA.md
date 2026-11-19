@@ -195,4 +195,18 @@ An initial report-generation helper stopped before modifying the report because 
 
 The isolated branch is `feat/timetable-proposals-20261119`, based on `b550331d1dff654d56575dc61ef1a3fcddb0a55e`. `AGENTS.md` records the explicit standing owner instruction to test, make focused commits and push completed work to main; this covers the current brief's authorization exception. The original main checkout still contains only its pre-existing unrelated doc 45 edit, CLAUDE.md and review/ work. Only the ten scoped files listed above are admitted to staging; no private environment, credentials, student export, database, generated screenshot/log or unrelated artifact belongs in the commit.
 
-Publication is verified after the tested checkpoint is committed; its exact implementation SHA/URL and remote-main verification are recorded in the publication receipt and final response. No deployment or production migration is authorized.
+## Verified publication receipt
+
+The ten scoped files were committed as **[`4f79c7105bded14d47f721673653e9923693c078`](https://github.com/OmiVibes/Schovera/commit/4f79c7105bded14d47f721673653e9923693c078)**, `feat(timetable): add authorized proposals and Principal approval`. Staged review checked the exact allowlist, whitespace, credential patterns and known QA values; no private artifacts were admitted. The 70-execution ledger above records the pre-publication verification, including all eight failed attempts and successful reruns.
+
+`git fetch origin main` confirmed the unchanged baseline; `git merge --ff-only feat/timetable-proposals-20261119` safely integrated the checkpoint into the original main checkout. The unrelated doc 45 SHA-256 was identical before/after integration. Normal `git push origin main` succeeded, `git ls-remote origin refs/heads/main` returned the exact implementation SHA, and the GitHub connector independently returned the same SHA and canonical commit URL.
+
+Remaining original-checkout work was exactly:
+
+```text
+ M docs/45_TASK_32T_HOSTED_DEMO_PROVISIONING.md
+?? CLAUDE.md
+?? review/
+```
+
+This publication receipt is a documentation-only follow-up; no executable source changed after the successful build/QA comparison. Its final main SHA is verified and supplied in the response. The isolated worktree and private evidence are retained. No force-push, reset, stash, destructive cleanup, branch-protection bypass, public deployment or production migration occurred. Other installations still require the additive migration in their own separately authorized environment before the proposal workflow is available; absent RPCs display unavailable status while existing published reads/direct administration retain their previous contracts.
