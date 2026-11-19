@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
@@ -71,6 +72,39 @@ export function StaffAttendanceReview({classId,date,revision=0,onFind}:{classId:
 export function ParentClassroomConfirmation({studentId,revision}:{studentId:string;revision:string}) {
   const ui=useUiText();const read=useAttendanceRead('parent_classroom_confirmation',{p_student_id:studentId},parentConfirmationSchema,revision);
   return <p className="m2-parent-confirmation" role="status">{read.error?ui('Today’s classroom confirmation is unavailable. Earlier saved history is shown separately.'):!read.data?ui('Checking today’s classroom confirmation…'):read.data.available?ui('Current class: Teacher-saved attendance is available for {0}.',[read.data.attendance_date]):ui('No Teacher-confirmed record for the current class is available for {0}. Missing gate evidence is not an absence.',[read.data.attendance_date])}</p>;
+}
+
+export function PrincipalSchoolSummary({schoolId}:{schoolId:string}) {
+  const ui=useUiText();
+  const read=useAttendanceRead('principal_attendance_review',{p_attendance_date:null,p_after_id:null,p_limit:40},principalAttendanceReviewSchema);
+  const [counts,setCounts]=useState<{schoolId:string;students:number|null;teachers:number|null;failed:boolean}|null>(null);
+  const [revision,setRevision]=useState(0);
+  useEffect(()=>{
+    let active=true;
+    void Promise.all([
+      read.db.from('students').select('id',{count:'exact',head:true}).eq('school_id',schoolId).eq('active',true),
+      read.db.from('profiles').select('id',{count:'exact',head:true}).eq('school_id',schoolId).eq('role','teacher').eq('active',true),
+    ]).then(([students,teachers])=>{
+      if(active)setCounts({schoolId,students:students.error?null:students.count,teachers:teachers.error?null:teachers.count,failed:!!(students.error||teachers.error)});
+    });
+    return()=>{active=false;};
+  },[read.db,schoolId,revision]);
+  const own=counts?.schoolId===schoolId?counts:null,value=read.data;
+  return <section className="card principal-school-summary" id="principal-school-summary" aria-labelledby="school-summary-heading">
+    <div className="section-heading"><div><p className="eyebrow">{ui('TODAY AT SCHOOL')}</p><h2 id="school-summary-heading">{ui('School overview')}</h2><p className="hint">{value?.attendance_date} · {ui('Saved classroom records; gate events are separate.')}</p></div><button className="secondary" type="button" disabled={read.loading} onClick={()=>{setRevision(n=>n+1);void read.refresh();}}>{ui('Refresh overview')}</button></div>
+    <div className="school-summary-grid">
+      <article><small>{ui('Active students')}</small><b data-testid="school-active-students">{own?.students??'—'}</b></article>
+      <article><small>{ui('Active teachers')}</small><b data-testid="school-active-teachers">{own?.teachers??'—'}</b></article>
+      <article><small>{ui('Finalized registers')}</small><b data-testid="school-finalized-registers">{value?.summary.finalized_registers??'—'}</b></article>
+      <article><small>{ui('Not finalized')}</small><b>{value?value.summary.classes-value.summary.finalized_registers:'—'}</b></article>
+    </div>
+    {own?.failed&&<p className="error" role="alert">{ui('School counts could not be loaded. Refresh when connected.')}</p>}
+    {read.error?<p className="error" role="alert">{ui(read.error)}</p>:!value?<p role="status">{ui('Checking saved attendance evidence…')}</p>:<>
+      <div className="attendance-counts"><span className="present"><b>{value.summary.present}</b>{ui('Present')}</span><span className="absent"><b>{value.summary.absent}</b>{ui('Absent')}</span><span className="late"><b>{value.summary.late}</b>{ui('Late')}</span><span><b>{value.summary.unresolved}</b>{ui('Students needing review')}</span></div>
+      <p className="hint">{ui('{0} of {1} current students have saved classroom records.',[value.summary.saved,value.summary.students])}</p>
+    </>}
+    <Link href="/principal/attendance">{ui('Review attendance and exceptions')} →</Link>
+  </section>;
 }
 
 export function PrincipalAttendanceReview() {

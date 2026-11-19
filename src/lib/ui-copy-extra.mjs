@@ -1,5 +1,18 @@
 // Interface copy only. Student names and teacher-authored messages are never translated here.
 export const extraUiRows = String.raw`
+TODAY AT SCHOOL|आज स्कूल में|आज शाळेत
+View school notices|स्कूल की सूचनाएँ देखें|शाळेच्या सूचना पाहा
+School overview|स्कूल का अवलोकन|शाळेचा आढावा
+Active students|सक्रिय विद्यार्थी|सक्रिय विद्यार्थी
+Active teachers|सक्रिय शिक्षक|सक्रिय शिक्षक
+Students needing review|समीक्षा की आवश्यकता वाले विद्यार्थी|पुनरावलोकन आवश्यक असलेले विद्यार्थी
+Saved classroom records; gate events are separate.|सहेजे गए कक्षा रिकॉर्ड; गेट की घटनाएँ अलग हैं।|जतन केलेल्या वर्ग नोंदी; प्रवेशद्वाराच्या घटना वेगळ्या आहेत.
+Refresh overview|अवलोकन ताज़ा करें|आढावा पुन्हा लोड करा
+School counts could not be loaded. Refresh when connected.|स्कूल की संख्याएँ लोड नहीं हुईं। कनेक्शन मिलने पर ताज़ा करें।|शाळेची संख्या लोड झाली नाही. जोडणी झाल्यावर पुन्हा लोड करा.
+Review attendance and exceptions|उपस्थिति और समीक्षा योग्य रिकॉर्ड देखें|उपस्थिती व पुनरावलोकनाच्या नोंदी पाहा
+Published class schedule. Contact the school timetable administrator to request a change.|प्रकाशित कक्षा समय-सारणी। बदलाव के लिए स्कूल के समय-सारणी प्रशासक से संपर्क करें।|प्रकाशित वर्ग वेळापत्रक. बदलासाठी शाळेच्या वेळापत्रक प्रशासकाशी संपर्क साधा.
+You are acting as timetable administrator. Saved changes are published immediately.|आप समय-सारणी प्रशासक के रूप में काम कर रहे हैं। सहेजे गए बदलाव तुरंत प्रकाशित होते हैं।|तुम्ही वेळापत्रक प्रशासक म्हणून काम करत आहात. जतन केलेले बदल लगेच प्रकाशित होतात.
+room has a timetable conflict|इस कमरे का समय किसी अन्य कक्षा से टकराता है|या खोलीची वेळ दुसऱ्या वर्गाशी जुळते
 Attendance register students|उपस्थिति रजिस्टर के विद्यार्थी|उपस्थिती नोंदवहीतील विद्यार्थी
 Classroom attendance insights|कक्षा की उपस्थिति के संकेत|वर्गाच्या उपस्थितीचे संकेत
 Browse student list|विद्यार्थी सूची देखें|विद्यार्थी यादी पाहा

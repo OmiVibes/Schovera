@@ -174,12 +174,16 @@ try {
   const school = await must(admin.from('schools').select('timezone').eq('id', teacherProfile.school_id).single());
   const localToday = schoolToday(new Date(), school.timezone);
   const activeStudents = await must(admin.from('students').select('id').eq('class_id', classId).eq('school_id', teacherProfile.school_id).eq('active', true));
+  const futureDate = shiftSchoolDate(localToday, 1);
+  const futureBefore = await must(admin.from('attendance_records').select('*').eq('class_id', classId).eq('attendance_date', futureDate).order('id'));
   const futureAttendance = await teacher.rpc('save_class_attendance', {
     p_class_id: classId,
-    p_attendance_date: shiftSchoolDate(localToday, 1),
+    p_attendance_date: futureDate,
     p_records: activeStudents.map(({ id }) => ({ student_id: id, status: 'present' })),
   });
-  expect(Boolean(futureAttendance.error) && /invalid attendance date/i.test(futureAttendance.error.message), 'School-local future attendance date was accepted.');
+  expect(Boolean(futureAttendance.error) && /invalid[ _]attendance[ _]date/i.test(futureAttendance.error.message), 'School-local future attendance date was accepted.');
+  const futureAfter = await must(admin.from('attendance_records').select('*').eq('class_id', classId).eq('attendance_date', futureDate).order('id'));
+  expect(JSON.stringify(futureAfter) === JSON.stringify(futureBefore), 'Denied future-date request changed persisted attendance.');
   console.log('Reliability verification passed: notice retries/audits/roles, timetable create/edit/delete concurrency and weekdays, and deterministic India school-date boundaries.');
 } finally {
   const noticeIds = new Set(temporary.announcements);
