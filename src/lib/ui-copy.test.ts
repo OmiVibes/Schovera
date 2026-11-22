@@ -10,6 +10,12 @@ it('preserves translated scripts and rejects encoding replacement text', () => {
     expect(uiText('Attendance register students', language)).toMatch(/[\u0900-\u097f]/);
   }
 });
+it('labels simulated and unverified school-entry sources in Hindi and Marathi', () => {
+  expect(uiText('SIMULATED EVENT', 'hi')).toMatch(/[\u0900-\u097f]/);
+  expect(uiText('SIMULATED EVENT', 'mr')).toMatch(/[\u0900-\u097f]/);
+  expect(uiText('SOURCE UNVERIFIED', 'hi')).toMatch(/[\u0900-\u097f]/);
+  expect(uiText('SOURCE UNVERIFIED', 'mr')).toMatch(/[\u0900-\u097f]/);
+});
 it('provides Hindi/Marathi interface copy with every placeholder retained', () => {
   for (const [source, values] of Object.entries(uiCopy)) for (const value of values) {
     expect(value.length > 0 || source === 's', source).toBe(true);

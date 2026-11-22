@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "status": "unprovisioned_plan_only",
+  "hardwareType": "nano_rc522",
+  "deviceLabel": "Fictional Nano physical one-event rehearsal",
+  "schoolName": "Fictional Nano Rehearsal School",
+  "studentLabel": "Fictional Nano Learner A",
+  "usbIdentity": "REPLACE_WITH_REVIEWED_VENDOR_PRODUCT_SERIAL",
+  "deviceId": null,
+  "schoolId": null,
+  "studentId": null,
+  "assignmentId": null,
+  "publicEnrollmentRequest": null,
+  "cardMapping": "Private owner-reviewed HMAC on Pi; no UID in this plan",
+  "keyCustody": "New device key generated on Pi; public request only to Windows",
+  "maxNewEvents": 1,
+  "maxRequests": 2,
+  "databaseProvisioningApproved": false,
+  "liveCaptureApproved": false,
+  "deliveryApproved": false
+}

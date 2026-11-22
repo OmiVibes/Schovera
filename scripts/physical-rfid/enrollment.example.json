@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "serial": {
+    "port": "/dev/serial/by-id/REPLACE_WITH_EXACT_CONFIRMED_DEVICE",
+    "usbId": "REPLACE_WITH_VENDOR_PRODUCT_SERIAL",
+    "seconds": 30,
+    "dtr": "REVIEW_ON_OR_OFF",
+    "resetRiskAccepted": false,
+    "monitorClosedConfirmed": false
+  },
+  "binding": {
+    "version": 1,
+    "mode": "physical_legacy_host_receipt_time",
+    "sessionId": "REPLACE_WITH_REVIEWED_CAPTURE_SESSION_UUID",
+    "schoolId": "REPLACE_WITH_OWNED_FICTIONAL_SCHOOL_UUID",
+    "sourceIdentity": "REPLACE_WITH_SAME_CONFIRMED_USB_ID",
+    "uidKey": "GENERATE_LOCALLY_DO_NOT_COMMIT",
+    "uidDigest": "HMAC_OF_REVIEWED_CARD_DO_NOT_COMMIT",
+    "eventType": "check_in",
+    "reviewedEnrollment": false,
+    "capabilityPublicKey": "REPLACE_WITH_TRUSTED_ISSUER_PUBLIC_KEY"
+  },
+  "enrollment": {
+    "readerId": "REPLACE_WITH_REVIEWED_HOST_READER_UUID",
+    "readerKey": "GENERATE_LOCALLY_DO_NOT_COMMIT",
+    "deviceId": "REPLACE_WITH_PRINCIPAL_PROVISIONED_DEVICE_UUID",
+    "assignmentId": "REPLACE_WITH_REVIEWED_IMMUTABLE_ASSIGNMENT_UUID",
+    "assignmentVersion": 1,
+    "credentialRef": "REPLACE_WITH_OPAQUE_CREDENTIAL_REFERENCE",
+    "capability": "REPLACE_WITH_AUTHORIZED_SIGNED_ASSIGNMENT_CAPABILITY"
+  }
+}

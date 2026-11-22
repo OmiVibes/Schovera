@@ -2,6 +2,7 @@
 import { pathToFileURL } from 'node:url';
 import { ReadOnlyObserver } from './capture-observer.mjs';
 import { ReadOnlyWindowsTransport, validateReadOnlyOptions } from './readonly-windows.mjs';
+import { ReadOnlyLinuxTransport, validateLinuxOptions } from './readonly-linux.mjs';
 
 export function parseCaptureArgs(args) {
   const values = {}; const flags = new Set(['--ack-reset-risk', '--confirm-monitor-closed']);
@@ -19,10 +20,11 @@ export function parseCaptureArgs(args) {
 
 export async function runReadOnlyCapture(options, { createTransport, report = value => console.log(JSON.stringify(value)),
   signal, processSignals = process, now = () => performance.now() } = {}) {
-  const config = validateReadOnlyOptions(options);
-  if (signal?.aborted) return { reason: 'cancelled_before_open', portOpened: false, serialPayloadWrites: 0, backendWritten: false, exitCode: 130 };
-  const transport = createTransport ? createTransport(config) : new ReadOnlyWindowsTransport(config);
-  const source = createTransport ? 'mock_serial' : 'windows_serial_readonly';
+  const linux = options?.platform === 'linux';
+  const config = linux ? validateLinuxOptions(options) : validateReadOnlyOptions(options);
+  if (signal?.aborted) return { reason: 'cancelled_before_open', portOpened: false, serialPayloadWrites: 0, backendWritten: false, exitCode: 1 };
+  const transport = createTransport ? createTransport(config) : linux ? new ReadOnlyLinuxTransport(config) : new ReadOnlyWindowsTransport(config);
+  const source = createTransport ? 'mock_serial' : linux ? 'linux_serial_readonly' : 'windows_serial_readonly';
   return new Promise(resolve => {
     const startedAt = now(); let captureStartedAt = null, closing = false, finished = false, opened = false, reason = '', failure = false;
     let softTimer, hardTimer, startupTimer, closeGuard;
@@ -35,7 +37,7 @@ export async function runReadOnlyCapture(options, { createTransport, report = va
       if (finished) return;
       finished = true; observer.end();
       for (const timer of [softTimer, hardTimer, startupTimer, closeGuard]) clearTimeout(timer);
-      signal?.removeEventListener('abort', interrupted); processSignals.removeListener('SIGINT', interrupted); processSignals.removeListener('SIGTERM', interrupted);
+      signal?.removeEventListener('abort', onAbort); processSignals.removeListener('SIGINT', onSigint); processSignals.removeListener('SIGTERM', onSigterm);
       for (const [name, fn] of listeners) transport.removeListener(name, fn);
       const closure = evidence?.exited === true ? evidence.workerConfirmed ? 'worker_closed_and_exited' : 'worker_exit_observed' : 'unconfirmed';
       const result = { code: 'readonly_capture_finished', source, port: config.port, baud: 115200, dtr: config.dtr, rts: 'off',
@@ -43,7 +45,7 @@ export async function runReadOnlyCapture(options, { createTransport, report = va
         elapsedMs: Math.round(Math.max(0, now() - startedAt)),
         captureElapsedMs: captureStartedAt === null ? 0 : Math.round(Math.max(0, now() - captureStartedAt)),
         closureEvidence: closure, ...observer.snapshot(),
-        exitCode: reason === 'interrupted' ? 130 : failure || !opened || closure === 'unconfirmed' ? 1 : 0 };
+        exitCode: reason === 'sigint' ? 130 : reason === 'sigterm' ? 143 : failure || !opened || closure === 'unconfirmed' ? 1 : 0 };
       try { report(result); } catch { result.exitCode = 1; }
       resolve(result);
     };
@@ -54,17 +56,28 @@ export async function runReadOnlyCapture(options, { createTransport, report = va
       try { Promise.resolve(transport.close()).then(finish, () => { transport.forceKill(); finish({ exited: false }); }); }
       catch { transport.forceKill(); finish({ exited: false }); }
     };
-    const interrupted = () => stop('interrupted');
+    const abortReason = () => {
+      const requested = signal?.reason;
+      return requested === 'capture_budget_reached' || requested === 'capture_held_or_failed'
+        ? requested : 'cancelled';
+    };
+    const onSigint = () => stop('sigint');
+    const onSigterm = () => stop('sigterm');
+    const onAbort = () => {
+      const code = abortReason();
+      stop(code, code !== 'capture_budget_reached');
+    };
     const onOpened = () => {
       if (!closing && !opened) {
         opened = true; clearTimeout(startupTimer);
         captureStartedAt = now();
-        // Report readiness before starting the bounded capture window so an
-        // operator receives the full configured time after the ready prompt.
+        // The capture budget begins only after exact port-open confirmation.
+        // Emit readiness first so supervised operators receive the full window
+        // after the TAP prompt; the deadline is armed immediately afterward.
         diagnostic({ code: 'readonly_port_opened', port: config.port, baud: 115200, dtr: config.dtr, rts: 'off' });
         if (!closing) {
           softTimer = setTimeout(() => stop('deadline'), config.seconds * 1000);
-          hardTimer = setTimeout(() => { transport.forceKill(); if (!closing) stop('hard_deadline', true); }, config.seconds * 1000 + 500);
+          hardTimer = setTimeout(() => { if (!closing) stop('hard_deadline', true); transport.forceKill(); }, config.seconds * 1000 + 500);
         }
       }
     };
@@ -79,8 +92,9 @@ export async function runReadOnlyCapture(options, { createTransport, report = va
     const onExit = () => { if (!closing) stop('unexpected_worker_exit', true); };
     const listeners = [['opened', onOpened], ['bytes', onBytes], ['failure', onFailure], ['closed', onClosed], ['exit', onExit]];
     for (const [name, fn] of listeners) transport.on(name, fn);
-    signal?.addEventListener('abort', interrupted, { once: true }); processSignals.on('SIGINT', interrupted); processSignals.on('SIGTERM', interrupted);
-    // Port startup is bounded separately and does not consume capture time.
+    signal?.addEventListener('abort', onAbort, { once: true }); processSignals.on('SIGINT', onSigint); processSignals.on('SIGTERM', onSigterm);
+    // Startup is bounded independently and does not consume the operator's
+    // capture window. The read deadline starts only after port-open confirmation.
     startupTimer = setTimeout(() => stop('port_startup_timeout', true), 5000);
     diagnostic({ code: 'readonly_capture_preflight', port: config.port, dtr: config.dtr, rts: 'off', possibleReset: true });
     if (!closing) { try { transport.start(); } catch { stop('transport_start_failed', true); } }

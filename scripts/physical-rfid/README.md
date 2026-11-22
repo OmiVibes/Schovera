@@ -1,5 +1,12 @@
 # Physical RFID adapter — Stage 1
 
+Linux software follow-up (20 November 2026): see [Pi staged handoff](RASPBERRY_PI.md)
+and [software verification record](../../docs/74_PI_PHYSICAL_RFID_SOFTWARE_STAGES.md).
+No physical gateway event or dashboard acceptance is claimed. A later bounded
+read-only serial diagnostic was owner-reported to receive three scan frames; it
+did not persist or deliver an event. The historical Windows/Stage 1 records
+below remain unchanged.
+
 Publication follow-up, 20 November 2026: see
 [verification and Raspberry Pi handoff](../../docs/73_PHYSICAL_RFID_PUBLICATION_AND_PI_HANDOFF.md).
 The historical implementation record below retains its original no-publication

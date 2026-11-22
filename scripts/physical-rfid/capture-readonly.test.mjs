@@ -68,12 +68,18 @@ describe('Mocked capture lifecycle; no hardware transports execute', () => {
   });
   it('closes once on Ctrl+C even when disconnect and exit also arrive', async () => {
     const r = running(); r.transport.emit('opened'); r.signals.emit('SIGINT'); r.transport.emit('failure', 'serial_disconnected'); r.transport.emit('exit');
-    expect(await r.done).toMatchObject({ reason: 'interrupted', exitCode: 130 }); expect(r.transport.close).toHaveBeenCalledTimes(1);
+    expect(await r.done).toMatchObject({ reason: 'sigint', exitCode: 130 }); expect(r.transport.close).toHaveBeenCalledTimes(1);
+  });
+  it('distinguishes supervisor termination from Ctrl+C and reports conventional SIGTERM status', async () => {
+    const r = running(); r.transport.emit('opened'); r.signals.emit('SIGTERM');
+    expect(await r.done).toMatchObject({ reason: 'sigterm', exitCode: 143 });
+    expect(r.transport.close).toHaveBeenCalledTimes(1);
+    expect(r.signals.listenerCount('SIGTERM')).toBe(0);
   });
   it('handles AbortSignal cancellation and never starts when already cancelled', async () => {
     const controller = new AbortController(); const r = running({ signal: controller.signal }); controller.abort();
-    expect(await r.done).toMatchObject({ reason: 'interrupted', exitCode: 130 });
-    const factory = vi.fn(); expect(await runReadOnlyCapture(options, { signal: controller.signal, createTransport: factory })).toMatchObject({ reason: 'cancelled_before_open' });
+    expect(await r.done).toMatchObject({ reason: 'cancelled', exitCode: 1 });
+    const factory = vi.fn(); expect(await runReadOnlyCapture(options, { signal: controller.signal, createTransport: factory })).toMatchObject({ reason: 'cancelled_before_open', exitCode: 1 });
     expect(factory).not.toHaveBeenCalled();
   });
   it('reports unexpected disconnect without reopening or selecting a different port', async () => {
@@ -107,6 +113,16 @@ describe('Mocked capture lifecycle; no hardware transports execute', () => {
     vi.useFakeTimers(); const r = running(); await vi.advanceTimersByTimeAsync(5000); r.transport.emit('bytes', Buffer.from(scan()));
     expect(await r.done).toMatchObject({ reason: 'port_startup_timeout', validScanFrames: 0, portOpened: false, exitCode: 1 });
   });
+  it('starts a full 30-second capture window only after serial readiness', async () => {
+    vi.useFakeTimers(); const r = running();
+    await vi.advanceTimersByTimeAsync(4000); // Startup time is independent of the capture budget.
+    r.transport.emit('opened');
+    await vi.advanceTimersByTimeAsync(29900);
+    r.transport.emit('bytes', Buffer.from(scan(29900)));
+    expect(r.transport.close).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(await r.done).toMatchObject({ reason: 'deadline', portOpened: true, captureElapsedMs: 30000, validScanFrames: 1, exitCode: 0 });
+  });
   it('has no command/write calls even for versioned READY/SCAN input', async () => {
     const r = running(); r.transport.write = vi.fn(() => { throw Error('Never allowed'); }); r.transport.emit('opened');
     r.transport.emit('bytes', Buffer.from('SRFID,1,READY\nSRFID,1,SCAN,10000000-0000-4000-8000-000000000001,1,' + UID + ',100\n'));
@@ -118,7 +134,7 @@ describe('Mocked capture lifecycle; no hardware transports execute', () => {
   it('force-closes and reports failure when cleanup itself throws', async () => {
     const transport = new MockReadOnlyTransport(); transport.close = vi.fn(() => { throw Error(UID); });
     const r = running({ transport }); transport.emit('opened'); r.signals.emit('SIGINT');
-    expect(await r.done).toMatchObject({ reason: 'interrupted', closureEvidence: 'unconfirmed' });
+    expect(await r.done).toMatchObject({ reason: 'sigint', exitCode: 130, closureEvidence: 'unconfirmed' });
     expect(transport.forceKill).toHaveBeenCalledTimes(1); expect(JSON.stringify(r.reports)).not.toContain(UID);
   });
   it('fails closed when startup does not confirm the port within five seconds', async () => {
@@ -127,15 +143,5 @@ describe('Mocked capture lifecycle; no hardware transports execute', () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(await done).toMatchObject({ reason: 'port_startup_timeout', portOpened: false, validScanFrames: 0, exitCode: 1 });
     expect(transport.close).toHaveBeenCalledTimes(1);
-  });
-  it('starts a full 30-second capture window after serial readiness', async () => {
-    vi.useFakeTimers(); const r = running();
-    await vi.advanceTimersByTimeAsync(4000);
-    r.transport.emit('opened');
-    await vi.advanceTimersByTimeAsync(29900);
-    r.transport.emit('bytes', Buffer.from(scan(29900)));
-    expect(r.transport.close).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(100);
-    expect(await r.done).toMatchObject({ reason: 'deadline', portOpened: true, captureElapsedMs: 30000, validScanFrames: 1, exitCode: 0 });
   });
 });

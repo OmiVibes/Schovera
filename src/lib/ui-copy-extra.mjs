@@ -486,4 +486,6 @@ Enter a reason for changing finalized attendance.|पुष्टि की ग�
 This register is already finalized. Reload before making a correction.|इस रजिस्टर की पुष्टि हो चुकी है। सुधार करने से पहले फिर खोलें।|या रजिस्टरची पुष्टी झाली आहे. दुरुस्ती करण्यापूर्वी पुन्हा उघडा.
 Could not save attendance. No confirmation was received. Retry the same save or reload the register.|उपस्थिति नहीं सहेजी जा सकी। पुष्टि नहीं मिली। वही बदलाव फिर सहेजें या रजिस्टर फिर खोलें।|उपस्थिती जतन झाली नाही. पुष्टी मिळाली नाही. तेच बदल पुन्हा जतन करा किंवा रजिस्टर पुन्हा उघडा.
 Teacher-saved classroom records. Draft registers are not shown.|शिक्षक द्वारा सहेजी गई कक्षा उपस्थिति। प्रारूप रजिस्टर नहीं दिखाए जाते।|शिक्षकांनी जतन केलेली वर्ग उपस्थिती. मसुदा रजिस्टर दाखवले जात नाहीत.
+SIMULATED EVENT|सिम्युलेटेड घटना|कृत्रिम चाचणी घटना
+SOURCE UNVERIFIED|स्रोत सत्यापित नहीं|स्रोताची पडताळणी नाही
 `;

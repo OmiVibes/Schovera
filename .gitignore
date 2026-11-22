@@ -47,6 +47,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+__pycache__/
+*.py[cod]
 
 # Private local state and developer server logs
 /.local/

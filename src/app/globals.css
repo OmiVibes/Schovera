@@ -2038,6 +2038,9 @@ html:lang(hi) .app, html:lang(mr) .app { overflow-wrap: anywhere; }
 .school-entry-event-title > span:not(.school-entry-event-type) { color: #677588; font-size: .7rem; }
 .school-entry-event-type { padding: .22rem .45rem; border-radius: 999px; background: #edf6f1; color: #276c4e; font-size: .65rem; font-weight: 800; }
 .school-entry-event-type.check_out { background: #eef2f7; color: #4b617e; }
+.school-entry-source { padding: .22rem .45rem; border-radius: 999px; font-size: .65rem; font-weight: 800; letter-spacing: .03em; }
+.school-entry-source.simulated { background: #fff0c2; color: #755000; }
+.school-entry-source.unverified { background: #edf0f3; color: #4b5563; }
 .school-entry-event-main > p { margin: .25rem 0 .45rem; color: #718092; font-size: .7rem; }
 .school-entry-times { display: flex; align-items: center; gap: .35rem .7rem; flex-wrap: wrap; color: #344456; font-size: .7rem; }
 .school-entry-times time { font-variant-numeric: tabular-nums; }

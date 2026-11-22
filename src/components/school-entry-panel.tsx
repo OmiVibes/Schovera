@@ -18,6 +18,7 @@ type EntryEvent = {
   received_at: string;
   sequence_state: 'in_order' | 'gap' | 'out_of_order';
   timestamp_quality: 'within_tolerance' | 'clock_uncertain';
+  source_kind: 'physical' | 'simulated' | 'historical_unknown';
   students?: {
     full_name?: string | null;
     roll_number?: string | null;
@@ -165,7 +166,7 @@ export function SchoolEntryPanel({
         }
       }
       let query = db.from('school_entry_events')
-        .select('id,event_type,observed_at,received_at,sequence_state,timestamp_quality,students!school_entry_events_student_id_fkey!inner(full_name,roll_number,class_id,classes(grade,division))', { count: 'exact' })
+        .select('id,event_type,observed_at,received_at,sequence_state,timestamp_quality,source_kind,students!school_entry_events_student_id_fkey!inner(full_name,roll_number,class_id,classes(grade,division))', { count: 'exact' })
         .gte('received_at', schoolDayStartIso(range.from, timeZone))
         .lt('received_at', schoolDayStartIso(shiftSchoolDate(range.to, 1), timeZone))
         .order('received_at', { ascending: false })
@@ -335,6 +336,8 @@ export function SchoolEntryPanel({
                     <strong>{role !== 'parent' ? student?.full_name || t('entry.studentUnknown') : item.event_type === 'check_in' ? t('entry.checkIn') : t('entry.checkOut')}</strong>
                     {role !== 'parent' && grade && <span>{grade}{student?.roll_number ? ` · ${t('entry.roll', { roll: student.roll_number })}` : ''}</span>}
                     {role !== 'parent' && <span className={`school-entry-event-type ${item.event_type}`}>{item.event_type === 'check_in' ? t('entry.checkIn') : t('entry.checkOut')}</span>}
+                    {item.source_kind === 'simulated' && <span className="school-entry-source simulated">{ui('SIMULATED EVENT')}</span>}
+                    {item.source_kind === 'historical_unknown' && <span className="school-entry-source unverified">{ui('SOURCE UNVERIFIED')}</span>}
                   </div>
                   <p>{checkpoint}{item.sequence_state !== 'in_order' ? ` · ${item.sequence_state === 'gap' ? t('entry.sequenceGap') : t('entry.outOfOrder')}` : ''}</p>
                   <div className="school-entry-times"><span>{t('entry.scanTime')}: <time dateTime={item.observed_at}>{formatDateTime(item.observed_at, language, timeZone)}</time></span>

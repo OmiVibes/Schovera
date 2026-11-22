@@ -474,8 +474,8 @@ describe('Task 32H gateway to loopback local Supabase', () => {
     expect(delivered).toMatchObject({ queue_state: 'delivered', remote_outcome: 'accepted', remote_receipt_id: expect.any(String), remote_received_at: expect.any(String), canonical_payload: canonicalEventV2(eventA) });
     expect(delivered.clock_quality).toBe('ok');
     reopened.close();
-    expect(await must(admin.from('school_entry_events').select('id,student_id,credential_assignment_id').eq('device_event_id', eventA.event_id).single()))
-      .toMatchObject({ student_id: studentA.id, credential_assignment_id: assignmentA });
+    expect(await must(admin.from('school_entry_events').select('id,student_id,credential_assignment_id,source_kind').eq('device_event_id', eventA.event_id).single()))
+      .toMatchObject({ student_id: studentA.id, credential_assignment_id: assignmentA, source_kind: 'simulated' });
     await checkpointParentLink('after-first-cloud-sync');
     await snapshotFixture('after-first-local-api-sync');
 
@@ -499,8 +499,8 @@ describe('Task 32H gateway to loopback local Supabase', () => {
     queueEvent(eventB);
     const syncB = runGatewaySync();
     expect(syncB.results[0]).toMatchObject({ event_id: eventB.event_id, state: 'delivered_to_local_server', outcome: 'accepted' });
-    expect(await must(admin.from('school_entry_events').select('student_id,credential_assignment_id').eq('device_event_id', eventB.event_id).single()))
-      .toMatchObject({ student_id: studentB.id, credential_assignment_id: assignmentB });
+    expect(await must(admin.from('school_entry_events').select('student_id,credential_assignment_id,source_kind').eq('device_event_id', eventB.event_id).single()))
+      .toMatchObject({ student_id: studentB.id, credential_assignment_id: assignmentB, source_kind: 'simulated' });
     await checkpointParentLink('after-reassigned-event-sync');
     await snapshotFixture('after-reassigned-event-sync');
 
@@ -532,6 +532,7 @@ describe('Task 32H gateway to loopback local Supabase', () => {
     const parentPage = await loginAndCheck(parentA, ['Check-in recorded'], [], async (page, panel) => {
       expect(await panel.getAttribute('data-poll-interval-ms')).toBe('20000');
       expect(await panel.innerText()).toContain(studentA.name);
+      expect(await panel.getByText('SIMULATED EVENT', { exact: true }).count()).toBe(1);
       const childSelector = page.locator('.child-switcher select');
       await expect.poll(() => childSelector.count()).toBe(1);
       await childSelector.selectOption(studentB.id);
@@ -544,6 +545,7 @@ describe('Task 32H gateway to loopback local Supabase', () => {
     }, true, true);
     await must(admin.from('teacher_class_assignments').insert({ teacher_id: teacherA.id, class_id: classB }));
     const teacherPage = await loginAndCheck(teacherA, [studentA.name], [studentB.name], async (page, panel) => {
+      expect(await panel.getByText('SIMULATED EVENT', { exact: true }).count()).toBe(1);
       const classSelector = panel.locator('.school-entry-control select').first();
       await classSelector.selectOption(classB);
       await page.waitForFunction(() => document.querySelector('[data-testid="school-entry-panel"]')?.getAttribute('data-loaded') === 'true');
@@ -554,7 +556,9 @@ describe('Task 32H gateway to loopback local Supabase', () => {
       expect(await panel.locator('.school-entry-event').count()).toBe(1);
       expect(await panel.innerText()).toContain(studentA.name);
     }, true, true);
-    const principalPage = await loginAndCheck(principalA, [studentA.name, studentB.name], [], undefined, true, true);
+    const principalPage = await loginAndCheck(principalA, [studentA.name, studentB.name], [], async (_page, panel) => {
+      expect(await panel.getByText('SIMULATED EVENT', { exact: true }).count()).toBe(2);
+    }, true, true);
     expect(parentPage && teacherPage && principalPage, 'role dashboards remain mounted for the live polling check').toBeTruthy();
     const pages = [parentPage!, teacherPage!, principalPage!];
     const previousByRole = await Promise.all(pages.map((page) => page.locator('[data-testid="school-entry-panel"] .school-entry-event').count()));

@@ -57,7 +57,7 @@ function transaction(db, work) {
   }
 }
 
-export function openGatewayDatabase(filePath, { maxEvents = 10_000 } = {}) {
+export function openGatewayDatabase(filePath, { maxEvents = 10_000, recoverOnOpen = true } = {}) {
   assertLocalFilePath(filePath);
   const resolved = path.resolve(filePath);
   if (resolved !== ':memory:') mkdirSync(path.dirname(resolved), { recursive: true });
@@ -160,8 +160,10 @@ export function openGatewayDatabase(filePath, { maxEvents = 10_000 } = {}) {
     db.exec('PRAGMA foreign_keys = ON;');
     const configuredCapacity = Number.isSafeInteger(maxEvents) && maxEvents > 0 ? maxEvents : 10_000;
     const store=new GatewayStore(db, resolved, configuredCapacity);
-    const token=store.acquireWorker();
-    if(token)try{store.recoverInterrupted();}finally{store.releaseWorker(token);}
+    if(recoverOnOpen){
+      const token=store.acquireWorker();
+      if(token)try{store.recoverInterrupted();}finally{store.releaseWorker(token);}
+    }
     return store;
   } catch (error) {
     try { db?.close(); } catch { /* preserve the original open/validation failure */ }
