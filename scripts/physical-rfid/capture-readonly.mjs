@@ -24,7 +24,7 @@ export async function runReadOnlyCapture(options, { createTransport, report = va
   const transport = createTransport ? createTransport(config) : new ReadOnlyWindowsTransport(config);
   const source = createTransport ? 'mock_serial' : 'windows_serial_readonly';
   return new Promise(resolve => {
-    const startedAt = now(); let closing = false, finished = false, opened = false, reason = '', failure = false;
+    const startedAt = now(); let captureStartedAt = null, closing = false, finished = false, opened = false, reason = '', failure = false;
     let softTimer, hardTimer, startupTimer, closeGuard;
     const diagnostic = value => {
       try { report({ ...value, source, serialPayloadWrites: 0, backendWritten: false }); }
@@ -40,7 +40,9 @@ export async function runReadOnlyCapture(options, { createTransport, report = va
       const closure = evidence?.exited === true ? evidence.workerConfirmed ? 'worker_closed_and_exited' : 'worker_exit_observed' : 'unconfirmed';
       const result = { code: 'readonly_capture_finished', source, port: config.port, baud: 115200, dtr: config.dtr, rts: 'off',
         resetRiskAcknowledged: true, monitorClosedOperatorConfirmed: true, reason, portOpened: opened,
-        elapsedMs: Math.round(Math.max(0, now() - startedAt)), closureEvidence: closure, ...observer.snapshot(),
+        elapsedMs: Math.round(Math.max(0, now() - startedAt)),
+        captureElapsedMs: captureStartedAt === null ? 0 : Math.round(Math.max(0, now() - captureStartedAt)),
+        closureEvidence: closure, ...observer.snapshot(),
         exitCode: reason === 'interrupted' ? 130 : failure || !opened || closure === 'unconfirmed' ? 1 : 0 };
       try { report(result); } catch { result.exitCode = 1; }
       resolve(result);
@@ -53,7 +55,19 @@ export async function runReadOnlyCapture(options, { createTransport, report = va
       catch { transport.forceKill(); finish({ exited: false }); }
     };
     const interrupted = () => stop('interrupted');
-    const onOpened = () => { if (!closing) { opened = true; clearTimeout(startupTimer); diagnostic({ code: 'readonly_port_opened', port: config.port, baud: 115200, dtr: config.dtr, rts: 'off' }); } };
+    const onOpened = () => {
+      if (!closing && !opened) {
+        opened = true; clearTimeout(startupTimer);
+        captureStartedAt = now();
+        // Report readiness before starting the bounded capture window so an
+        // operator receives the full configured time after the ready prompt.
+        diagnostic({ code: 'readonly_port_opened', port: config.port, baud: 115200, dtr: config.dtr, rts: 'off' });
+        if (!closing) {
+          softTimer = setTimeout(() => stop('deadline'), config.seconds * 1000);
+          hardTimer = setTimeout(() => { transport.forceKill(); if (!closing) stop('hard_deadline', true); }, config.seconds * 1000 + 500);
+        }
+      }
+    };
     const onBytes = bytes => {
       if (closing) return;
       if (!opened) { stop('bytes_before_open_confirmation', true); return; }
@@ -66,10 +80,8 @@ export async function runReadOnlyCapture(options, { createTransport, report = va
     const listeners = [['opened', onOpened], ['bytes', onBytes], ['failure', onFailure], ['closed', onClosed], ['exit', onExit]];
     for (const [name, fn] of listeners) transport.on(name, fn);
     signal?.addEventListener('abort', interrupted, { once: true }); processSignals.on('SIGINT', interrupted); processSignals.on('SIGTERM', interrupted);
-    // Reserve half a second for close/kill, INSIDE the requested <=30-second budget.
-    softTimer = setTimeout(() => stop('deadline'), config.seconds * 1000 - 500);
-    hardTimer = setTimeout(() => { transport.forceKill(); if (!closing) stop('hard_deadline', true); }, config.seconds * 1000);
-    startupTimer = setTimeout(() => stop('port_startup_timeout', true), Math.min(5000, config.seconds * 1000 - 500));
+    // Port startup is bounded separately and does not consume capture time.
+    startupTimer = setTimeout(() => stop('port_startup_timeout', true), 5000);
     diagnostic({ code: 'readonly_capture_preflight', port: config.port, dtr: config.dtr, rts: 'off', possibleReset: true });
     if (!closing) { try { transport.start(); } catch { stop('transport_start_failed', true); } }
   });
