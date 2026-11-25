@@ -30,6 +30,8 @@ export function acquisitionId(session, sequence) {
 export function parseFrame(text) {
   if (typeof text !== 'string' || Buffer.byteLength(text) > MAX_FRAME_BYTES || !/^[\x20-\x7e]+$/.test(text)) refuse('invalid_frame');
   if (text === 'SCHOVERA_RFID_READY') return { type: 'legacy_ready' };
+  if (text === 'SCHOVERA_LCD_SHOWN,1') return { type: 'lcd_shown', version: 1 };
+  if (text === 'SCHOVERA_LCD_UNAVAILABLE') return { type: 'lcd_unavailable' };
   if (/^Firmware Version: 0x[0-9a-f]{1,2} = (?:\((?:unknown|clone|counterfeit chip)\)|v[0-9]+\.[0-9]+)$/i.test(text)) return { type: 'legacy_version' };
   const fields = text.split(',');
   if (fields[0] === 'SCHOVERA_SCAN' && fields.length === 3) return {

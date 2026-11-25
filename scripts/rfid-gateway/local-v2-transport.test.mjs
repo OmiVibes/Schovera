@@ -76,6 +76,8 @@ describe('loopback local event-v2 transport', () => {
       .rejects.toMatchObject({ errorClass: 'invalid_server_receipt' });
     await expect(make(async () => ({ status: 409, headers: {}, body: '{}' })).send(event))
       .rejects.toMatchObject({ errorClass: 'server_event_or_nonce_conflict' });
+    await expect(make(async () => ({ ...receipt(event), body: JSON.stringify({ ...JSON.parse(receipt(event).body), student_display_name: 'bad\nname' }) })).send(event))
+      .rejects.toMatchObject({ errorClass: 'invalid_server_receipt' });
     await expect(make(async () => { throw new Error('request_timeout'); }).send(event))
       .rejects.toMatchObject({ errorClass: 'request_timeout' });
   });
@@ -120,8 +122,41 @@ describe('loopback local event-v2 transport', () => {
     const { store, event } = setup(); const pair = generateKeyPairSync('ed25519'); const unresolved = receipt(event, { outcome: 'unresolved' });
     const transport = new LocalSupabaseV2Transport({ target: 'http://127.0.0.1:3000', devicePrivateKey: pair.privateKey,
       request: async () => unresolved });
-    const [result] = await syncPendingV2Events(store, transport, { force: true });
+    let displayCallbackCount = 0;
+    const onDelivered = async () => { displayCallbackCount++; return 'must_not_display'; };
+    const [result] = await syncPendingV2Events(store, transport, { force: true, onDelivered });
     expect(result).toMatchObject({ state: 'attention_required', outcome: 'unresolved' });
     expect(store.getEvent(event.device_id, event.event_id)).toMatchObject({ queue_state: 'attention', remote_outcome: 'unresolved', remote_receipt_id: expect.any(String) });
+    expect(displayCallbackCount).toBe(0);
+  });
+
+  it('delivers only the explicitly selected event and invokes LCD feedback after its accepted receipt is committed', async () => {
+    const { store, event, deviceId } = setup();
+    const readerId = store.getEvent(deviceId, event.event_id).reader_id;
+    const other = { ...event, event_id: randomUUID(), device_sequence: 2 };
+    const submission = signReaderSubmission(other, { readerId, key: 'c'.repeat(64), timestamp: now + 1 });
+    submission.readerKey = 'c'.repeat(64);
+    ingestReaderSubmission(store, submission, { now: now + 1 });
+    const pair = generateKeyPairSync('ed25519');
+    const calls = [];
+    const transport = new LocalSupabaseV2Transport({ target: 'http://127.0.0.1:3000', devicePrivateKey: pair.privateKey,
+      request: async (_url, _body, headers) => {
+        calls.push(headers['x-schovera-device-id']);
+        return receipt(event, { student_display_name: 'Synthetic Learner' });
+      } });
+    const feedback = [];
+    const [result] = await syncPendingV2Events(store, transport, {
+      force: true, onlyEvent: { deviceId, eventId: event.event_id },
+      onDelivered: async ({ event: deliveredEvent, receipt: accepted }) => {
+        feedback.push({ eventId: deliveredEvent.event_id, name: accepted.student_display_name,
+          queueState: store.getEvent(deviceId, deliveredEvent.event_id).queue_state });
+        return 'command_acknowledged';
+      },
+    });
+    expect(result).toMatchObject({ event_id: event.event_id, state: 'delivered_to_local_server', lcd: 'command_acknowledged' });
+    expect(feedback).toEqual([{ eventId: event.event_id, name: 'Synthetic Learner', queueState: 'delivered' }]);
+    expect(store.getEvent(deviceId, other.event_id).queue_state).toBe('pending');
+    expect(calls).toEqual([deviceId]);
+    expect(JSON.stringify([result])).not.toContain('Synthetic Learner');
   });
 });

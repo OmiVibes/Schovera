@@ -507,6 +507,7 @@ describe('Task 32H gateway to loopback local Supabase', () => {
     const gatewayTransport = new LocalSupabaseV2Transport({ target: appUrl, devicePrivateKey });
     const duplicateReceipt = await gatewayTransport.send(eventA);
     expect(duplicateReceipt.duplicate).toBe(true);
+    expect(duplicateReceipt.student_display_name).toBe(`Synthetic Gateway Student A ${suffix}`);
     await expect(gatewayTransport.send({ ...eventA, event_type: 'check_out' })).rejects.toMatchObject({ errorClass: 'server_event_or_nonce_conflict' });
     expect(await countRows(admin.from('school_entry_events').select('id', { count: 'exact', head: true }).eq('device_event_id', eventA.event_id))).toBe(1);
 

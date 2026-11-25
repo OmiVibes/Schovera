@@ -255,6 +255,14 @@ export class GatewayStore {
       AND (next_retry_at IS NULL OR next_retry_at <= ?) ORDER BY created_at, device_sequence LIMIT ?`).all(now, bounded);
   }
 
+  duePendingEvent(deviceId, eventId, now, force = false) {
+    if (typeof deviceId !== 'string' || typeof eventId !== 'string') return [];
+    const row = this.db.prepare(`SELECT * FROM gateway_events WHERE device_id = ? AND event_id = ?
+      AND queue_state = 'pending' AND (? = 1 OR next_retry_at IS NULL OR next_retry_at <= ?)`)
+      .get(deviceId, eventId, force ? 1 : 0, now);
+    return row ? [row] : [];
+  }
+
   startAttempt(deviceId, eventId, now) {
     this.db.prepare(`UPDATE gateway_events SET attempt_count = attempt_count + 1,
       queue_state = 'syncing', last_attempt_at = ?, next_retry_at = NULL, updated_at = ?

@@ -72,6 +72,7 @@ export class LegacyGatewayCapture {
       if(this.cursor().last_uptime!==null){this.hold();refuse('reset_requires_new_reviewed_session');}
       return {code:'ready_indication',durable:false};
     }
+    if(f.type==='lcd_shown'||f.type==='lcd_unavailable')return {code:f.type,durable:false};
     if(f.type==='legacy_version')return {code:'version_indication',durable:false};
     if(f.type!=='legacy_scan')refuse('legacy_scan_required');
     const {binding:b,enrollment:e}=this;

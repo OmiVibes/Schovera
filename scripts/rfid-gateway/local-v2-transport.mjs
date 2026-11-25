@@ -69,16 +69,20 @@ function requestJson(url, body, headers, timeoutMs) {
 function parseReceipt(body, event) {
   let data;
   try { data = JSON.parse(body); } catch { throw new AttentionTransportError('invalid_server_receipt'); }
+  const displayName = data?.student_display_name;
   if (!data || typeof data !== 'object' || Array.isArray(data)
-    || Object.keys(data).some((key) => !['receipt_id', 'event_id', 'outcome', 'sequence_state', 'received_at', 'duplicate'].includes(key))
+    || Object.keys(data).some((key) => !['receipt_id', 'event_id', 'outcome', 'sequence_state', 'received_at', 'duplicate', 'student_display_name'].includes(key))
     || !UUID.test(data.receipt_id ?? '') || !['accepted', 'unresolved'].includes(data.outcome)
     || data.event_id !== event.event_id
     || !SEQUENCE_STATES.has(data.sequence_state) || typeof data.received_at !== 'string'
     || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(data.received_at)
     || !Number.isFinite(Date.parse(data.received_at))
-    || typeof data.duplicate !== 'boolean') throw new AttentionTransportError('invalid_server_receipt');
+    || typeof data.duplicate !== 'boolean'
+    || (displayName !== undefined && (typeof displayName !== 'string' || !displayName.trim() || displayName.length > 160 || /[\u0000-\u001f\u007f]/.test(displayName)))
+    || (data.outcome === 'unresolved' && displayName !== undefined)) throw new AttentionTransportError('invalid_server_receipt');
   return { receipt_id: data.receipt_id, outcome: data.outcome, sequence_state: data.sequence_state,
-    received_at: data.received_at, duplicate: data.duplicate, event_id: event.event_id };
+    received_at: data.received_at, duplicate: data.duplicate, event_id: event.event_id,
+    ...(displayName === undefined ? {} : { student_display_name: displayName }) };
 }
 
 export class LocalSupabaseV2Transport {
@@ -128,8 +132,12 @@ export class LocalSupabaseV2Transport {
 
 async function syncPendingV2EventsOwned(store, transport, {
   now = Date.now(), limit = 10, force = false, maxAttempts = 8, random = Math.random, beforeReceiptCommit,
+  onlyEvent = null, onDelivered,
 } = {}) {
-  const rows = store.duePending(new Date(now).toISOString(), Math.min(10, Math.max(1, limit)), force);
+  const nowIso = new Date(now).toISOString();
+  const rows = onlyEvent
+    ? store.duePendingEvent(onlyEvent.deviceId, onlyEvent.eventId, nowIso, force)
+    : store.duePending(nowIso, Math.min(10, Math.max(1, limit)), force);
   const results = [];
   for (const row of rows) {
     let event;
@@ -145,10 +153,14 @@ async function syncPendingV2EventsOwned(store, transport, {
     }
     store.startAttempt(row.device_id, row.event_id, new Date(now).toISOString());
     const attempt = Number(row.attempt_count) + 1;
+    let acceptedReceipt = null;
+    let resultIndex = -1;
     try {
       const receipt = await transport.send(event);
       store.markDelivered(row.device_id, row.event_id, receipt, new Date().toISOString(), beforeReceiptCommit);
       results.push({ event_id: row.event_id, state: 'delivered_to_local_server', receipt_id: receipt.receipt_id, outcome: receipt.outcome });
+      resultIndex = results.length - 1;
+      acceptedReceipt = receipt;
     } catch (error) {
       if (error instanceof DefinitiveRemoteAttention) {
         store.markRemoteAttention(row.device_id, row.event_id, error.receipt, error.errorClass, new Date().toISOString(), beforeReceiptCommit);
@@ -173,11 +185,21 @@ async function syncPendingV2EventsOwned(store, transport, {
         }
       }
     }
+    if (acceptedReceipt && onDelivered) {
+      try {
+        const displayStatus = await onDelivered({ event, receipt: acceptedReceipt });
+        if (resultIndex >= 0 && typeof displayStatus === 'string') results[resultIndex].lcd = displayStatus;
+      } catch {
+        // LCD failure happens after the confirmed receipt and cannot roll back
+        // or relabel an event that is already durably marked delivered.
+        if (resultIndex >= 0) results[resultIndex].lcd = 'display_failed';
+      }
+    }
   }
   return results;
 }
 
 export async function syncPendingV2Events(store,transport,options={}){
   const token=store.acquireWorker();if(!token)throw new AttentionTransportError('gateway_worker_busy');
-  try{store.recoverInterrupted();return await syncPendingV2EventsOwned(store,transport,options);}finally{store.releaseWorker(token);}
+  try{if(!options.onlyEvent)store.recoverInterrupted();return await syncPendingV2EventsOwned(store,transport,options);}finally{store.releaseWorker(token);}
 }

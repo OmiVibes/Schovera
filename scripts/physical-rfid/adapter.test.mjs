@@ -36,6 +36,8 @@ describe('Separate strict physical/legacy protocol', () => {
     expect(parseFrame('SCHOVERA_RFID_READY')).toEqual({ type: 'legacy_ready' });
     expect(parseFrame('Firmware Version: 0x82 = (unknown)')).toEqual({ type: 'legacy_version' });
     expect(parseFrame(`SCHOVERA_SCAN,${UID},32923`)).toEqual({ type: 'legacy_scan', uid: UID, deviceUptimeMs: 32923 });
+    expect(parseFrame('SCHOVERA_LCD_SHOWN,1')).toEqual({ type: 'lcd_shown', version: 1 });
+    expect(parseFrame('SCHOVERA_LCD_UNAVAILABLE')).toEqual({ type: 'lcd_unavailable' });
   });
   it('requires exact version/type/field counts and never accepts M7 JSON as physical input', () => {
     for (const value of ['SRFID,2,READY', 'SRFID,1,READY,extra', `SRFID,1,SCAN,${sessions[0]},1,${UID},1,extra`, '{"kind":"synthetic"}', 'PRIVATE_DEBUG_DATA']) expect(() => parseFrame(value)).toThrow();

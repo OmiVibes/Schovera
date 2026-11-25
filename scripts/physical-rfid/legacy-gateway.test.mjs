@@ -32,6 +32,12 @@ it('captures reviewed legacy observations in the existing queue with host receip
   expect(Number.isFinite(Date.parse(row.local_received_at))).toBe(true);
   expect(JSON.stringify(r)).not.toContain(uid);
 });
+it('treats LCD acknowledgements as informational and never creates a gate event',()=>{
+  const f=fixture();
+  expect(f.capture.capture('SCHOVERA_LCD_SHOWN,1')).toMatchObject({code:'lcd_shown',durable:false});
+  expect(f.capture.capture('SCHOVERA_LCD_UNAVAILABLE')).toMatchObject({code:'lcd_unavailable',durable:false});
+  expect(f.store.eventCount()).toBe(0);
+});
 it('replays an exact tuple after process reopen without changing ID, timestamp or sequence',()=>{
   const f=fixture(),a=f.capture.capture(scan(100));const body=f.store.getEvent(f.enrollment.deviceId,a.eventId).canonical_payload;f.advance(5000);f.reopen();const b=f.capture.capture(scan(100));expect(b).toMatchObject({duplicate:true,eventId:a.eventId});expect(f.store.eventCount()).toBe(1);expect(f.store.getEvent(f.enrollment.deviceId,b.eventId).canonical_payload).toBe(body);
 });

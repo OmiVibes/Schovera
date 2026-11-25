@@ -91,6 +91,23 @@ export async function POST(request: Request) {
     return reply(400, { error: 'event could not be processed' });
   }
   if (data?.outcome !== 'accepted' && data?.outcome !== 'unresolved') return reply(500, { error: 'event processing result unavailable' });
+  // The device already proved possession of its signing key and this event's
+  // assignment capability. Return a name only for the exact accepted event,
+  // scoped by the event row, device, and capability school. This is display
+  // feedback for the local LCD, not an attendance write or UI authorization.
+  let studentDisplayName: string | undefined;
+  if (data.outcome === 'accepted' && typeof data.event_id === 'string') {
+    const { data: persistedEvent, error: lookupError } = await config.service.from('school_entry_events')
+      .select('students!school_entry_events_student_id_fkey(full_name)')
+      .eq('id', data.event_id)
+      .eq('device_id', event.device_id)
+      .eq('school_id', capabilityKey.school_id)
+      .maybeSingle();
+    const displayName = Array.isArray(persistedEvent?.students)
+      ? persistedEvent.students[0]?.full_name
+      : undefined;
+    if (!lookupError && typeof displayName === 'string' && displayName.trim()) studentDisplayName = displayName;
+  }
   return reply(data.duplicate ? 200 : 202, {
     receipt_id: data.receipt_id,
     event_id: event.event_id,
@@ -98,5 +115,6 @@ export async function POST(request: Request) {
     sequence_state: data.sequence_state,
     received_at: data.received_at,
     duplicate: data.duplicate === true,
+    ...(studentDisplayName ? { student_display_name: studentDisplayName } : {}),
   });
 }
